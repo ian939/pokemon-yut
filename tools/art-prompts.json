@@ -179,6 +179,36 @@
       "keepAspect": true,
       "lowres": 160,
       "colors": 20
+    },
+    {
+      "id": "grass",
+      "tone": "pixel",
+      "phase": 2,
+      "prompt": "A single tuft of tall wild grass for a monster-collecting RPG map, seen from above at a slight top-down angle: a dense round clump of tall green grass blades with lighter tips and a darker shadow at its base, the kind of tall grass where wild creatures hide. Only the grass clump, isolated and centered on a plain solid pure white background with nothing else.",
+      "refs": [
+        "@field"
+      ],
+      "out": "assets/board/grass.png",
+      "transparent": true,
+      "lowres": 56,
+      "colors": 16
+    },
+    {
+      "id": "chest",
+      "tone": "pixel",
+      "phase": 2,
+      "prompt": "Two identical small treasure chests standing side by side with a wide empty gap between them, pixel art item sprites like classic handheld RPGs, seen from a slight three-quarter front view. Left chest: closed, made of wood with red-and-gold metal bands and a golden lock. Right chest: exactly the same chest with its lid wide open and warm golden light glowing out of it. Both chests the same size and style. Isolated on a plain solid pure white background with nothing else.",
+      "refs": [
+        "@field",
+        "assets/items/poke-ball.png"
+      ],
+      "split": [
+        "assets/ui/chest-closed.png",
+        "assets/ui/chest-open.png"
+      ],
+      "transparent": true,
+      "lowres": 112,
+      "colors": 24
     }
   ]
 }

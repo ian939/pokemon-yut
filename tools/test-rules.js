@@ -209,14 +209,108 @@ t("21. 빽도로 참먹이에 가면 거기 서 있던 상대 말을 잡음", ()
   eq(s.pieces[2].state, "wait"); eq(s.phase, "throw");
 });
 
+// ---------- v2: ❓ 풀숲 칸 ----------
+const withSpots = (spots, n) => Y.newGame({
+  pieces: n || 2, backdo: true, seed: 7, spots,
+  teams: [{ name: "A", picks: [6, 25, 1, 7] }, { name: "B", picks: [9, 26, 3, 133] }],
+}, D.evoFrom);
+const evTypes = r => r.events.map(e => e.type);
+t("23. ❓ 칸에 딱 멈추면 야생 포켓몬(wild), 그 칸은 쓴 것으로", () => {
+  let s = choose(withSpots([{ node: 3, id: 133 }, { node: 12, id: 58 }]), [3]);
+  const r = Y.applyMove(s, "new/3");
+  const w = r.events.find(e => e.type === "wild");
+  ok(w, "wild 이벤트 없음");
+  eq([w.node, w.id, w.team], [3, 133, 0]);
+  eq(r.state.spots[0].used, true); eq(r.state.spots[1].used, false);
+});
+t("24. ❓ 칸을 지나가기만 하면 안 나옴", () => {
+  const r = Y.applyMove(choose(withSpots([{ node: 3, id: 133 }]), [4]), "new/4");
+  ok(!evTypes(r).includes("wild"), "지나갔는데 wild");
+  eq(r.state.spots[0].used, false);
+});
+t("25. 한 칸에 한 번 — 다시 멈춰도 안 나옴", () => {
+  let s = Y.applyMove(choose(withSpots([{ node: 3, id: 133 }]), [3]), "new/3").state;
+  s.pieces[0].state = "wait"; // 말을 치우고 다른 말로 다시 3번 칸에
+  const r = Y.applyMove(choose(s, [3]), "new/3");
+  ok(!evTypes(r).includes("wild"), "두 번 나옴");
+});
+t("26. 골인하는 이동은 ❓ 칸을 지나도 안 나옴", () => {
+  let s = put(withSpots([{ node: 19, id: 133 }]), 0, 17);
+  const r = Y.applyMove(choose(s, [3]), "n17/3"); // 18 → 19 → 참먹이(골인)
+  ok(r.events.some(e => e.type === "finish"), "골인 안 함");
+  ok(!evTypes(r).includes("wild"), "골인인데 wild");
+});
+t("27. 배틀·진화와 겹치면 move → capture → evolve → wild 순서", () => {
+  let s = withSpots([{ node: 8, id: 133 }]);
+  put(s, 0, 4);                  // 리자몽 라인 말(파이리)이 4번 칸
+  put(s, 2, 8);                  // 상대 말이 8번 칸 (❓ 칸)
+  const r = Y.applyMove(choose(s, [4]), "n4/4"); // 8번 칸: 상대 잡기 + 8/20=0.4 → 리자드로 진화 + 풀숲
+  const order = evTypes(r).filter(x => ["move", "capture", "evolve", "wild"].includes(x));
+  eq(order, ["move", "capture", "evolve", "wild"]);
+});
+t("28. 옛 저장(❓ 칸 없음)도 이어하기 되고, 발동 안 함", () => {
+  let s = game();
+  delete s.spots;
+  ok(Y.validate(s), "옛 저장 validate 실패");
+  const r = Y.applyMove(choose(s, [3]), "new/3");
+  ok(!evTypes(r).includes("wild"));
+  s = withSpots([{ node: 3, id: 9999 }]);
+  ok(!Y.validate(s), "이상한 포켓몬 번호를 통과시킴");
+});
+t("29. 보물상자 10만 번 — 50·30·10·5·5 (±0.5%p), 잡을 확률 60·65·70·75·100%", () => {
+  const R = Y.Rewards;
+  eq(R.BALLS.map(b => Math.round(R.catchRate(b) * 100)), [60, 65, 70, 75, 100]);
+  const rnd = Y.rng(4242), cnt = {}, N = 100000;
+  R.rollBox(N, rnd).forEach(b => { cnt[b] = (cnt[b] || 0) + 1; });
+  const want = { poke: 0.5, great: 0.3, ultra: 0.1, luxury: 0.05, master: 0.05 };
+  Object.keys(want).forEach(b => ok(Math.abs(cnt[b] / N - want[b]) < 0.005, R.BALL_INFO[b].name + " " + (cnt[b] / N * 100).toFixed(2) + "%"));
+  eq(R.rollBox(3, rnd).length, 3);
+});
+t("30. 던지기 — 성공률이 잡을 확률과 같고, 흔들기는 성공 3번 · 실패 1~3번", () => {
+  const R = Y.Rewards, rnd = Y.rng(77), N = 60000;
+  ["poke", "ultra", "master"].forEach(b => {
+    let okN = 0;
+    for (let i = 0; i < N; i++) {
+      const r = R.throwBall(b, rnd);
+      if (r.ok) { okN++; ok(r.shakes === 3, "성공인데 흔들기 " + r.shakes); }
+      else ok(r.shakes >= 1 && r.shakes <= 3, "실패 흔들기 " + r.shakes);
+    }
+    ok(Math.abs(okN / N - R.catchRate(b)) < 0.01, R.BALL_INFO[b].name + " 성공 " + (okN / N * 100).toFixed(1) + "%");
+  });
+});
+t("31. 야생 포켓몬 — 희귀도 60·25·12·3 (±1%p), 아직 없는 포켓몬 먼저", () => {
+  const pools = { c: [], r: [], u: [], l: [] };
+  for (let id = 1; id <= 1025; id++) pools[D.rarity[id] || "c"].push(id);
+  const R = Y.Rewards, rnd = Y.rng(9), N = 50000, cnt = { c: 0, r: 0, u: 0, l: 0 };
+  for (let i = 0; i < N; i++) cnt[D.rarity[R.rollWild(pools, [], rnd)] || "c"]++;
+  Object.keys(R.WILD_ODDS).forEach(k => ok(Math.abs(cnt[k] / N - R.WILD_ODDS[k] / 100) < 0.01, k + " " + (cnt[k] / N * 100).toFixed(1) + "%"));
+  // 절반을 가지고 있으면: 절반 확률로 없는 것만 + 나머지 절반은 섞여서 → 없는 것 약 75%
+  const owned = new Set();
+  for (let id = 1; id <= 1025; id += 2) owned.add(id);
+  let fresh = 0;
+  for (let i = 0; i < N; i++) if (!owned.has(R.rollWild(pools, owned, rnd))) fresh++;
+  ok(Math.abs(fresh / N - 0.75) < 0.02, "없는 포켓몬 " + (fresh / N * 100).toFixed(1) + "%");
+});
+t("32. ❓ 칸 고르기 — 2칸, 후보 칸 안에서, 서로 붙지 않게", () => {
+  const rnd = Y.rng(3);
+  for (let i = 0; i < 2000; i++) {
+    const ns = Y.pickSpotNodes(rnd, 2);
+    eq(ns.length, 2);
+    ok(ns.every(n => Y.SPOT_NODES.includes(n)), "후보 밖 " + ns);
+    ok(Math.abs(ns[0] - ns[1]) !== 1, "붙은 칸 " + ns); // 후보 칸은 모두 바깥 길이라 번호 차이 1 = 바로 옆 칸
+  }
+});
+
 // ---------- 무작위 대국 (불변 조건 확인) ----------
 t("22. 무작위 3,000판 끝까지 — 멈춤·규칙 위반 없음", () => {
   let rs = 99;
   const rnd = () => { const r = Y.rand(rs); rs = r[1]; return r[0]; };
   let longest = 0;
   for (let g = 0; g < 3000; g++) {
+    const spotRnd = Y.rng(g + 100);
     let s = Y.newGame({
       pieces: 2 + (g % 3), backdo: g % 4 !== 0, seed: g + 1, first: g % 2,
+      spots: g % 2 ? Y.pickSpotNodes(spotRnd, 2).map(node => ({ node, id: 1 + Math.floor(spotRnd() * 1025) })) : undefined,
       teams: [{ name: "A", picks: [6, 25, 1, 7] }, { name: "B", picks: [9, 26, 3, 133] }],
     }, D.evoFrom);
     let steps = 0;

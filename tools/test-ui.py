@@ -148,7 +148,7 @@ def scenario(browser, base, errors):
     ctx.add_init_script("if (!localStorage.getItem('engmon_save_v1')) localStorage.setItem('engmon_save_v1', " + json.dumps(ENGMON_SAVE) + ");")
     page = ctx.new_page()
     page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
-    page.goto(base + "?seed=2&force=1,1,2,-1,3,4,4,2")
+    page.goto(base + "?seed=2&spots=none&force=1,1,2,-1,3,4,4,2")  # 풀숲 없이 (v1 연출만)
     page.wait_for_timeout(400)
     page.click("text=가족 대결")
     page.click("[data-act=set][data-field=pieces][data-value='2']")
@@ -232,6 +232,124 @@ def scenario(browser, base, errors):
     ctx.close()
 
 
+def scenario_v2(browser, base, errors):
+    """v2: ❓ 풀숲 야생 조우 (잡기·놓치기·볼 없음) · 로켓단 쫓아내기 · 보물상자 · 보관함 → 고르기."""
+    def ctx_page(vw=1180, vh=820, bag=None):
+        ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True)
+        ctx.add_init_script("if (!localStorage.getItem('engmon_save_v1')) localStorage.setItem('engmon_save_v1', " + json.dumps(ENGMON_SAVE) + ");")
+        if bag is not None:
+            ctx.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', " + json.dumps(json.dumps({"bag": bag})) + ");")
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        return ctx, page
+
+    def start_family(page, query):
+        page.goto(base + query)
+        page.wait_for_timeout(300)
+        page.click("text=가족 대결")
+        page.click("[data-act=set][data-field=pieces][data-value='2']")
+        page.click("[data-act=to-pick]")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        wait_idle(page)
+
+    store = lambda page, js: page.evaluate("() => { const d = window.__yut.Store.data; return " + js + "; }")
+
+    # ① 잡기 성공 (catch=1) — 가방 몬스터볼 3 → 2, 보관함에 이브이
+    ctx, page = ctx_page()
+    start_family(page, "?seed=2&force=3&spots=3:58,12:133&catch=1")  # 가디(58)는 가짜 도감에 없음 → NEW!
+    check(page.eval_on_selector_all("#spots .spot", "e => e.map(x => +x.dataset.node)") == [3, 12], "윷판에 ❓ 풀숲 2칸 (3번·12번)")
+    page.screenshot(path=str(OUT / "70-spots.png"))
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.wait_for_selector(".dest[data-move='new/3']")
+    check("🌿" in page.inner_text(".dest[data-move='new/3'] b"), "풀숲 칸으로 가는 말풍선에 🌿")
+    page.click(".dest[data-move='new/3']", force=True)
+    page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+    page.screenshot(path=str(OUT / "71-wild-menu.png"))
+    check("NEW!" in page.inner_text(".bt-plate.foe"), "처음 보는 포켓몬이면 NEW!")
+    page.click(".bt-menu .bt-ballbtn")
+    page.wait_for_selector(".bt-stamp", timeout=15000)
+    page.screenshot(path=str(OUT / "72-wild-caught.png"))
+    page.wait_for_selector(".battle", state="detached", timeout=15000)
+    wait_idle(page)
+    check(store(page, "d.collection.map(x => x.id)") == [58], "잡은 가디가 윷놀이 보관함에")
+    check(store(page, "d.bag.poke") == 2, "던진 몬스터볼 1개가 가방에서 빠짐 (3 → 2)")
+    check(page.eval_on_selector_all("#spots .spot", "e => e.length") == 1, "쓴 풀숲은 윷판에서 사라짐")
+    # 보관함 → 다음 판 고르기
+    page.click("[data-act=pause]"); page.click("[data-act=pause-home]")
+    page.click("text=가족 대결"); page.click("[data-act=to-pick]")
+    page.wait_for_timeout(200)
+    check("윷놀이에서 잡은 포켓몬" in page.inner_text("#pick-scroll") and page.query_selector(".pcard[data-id='58']") is not None, "고르기 화면에 🎯 윷놀이에서 잡은 포켓몬 (가디)")
+    page.screenshot(path=str(OUT / "73-pick-collection.png"))
+    page.goto(base + "?fast=1"); page.wait_for_timeout(300)
+    page.click("[data-act=bag]"); page.wait_for_timeout(200)
+    page.screenshot(path=str(OUT / "74-bag.png"))
+    check("보관함" in page.inner_text(".modal") and "×2" in page.inner_text(".bag-list"), "가방 창: 볼 개수와 보관함")
+    ctx.close()
+
+    # ② 3번 다 놓침 (catch=0) → 도망, 볼 3개 다 씀
+    ctx, page = ctx_page()
+    start_family(page, "?seed=2&force=3&spots=3:25&catch=0&fast=1")
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/3']", force=True)
+    for k in range(3):
+        page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+        page.click(".bt-menu .bt-ballbtn")
+    page.wait_for_selector(".battle", state="detached", timeout=20000)
+    wait_idle(page)
+    check(store(page, "d.bag.poke") == 0 and store(page, "d.collection.length") == 0, "3번 다 놓치면 도망 — 볼 3개 씀, 보관함 그대로")
+    ctx.close()
+
+    # ③ 볼이 하나도 없을 때
+    ctx, page = ctx_page(bag={"poke": 0, "great": 0, "ultra": 0, "luxury": 0, "master": 0})
+    start_family(page, "?seed=2&force=3&spots=3:25&fast=1")
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/3']", force=True)
+    page.wait_for_function("() => document.querySelector('.bt-text') && document.querySelector('.bt-text').textContent.includes('볼이 없어요')", timeout=15000)
+    check(page.query_selector(".bt-menu .bt-ballbtn") is None, "볼이 없으면 안내만 하고 볼 메뉴 없음")
+    page.wait_for_selector(".battle", state="detached", timeout=15000)
+    ctx.close()
+
+    # ④ 로켓단이 풀숲을 밟으면 쫓아냄
+    ctx, page = ctx_page()
+    page.goto(base + "?seed=2&force=1,3&spots=3:133&fast=1"); page.wait_for_timeout(300)
+    page.click("text=로켓단 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
+    page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    page.wait_for_selector("#ri-go"); page.click("#ri-go"); wait_idle(page)
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/1']", force=True)
+    page.wait_for_function("() => { const s = window.__yut.G.s; return s.spots[0].used; }", timeout=20000)
+    page.wait_for_timeout(600)
+    check(page.query_selector(".battle") is None and store(page, "d.collection.length") == 0, "로켓단이 풀숲에 멈추면 쫓아냄 (조우 화면 없음, 보관함 그대로)")
+    ctx.close()
+
+    # ⑤ 로켓단을 이기면 보물상자 — 가방에 볼이 들어가고, 새로고침해도 두 번 안 들어감
+    ctx, page = ctx_page()
+    page.goto(base + "?seed=2&fast=1&box=master,luxury,poke"); page.wait_for_timeout(300)
+    page.click("text=로켓단 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
+    page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    page.wait_for_selector("#ri-go"); page.click("#ri-go"); wait_idle(page)
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s;
+      Object.assign(s.pieces[0], { state: "done" });
+      Object.assign(s.pieces[1], { state: "board", route: "OUT", step: 19, atGoal: false });
+      s.phase = "choose"; s.pending = [3]; s.throwsLeft = 0; s.turn = 0;
+      Y.Store.data.game = s; Y.Store.save(); }""")
+    page.goto(base + "?fast=1&box=master,luxury,poke"); page.wait_for_timeout(300)
+    page.click("[data-act=resume]"); wait_idle(page)
+    page.click(".dest.goal", force=True)  # 둘 수 있는 말이 하나라 이미 골라져 있다
+    page.wait_for_selector(".win-screen .chest", timeout=20000)
+    check(store(page, "[d.bag.master, d.bag.luxury, d.bag.poke]") == [1, 1, 4], "이긴 순간 상자 볼이 가방에 (마스터 1 · 럭셔리 1 · 몬스터 3+1)")
+    check(page.query_selector(".win-btns.hidden") is not None, "상자를 열기 전에는 '한 판 더' 버튼이 숨어 있음")
+    page.screenshot(path=str(OUT / "75-box-closed.png"))
+    page.click(".win-screen .chest", force=True)  # 통통 튀는 중이라 강제로
+    page.wait_for_function("() => document.querySelectorAll('#box-balls .ballchip').length === 3", timeout=15000)
+    page.wait_for_selector(".win-btns:not(.hidden)", timeout=5000)
+    page.screenshot(path=str(OUT / "76-box-open.png"))
+    page.reload(); page.wait_for_timeout(400)
+    check(store(page, "[d.bag.master, d.bag.luxury, d.bag.poke]") == [1, 1, 4], "새로고침해도 상자 볼이 두 번 안 들어감")
+    ctx.close()
+
+
 def main():
     httpd = serve()
     base = f"http://127.0.0.1:{httpd.server_port}/index.html"
@@ -239,8 +357,10 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        scenario(browser, base, errors)
-        if "--scenario-only" in sys.argv:
+        if "--v2-only" not in sys.argv:
+            scenario(browser, base, errors)
+        scenario_v2(browser, base, errors)
+        if "--scenario-only" in sys.argv or "--v2-only" in sys.argv:
             browser.close()
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
             httpd.shutdown()

@@ -236,6 +236,8 @@
       turnNo: 1,
       winner: null,
       lastThrow: null,
+      // ❓ 풀숲 칸 — 어느 칸·어떤 포켓몬인지는 화면 쪽이 정해서 넘긴다 (엔진은 포켓몬 데이터를 모른다)
+      spots: (o.spots || []).map(sp => ({ node: sp.node, id: sp.id, used: false })),
     };
     s.teams.forEach((t, ti) => {
       for (let k = 0; k < n; k++) s.pieces.push({ team: ti, slot: k, state: "wait", route: "OUT", step: 0, atGoal: false, stage: 0 });
@@ -319,6 +321,16 @@
         p.stage = target;
       }
     });
+    // ❓ 풀숲 — 딱 멈춘 칸이 아직 안 쓴 풀숲이면 야생 포켓몬 (지나가기·골인 이동은 해당 없음, 한 칸에 한 번)
+    // 진화한 뒤에 나오도록 evolve 다음에 둔다
+    if (!m.finish && s.spots) {
+      const sp = s.spots.find(x => !x.used && x.node === m.to.node);
+      if (sp) {
+        sp.used = true;
+        sp.by = s.turn;
+        ev.push({ type: "wild", team: s.turn, node: sp.node, id: sp.id, pieces: m.pieces.slice() });
+      }
+    }
     if (m.finish) ev.push({ type: "finish", team: s.turn, pieces: m.pieces.slice() });
     if (m.capture.length) ev.push({ type: "bonus", team: s.turn });
 
@@ -369,6 +381,7 @@
     else {
       if (!m.to.atGoal && (m.to.node === 5 || m.to.node === 10 || m.to.node === 22)) v += 40;
       v += 25 * m.stack.length;
+      if (state.spots && state.spots.some(sp => !sp.used && sp.node === m.to.node)) v += 15; // ❓ 풀숲을 먼저 밟아 쫓아내기
       if (level !== "easy") v -= 120 * threat(state, m.to.node, team) * (n + m.stack.length);
     }
     if (level !== "easy" && m.unit !== "new") v += 80 * threat(state, m.from.node, team) * n; // 위험한 칸에서 피하기
@@ -399,6 +412,8 @@
       if (["throw", "choose", "over"].indexOf(s.phase) < 0 || !Array.isArray(s.pending)) return false;
       if (s.pieces.length !== s.teams.length * s.settings.pieces) return false;
       if (s.teams.some(t => !Array.isArray(t.paths) || t.paths.length !== s.settings.pieces || t.paths.some(p => !p.length))) return false;
+      if (s.spots != null && (!Array.isArray(s.spots) || s.spots.some(sp =>
+        !sp || !NODES[sp.node] || !(sp.id >= 1 && sp.id <= 1025) || typeof sp.used !== "boolean"))) return false;
       return s.pieces.every(p =>
         ["wait", "board", "done"].indexOf(p.state) >= 0 && ROUTES[p.route] &&
         p.step >= 0 && p.step < ROUTES[p.route].length && p.team >= 0 && p.team < s.teams.length) &&
@@ -406,12 +421,80 @@
     } catch (e) { return false; }
   }
 
+  /* ---------- ❓ 풀숲 칸 고르기 ----------
+   * 바깥 길의 보통 칸 중에서 (출발 바로 옆 1·2번, 모서리·방·참먹이, 들어가기 어려운 대각선은 뺀다)
+   * 두 칸이 서로 붙지 않게 */
+  const SPOT_NODES = [3, 4, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19];
+  const neighbors = {};
+  LINES.forEach(l => l.forEach((n, i) => {
+    if (i > 0) { (neighbors[n] = neighbors[n] || []).push(l[i - 1]); (neighbors[l[i - 1]] = neighbors[l[i - 1]] || []).push(n); }
+  }));
+  function pickSpotNodes(rnd, count) {
+    const out = [];
+    for (let tries = 0; out.length < (count || 2) && tries < 200; tries++) {
+      const n = SPOT_NODES[Math.floor(rnd() * SPOT_NODES.length)];
+      if (out.indexOf(n) >= 0 || out.some(o => (neighbors[o] || []).indexOf(n) >= 0)) continue;
+      out.push(n);
+    }
+    return out;
+  }
+  // 화면 쪽에서 쓰는 시드 난수 함수 (판 흐름과 따로)
+  function rng(seed) {
+    let st = (seed >>> 0) || 1;
+    return () => { const r = rand(st); st = r[1]; return r[0]; };
+  }
+
+  /* ---------- 보물상자·볼·야생 포켓몬 확률 (v2) ----------
+   * 볼 5단계: 상자에서 50·30·10·5·5, 잡을 확률 60% + 단계마다 5% (마스터볼만 원작처럼 100%) */
+  const BALLS = ["poke", "great", "ultra", "luxury", "master"];
+  const BALL_INFO = {
+    poke: { name: "몬스터볼", img: "poke-ball", odds: 50 },
+    great: { name: "슈퍼볼", img: "great-ball", odds: 30 },
+    ultra: { name: "하이퍼볼", img: "ultra-ball", odds: 10 },
+    luxury: { name: "럭셔리볼", img: "luxury-ball", odds: 5 },
+    master: { name: "마스터볼", img: "master-ball", odds: 5 },
+  };
+  const WILD_ODDS = { c: 60, r: 25, u: 12, l: 3 }; // 잉글리시몬 모험 조우와 같게
+  const Rewards = {
+    BALLS, BALL_INFO, WILD_ODDS, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
+    catchRate(ball) { return ball === "master" ? 1 : 0.6 + 0.05 * Math.max(0, BALLS.indexOf(ball)); },
+    // 상자 하나 = 볼 n개, 한 개씩 따로 뽑는다
+    rollBox(n, rnd) {
+      const total = BALLS.reduce((t, b) => t + BALL_INFO[b].odds, 0);
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        let x = rnd() * total;
+        const b = BALLS.find(k => (x -= BALL_INFO[k].odds) < 0) || "poke";
+        out.push(b);
+      }
+      return out;
+    },
+    // 던지기: 결과를 먼저 뽑고 흔드는 횟수를 맞춘다 (성공 3번, 실패 1~3번)
+    throwBall(ball, rnd) {
+      const ok = rnd() < Rewards.catchRate(ball);
+      return { ok, shakes: ok ? 3 : 1 + Math.floor(rnd() * 3) };
+    },
+    // 야생 포켓몬: 희귀도 60·25·12·3 → 절반은 아직 없는 포켓몬 먼저. pools = { c:[ids], r:[...], u:[...], l:[...] }
+    rollWild(pools, owned, rnd) {
+      const has = owned instanceof Set ? owned : new Set(owned || []);
+      const keys = Object.keys(WILD_ODDS).filter(k => pools[k] && pools[k].length);
+      const total = keys.reduce((t, k) => t + WILD_ODDS[k], 0);
+      let x = rnd() * total;
+      const k = keys.find(q => (x -= WILD_ODDS[q]) < 0) || keys[0];
+      let pool = pools[k];
+      const fresh = pool.filter(id => !has.has(id));
+      if (fresh.length && rnd() < Rewards.UNOWNED_FIRST) pool = fresh;
+      return pool[Math.floor(rnd() * pool.length)];
+    },
+  };
+
   const Yut = {
     NODES, NODE_KIND, NODE_NAME, LINES, ROUTES, RESULTS, BACKDO, FLAT_P,
-    rand, throwSticks, sticksFor, resultProbs, settle, stepMove, posOf, unitsOf, waitingOf,
+    rand, rng, throwSticks, sticksFor, resultProbs, settle, stepMove, posOf, unitsOf, waitingOf,
     legalMoves, applyThrow, applyMove, newGame, teamDone,
     evoPath, progressOf, stageFor, formOf,
     remainingOf, threat, cpuScore, cpuChoose, validate, clone,
+    SPOT_NODES, pickSpotNodes, Rewards,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = Yut;
   else root.Yut = Yut;

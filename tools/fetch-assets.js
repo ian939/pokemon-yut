@@ -24,7 +24,7 @@ const CAST = {
   rocket: [24, 109, 52, 202],                  // 로켓단 말: 아보크·또가스·나옹·마자용
   friends: [25, 133, 143, 54, 132, 39, 35, 175], // 빌려온 친구
 };
-const BALLS = ["poke-ball", "great-ball", "ultra-ball", "master-ball"];
+const BALLS = ["poke-ball", "great-ball", "ultra-ball", "luxury-ball", "master-ball"]; // v2 볼 5단계
 const ROCKET_IMG = ["rocket-jessie", "rocket-james", "rocket-meowth", "rocket-wobbuffet"];
 
 const jobs = [];
