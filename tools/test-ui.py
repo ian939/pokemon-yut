@@ -10,6 +10,7 @@
   5. 새 버전 감지: 서버 파일의 APP_VERSION 이 다르면 알림
   6. 누르는 것 44×44px 이상, 가로 스크롤 없음 (폰 390×844 포함)
   7. 콘솔 오류 0개
+  8. v3: ✨ 기술 켜기/끄기 · 배우기 · 쓰기(바로·상대 말·결과·빈 칸) · 저절로 기술 · 잡은 포켓몬으로 말 바꾸기 · 로켓단 그물 · 기술 도감
 """
 import functools
 import http.server
@@ -270,6 +271,8 @@ def scenario_v2(browser, base, errors):
     page.click(".bt-menu .bt-ballbtn")
     page.wait_for_selector(".bt-stamp", timeout=15000)
     page.screenshot(path=str(OUT / "72-wild-caught.png"))
+    page.wait_for_selector(".bt-menu [data-key='later']", timeout=15000)  # v3: 지금 말로 쓸까요? → 나중에
+    page.click(".bt-menu [data-key='later']")
     page.wait_for_selector(".battle", state="detached", timeout=15000)
     wait_idle(page)
     check(store(page, "d.collection.map(x => x.id)") == [58], "잡은 가디가 윷놀이 보관함에")
@@ -312,7 +315,7 @@ def scenario_v2(browser, base, errors):
 
     # ④ 로켓단이 풀숲을 밟으면 쫓아냄
     ctx, page = ctx_page()
-    page.goto(base + "?seed=2&force=1,3&spots=3:133&fast=1"); page.wait_for_timeout(300)
+    page.goto(base + "?seed=2&force=1,3&spots=3:133&fast=1&catch=0"); page.wait_for_timeout(300)
     page.click("text=로켓단 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
     page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
     page.wait_for_selector("#ri-go"); page.click("#ri-go"); wait_idle(page)
@@ -320,7 +323,7 @@ def scenario_v2(browser, base, errors):
     page.click(".dest[data-move='new/1']", force=True)
     page.wait_for_function("() => { const s = window.__yut.G.s; return s.spots[0].used; }", timeout=20000)
     page.wait_for_timeout(600)
-    check(page.query_selector(".battle") is None and store(page, "d.collection.length") == 0, "로켓단이 풀숲에 멈추면 쫓아냄 (조우 화면 없음, 보관함 그대로)")
+    check(page.query_selector(".battle") is None and store(page, "d.collection.length") == 0, "로켓단이 풀숲에 멈추면 그물 (조우 화면 없음, 내 보관함 그대로)")
     ctx.close()
 
     # ⑤ 로켓단을 이기면 보물상자 — 가방에 볼이 들어가고, 새로고침해도 두 번 안 들어감
@@ -379,6 +382,220 @@ def scenario_v2(browser, base, errors):
     ctx.close()
 
 
+def scenario_v3(browser, base, errors):
+    """v3: ✨ 기술 (배우기·쓰기·대상 고르기·저절로 기술) · 🔄 잡은 포켓몬으로 말 바꾸기 · 😼 로켓단 그물 · 기술 끄기 · 기술 도감."""
+    def ctx_page(vw=1180, vh=820):
+        ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True)
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
+        return ctx, page
+
+    def start(page, query, mode="family", pieces=4, skills=True):
+        page.goto(base + query)
+        page.wait_for_timeout(300)
+        page.click("text=" + ("가족 대결" if mode == "family" else "로켓단 대결"))
+        page.click(f"[data-act=set][data-field=pieces][data-value='{pieces}']")
+        if not skills:
+            page.click("[data-act=set][data-field=skills][data-value='false']")
+        page.click("[data-act=to-pick]")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        if mode == "family":
+            page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        else:
+            page.wait_for_selector("#ri-go"); page.click("#ri-go")
+        wait_idle(page)
+
+    # 판 상태를 바로 만든다: at(i, 칸) = 말 i 를 그 칸에 (바깥길로 온 것으로)
+    def inject(page, js):
+        page.evaluate("""() => { const Y = window.__yut, G = Y.G, s = G.s;
+          const at = (i, n, walk) => Object.assign(s.pieces[i], { state: 'board', atGoal: false, walk: walk || 0 }, Y.Yut.settle('OUT', n));
+          const fresh = (team, phase, pending) => { s.turn = team; s.turnNo += 2; s.phase = phase || 'throw'; s.throwsLeft = phase === 'choose' ? 0 : 1; s.pending = pending || []; };
+          """ + js + """;
+          Y.Act['skill-cancel'](); }""")
+        wait_idle(page)
+
+    ev = lambda page, js: page.evaluate("() => { const Y = window.__yut, G = Y.G, s = G.s; return " + js + "; }")
+
+    def use_skill(page, key):
+        page.wait_for_selector("#btn-skill:not([hidden])", timeout=10000)
+        page.click("#btn-skill")
+        page.wait_for_selector(".skill-item[data-act=skill-pick]", timeout=5000)
+        items = page.query_selector_all(".skill-item[data-act=skill-pick]")
+        name = ev(page, f"Y.Yut.SKILLS['{key}'].name")
+        pick = next((it for it in items if name in it.inner_text()), None)
+        check(pick is not None, f"기술 창에 {name}")
+        if pick:
+            pick.click()
+
+    # ① 설정: 두 대결 모두 ✨ 기술 켜기/끄기 (처음 게임 설정)
+    ctx, page = ctx_page()
+    for mode in ("가족 대결", "로켓단 대결"):
+        page.goto(base + "?fast=1"); page.wait_for_timeout(250)
+        page.click("text=" + mode)
+        on = page.query_selector("[data-act=set][data-field=skills][data-value='true'].on")
+        off = page.query_selector("[data-act=set][data-field=skills][data-value='false']")
+        check(on is not None and off is not None, f"{mode} 준비 화면에 ✨ 기술 켜기/끄기 (처음엔 켜짐)")
+    page.screenshot(path=str(OUT / "80-setup-skills.png"), full_page=True)
+    ctx.close()
+
+    # ② 기술 끄기 — 전설(early)이어도 안 배우고, 기술 버튼이 없다
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&early=1&fast=1", skills=False)
+    check(ev(page, "[s.settings.skills, Y.Store.data.settings.skills, s.pieces.every(p => !p.skill)]") == [False, False, True], "기술 끄기: 판·저장에 들어가고 아무도 기술을 안 배움")
+    inject(page, "at(0, 3)")
+    check(page.query_selector("#btn-skill:not([hidden])") is None, "기술 끄기: ✨ 기술 버튼 없음")
+    ctx.close()
+
+    # ③ 기술 쓰기 — 니트로차지(바로) · 파도타기(상대 말 고르기) · 희망사항(결과 고르기) · 스텔스록(빈 칸 고르기)
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&early=1&pools=nitro,surf,wish,rock|iron,moon,bond,counter&fast=1")
+    check(ev(page, "s.pieces.map(p => p.skill).join(',')") == "nitro,surf,wish,rock,iron,moon,bond,counter", "전설(early): 판을 시작할 때 기술을 배움")
+    inject(page, "at(0, 3)")
+    page.screenshot(path=str(OUT / "81-skill-button.png"))
+    measure(page, "✨ 기술 버튼이 있는 윷판")
+    use_skill(page, "nitro")
+    page.wait_for_selector(".cutin", timeout=5000)
+    page.screenshot(path=str(OUT / "82-cutin.png"))
+    wait_idle(page)
+    check(ev(page, "[Y.Yut.posOf(s.pieces[0]), s.pieces[0].used]") == [5, True], "니트로차지: 바로 2칸 (3 → 5), 한 번 쓰면 끝")
+    check(page.query_selector("#btn-skill:not([hidden])") is None, "한 차례에 기술 하나 — 버튼이 사라짐")
+    check(page.query_selector(".pchip[data-piece='0'] .sk.used") is not None, "다 쓴 말 칩에 ✓")
+    # 파도타기: 반짝이는 상대 말을 누른다
+    inject(page, "fresh(0); at(1, 12); at(5, 9)")
+    use_skill(page, "surf")
+    page.wait_for_selector("#dests .dest.skill-t", timeout=5000)
+    rings = ev(page, "[...document.querySelectorAll('#dests .dest.skill-t')].map(d => +d.dataset.node)")
+    check(rings == [9], f"파도타기: 밀 수 있는 상대 말만 반짝 ({rings})")
+    check(page.inner_text("#btn-skill") == "✖ 취소", "대상 고르는 중엔 ✖ 취소 버튼")
+    page.screenshot(path=str(OUT / "83-target.png"))
+    measure(page, "기술 대상 고르기")
+    page.click("#dests .dest.skill-t", force=True)
+    wait_idle(page)
+    check(ev(page, "Y.Yut.posOf(s.pieces[5])") == 7, "파도타기: 상대 말이 2칸 뒤로 (9 → 7)")
+    # 희망사항: 결과 고르기 창
+    inject(page, "fresh(0); at(2, 6)")
+    use_skill(page, "wish")
+    page.wait_for_selector(".res-pick .btn", timeout=5000)
+    page.screenshot(path=str(OUT / "84-wish.png"))
+    measure(page, "희망사항 결과 고르기")
+    page.click(".res-pick .btn[data-v='5']")
+    wait_idle(page)
+    check(ev(page, "[s.phase, s.pending.join(','), s.throwsLeft]") == ["choose", "5", 0], "희망사항: 모를 골라도 한 번 더 없음")
+    # 스텔스록: 빈 칸 고르기 → 윷판에 🪨
+    inject(page, "fresh(0); at(3, 2)")
+    use_skill(page, "rock")
+    page.wait_for_selector("#dests .dest.skill-t[data-node='10']", timeout=5000)
+    page.click("#dests .dest.skill-t[data-node='10']", force=True)
+    wait_idle(page)
+    check(ev(page, "JSON.stringify(s.traps)") == '[{"node":10,"kind":"rock","team":0}]' and page.query_selector("#traps .trap[data-node='10']") is not None, "스텔스록: 10번 칸에 바위")
+    page.screenshot(path=str(OUT / "85-rock.png"))
+    # 저절로 기술: 🛡️ 철벽(튕겨 냄) · 🌙 달빛(한 칸 뒤로) · 👻 길동무(잡은 말도 집으로)
+    inject(page, "fresh(0, 'choose', [3]); s.traps = []; [0,1,2,3,5,6,7].forEach(i => { if (i < 4) s.pieces[i].state = 'wait'; }); at(0, 4); at(4, 7)")
+    page.click(".unit.can[data-node='4']", force=True)
+    page.click(".dest[data-move='n4/3']", force=True)
+    page.wait_for_selector(".cutin", timeout=8000)
+    page.screenshot(path=str(OUT / "86-iron.png"))
+    wait_idle(page)
+    check(ev(page, "[Y.Yut.posOf(s.pieces[0]), s.pieces[4].state, s.pieces[4].used]") == [4, "board", True], "철벽: 잡으러 간 말이 제자리로 튕겨 나감")
+    inject(page, "fresh(0, 'choose', [3]); s.pieces[4].state = 'wait'; at(0, 4); at(5, 7)")
+    page.click(".unit.can[data-node='4']", force=True)
+    page.click(".dest[data-move='n4/3']", force=True)
+    wait_idle_or_popup(page)
+    page.wait_for_function("() => !window.__yut.G.busy || document.querySelector('.bt-skip')", timeout=20000)
+    while page.query_selector(".bt-skip"):
+        page.click(".bt-skip", force=True); page.wait_for_timeout(200)
+    wait_idle(page)
+    check(ev(page, "[Y.Yut.posOf(s.pieces[5]), s.pieces[5].used]") == [6, True], "달빛: 잡혀도 집 대신 한 칸 뒤로 (7 → 6)")
+    inject(page, "fresh(0, 'choose', [3]); s.pieces[5].state = 'wait'; at(0, 4); at(6, 7)")
+    page.click(".unit.can[data-node='4']", force=True)
+    page.click(".dest[data-move='n4/3']", force=True)
+    page.wait_for_function("() => !window.__yut.G.busy || document.querySelector('.bt-skip')", timeout=20000)
+    while page.query_selector(".bt-skip"):
+        page.click(".bt-skip", force=True); page.wait_for_timeout(200)
+    wait_idle(page)
+    check(ev(page, "[s.pieces[6].state, s.pieces[0].state]") == ["wait", "wait"], "길동무: 잡힌 말과 잡은 말이 모두 집으로")
+    # 🥊 카운터: 파도타기를 되돌림
+    inject(page, "fresh(0); s.pieces[1].used = false; at(1, 12); at(5, 9); at(7, 15)")
+    use_skill(page, "surf")
+    page.wait_for_selector("#dests .dest.skill-t[data-node='9']", timeout=5000)
+    page.click("#dests .dest.skill-t[data-node='9']", force=True)
+    wait_idle(page)
+    check(ev(page, "[Y.Yut.posOf(s.pieces[5]), Y.Yut.posOf(s.pieces[1]), s.pieces[7].used]") == [9, 10, True], "카운터: 상대는 그대로, 파도타기를 쓴 말이 2칸 밀림")
+    ctx.close()
+
+    # ④ 5칸마다 진화 → 마지막 모습에서 기술을 배움 (배우는 알림)
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&pools=nitro,nitro,nitro,nitro&fast=1")
+    inject(page, "fresh(0, 'choose', [1]); Object.assign(s.pieces[0], { stage: 1 }); at(0, 9, 9)")
+    page.click(".unit.can[data-node='9']", force=True)
+    page.click(".dest[data-move='n9/1']", force=True)
+    page.wait_for_function("() => document.querySelector('#hint').textContent.includes('배웠다')", timeout=15000)
+    page.screenshot(path=str(OUT / "87-learn.png"))
+    wait_idle(page)
+    check(ev(page, "[s.pieces[0].stage, s.pieces[0].skill]") == [2, "nitro"], "10칸 → 마지막 모습 + 기술 배움")
+    check(page.query_selector(".pchip[data-piece='0'] .sk") is not None, "배운 기술이 팀 카드 칩 모서리에")
+    ctx.close()
+
+    # ⑤ 🔄 잡은 포켓몬으로 바로 말 바꾸기 (가족 대결)
+    ctx, page = ctx_page()
+    start(page, "?seed=2&force=3&spots=3:133&catch=1&fast=1&swappool=rain")
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/3']", force=True)
+    page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+    page.click(".bt-menu .bt-ballbtn")
+    page.wait_for_selector(".bt-menu .bt-swapbtn", timeout=15000)
+    page.screenshot(path=str(OUT / "88-swap-menu.png"))
+    n_opts = len(page.query_selector_all(".bt-menu .bt-swapbtn"))
+    check(n_opts >= 1, f"잡으면 '지금 말로 쓸까요?' — 바꿀 말 {n_opts}개")
+    moved = ev(page, "s.pieces.findIndex((p, i) => p.team === 0 && p.state === 'board')")
+    page.click(f".bt-menu .bt-swapbtn[data-key='{moved}']")
+    page.wait_for_selector(".battle", state="detached", timeout=20000)
+    wait_idle(page)
+    check(ev(page, f"[Y.Yut.formOf(s, {moved}), s.teams[0].picks.indexOf(133) >= 0, Y.Yut.posOf(s.pieces[{moved}])]") == [133, True, 3], "풀숲에 선 말이 그 자리에서 이브이로 바뀜")
+    check(ev(page, "Y.Store.data.collection.map(x => x.id).join(',')") == "133", "잡은 포켓몬은 보관함에도")
+    page.screenshot(path=str(OUT / "89-swapped.png"))
+    ctx.close()
+    # 나중에 → 말은 그대로
+    ctx, page = ctx_page()
+    start(page, "?seed=2&force=3&spots=3:133&catch=1&fast=1")
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/3']", force=True)
+    page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+    page.click(".bt-menu .bt-ballbtn")
+    page.wait_for_selector(".bt-menu [data-key='later']", timeout=15000)
+    page.click(".bt-menu [data-key='later']")
+    page.wait_for_selector(".battle", state="detached", timeout=20000)
+    wait_idle(page)
+    check(ev(page, "s.teams[0].picks.indexOf(133) < 0 && Y.Store.data.collection.length === 1"), "나중에: 말은 그대로, 보관함에만")
+    ctx.close()
+
+    # ⑥ 😼 로켓단도 풀숲에서 그물로 잡아 자기 말로 (catch=1) · 그물이 찢어지면 도망 (catch=0)
+    for catch, want in (("1", True), ("0", False)):
+        ctx, page = ctx_page(820, 1180)
+        start(page, f"?seed=2&force=1,3&spots=3:133&catch={catch}&fast=1", mode="rocket", pieces=2)
+        page.click("#btn-throw", force=True); wait_idle(page)
+        page.click(".dest[data-move='new/1']", force=True)
+        page.wait_for_function("() => window.__yut.G.s.spots[0].used", timeout=20000)
+        page.wait_for_function("() => !window.__yut.G.busy && !window.__yut.G.swapAfter", timeout=20000)
+        page.wait_for_timeout(400)
+        got = ev(page, "s.teams[1].picks.indexOf(133) >= 0")
+        check(got == want and ev(page, "Y.Store.data.collection.length") == 0 and page.query_selector(".battle") is None,
+              "로켓단 그물: " + ("잡아서 로켓단 말이 이브이로 (내 보관함엔 없음)" if want else "찢어지면 도망, 로켓단 말 그대로"))
+        if want:
+            page.screenshot(path=str(OUT / "90-rocket-net.png"))
+        ctx.close()
+
+    # ⑦ 기술 도감 (처음 화면)
+    ctx, page = ctx_page(390, 844)
+    page.goto(base + "?fast=1"); page.wait_for_timeout(300)
+    page.click("[data-act=skilldex]"); page.wait_for_timeout(200)
+    check(len(page.query_selector_all(".dex-card")) == 27, "기술 도감: 27개")
+    page.screenshot(path=str(OUT / "91-skilldex.png"))
+    measure(page, "기술 도감 (폰)")
+    ctx.close()
+
+
 def main():
     httpd = serve()
     base = f"http://127.0.0.1:{httpd.server_port}/index.html"
@@ -386,10 +603,12 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        if "--v2-only" not in sys.argv:
+        if "--v2-only" not in sys.argv and "--v3-only" not in sys.argv:
             scenario(browser, base, errors)
-        scenario_v2(browser, base, errors)
-        if "--scenario-only" in sys.argv or "--v2-only" in sys.argv:
+        if "--v3-only" not in sys.argv:
+            scenario_v2(browser, base, errors)
+        scenario_v3(browser, base, errors)
+        if "--scenario-only" in sys.argv or "--v2-only" in sys.argv or "--v3-only" in sys.argv:
             browser.close()
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
             httpd.shutdown()

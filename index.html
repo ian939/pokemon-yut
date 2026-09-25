@@ -194,6 +194,9 @@ img { -webkit-user-drag: none; }
 .game.land.tight .btn.throw { min-height: 56px; }
 .game.land.tight .hint { min-height: calc(var(--t1) * 1.45 * 2 + 20px); }
 .game.land.tighter .mat { display: none; } /* 결과는 결과 팝업으로 보이니 멍석은 빼도 된다 */
+/* 가로: 안내 칸은 3줄까지 — 판을 잴 때는 3줄로 재서, 긴 알림이 떠도 패널이 넘쳐 위쪽 줄(가방)을 덮지 않게 */
+.game.land .hint { max-height: calc(var(--t1) * 1.45 * 3 + 20px); overflow: hidden; }
+.game.land .hint.measure { height: calc(var(--t1) * 1.45 * 3 + 20px); }
 /* 세로 화면: 안내 칸 높이를 고정 — 글이 길어져도 판 크기가 들썩이지 않게 (3줄, 폰은 4줄) */
 .game.port .hint { height: calc(var(--t1) * 1.45 * 3 + 20px); min-height: 0; overflow: hidden; }
 @media (max-width: 520px) {
@@ -485,6 +488,90 @@ body.game-land #toast.show { transform: none; }
 .ballchip.pop { animation: popIn .4s cubic-bezier(.2,1.6,.4,1) both; }
 .ballchip.b-luxury, .ballchip.b-master { background: #fff3c4; box-shadow: 0 3px 0 var(--ink), 0 0 14px 4px rgba(245,184,46,.8); }
 .win-btns.hidden { display: none; }
+/* ===== v3: ✨ 기술 · 🔄 말 바꾸기 ===== */
+.btn[hidden] { display: none !important; }
+.card .note { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+/* 던지기 + ✨ 기술 한 줄 — 칸이 좁으면(폰) 기술 버튼이 아래 줄로 내려간다. ▶ 커서와 글자는 한 줄로 */
+.act-row { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.act-row .btn { flex-wrap: nowrap; }
+.act-row .throw { flex: 1 1 140px; width: auto; min-width: 0; }
+.btn.skill-btn { flex: 1 0 auto; width: auto; padding-left: 14px; padding-right: 14px; background: var(--gold); color: var(--ink); white-space: nowrap; }
+.game.land .btn.skill-btn { flex-grow: 0; }
+.btn.skill-btn.cancel { background: var(--paper); }
+.game.land.tight .btn.skill-btn { min-height: 56px; }
+/* 팀 카드 칩: ✨ 기술(왼쪽 위) · 효과(오른쪽 위) · 다음 진화까지 점 5개(아래) — 그림 가운데는 비운다 */
+.pchip .sk { position: absolute; top: -7px; left: -7px; width: 42%; aspect-ratio: 1; border-radius: 50%; background: var(--gold); border: 2px solid var(--ink); display: grid; place-items: center; font-size: 11px; line-height: 1; z-index: 2; }
+.pchip .sk.wait { opacity: .45; }
+.pchip .sk.used { background: #c9d3df; color: var(--ink-soft); font-weight: 900; }
+.pchip .st { position: absolute; top: -7px; right: -7px; font-size: 14px; line-height: 1; z-index: 2; filter: drop-shadow(0 1px 0 #fff); }
+.pchip .pips { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); display: flex; gap: 2px; z-index: 2; }
+.pchip .pips i { width: 5px; height: 5px; border-radius: 2px; background: rgba(255,255,255,.85); box-shadow: 0 0 0 1px var(--ink-soft); }
+.pchip .pips i.on { background: var(--gold); box-shadow: 0 0 0 1px var(--ink); }
+.pchip.target { box-shadow: 0 0 0 3px var(--violet), 0 0 14px 4px rgba(122,79,181,.7); animation: glowChip 1s ease-in-out infinite; }
+.tcard .tfx { font-family: var(--font); font-size: 13px; font-weight: 900; color: var(--ink); background: var(--paper-2); border: 2px solid var(--ink); border-radius: 8px; padding: 0 5px; line-height: 1.4; }
+.tcard .tn { flex-wrap: wrap; row-gap: 2px; } /* 효과 표시가 많으면 다음 줄로 (카드 밖으로 안 나가게) */
+@media (max-width: 520px) {
+  /* 폰: 안내 칸이 좁아서 도트 글꼴(22px)은 한 줄에 서너 글자뿐 — 낱말이 쪼개지지 않게 보통 글꼴로 */
+  .game.port .hint { font-family: var(--font); font-size: 15px; line-height: 1.45; padding: 8px 22px 8px 10px; height: calc(15px * 1.45 * 5 + 16px); }
+  .game.port .hint.say::after { right: 6px; bottom: 4px; font-size: 12px; }
+}
+/* 윷판: 말의 효과 표시(왼쪽 위) · 함정 칸 */
+.unit .badge-s { position: absolute; top: -6%; left: -6%; width: 34%; aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,.92); border: 2px solid var(--ink); display: grid; place-items: center; font-size: max(11px, calc(var(--bs) * .024)); z-index: 3; }
+.unit.flying { transition: left calc(.6s * var(--spd)) ease-in-out, top calc(.6s * var(--spd)) ease-in-out; z-index: 55; }
+.unit.flying .front { animation: flyUp calc(.6s * var(--spd)) ease-in-out; }
+.unit.bump .front { animation: bump calc(.4s * var(--spd)) ease-in-out; }
+.trap { position: absolute; width: 7.4%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 7; pointer-events: none; display: grid; place-items: center;
+  border-radius: 50%; background: rgba(255,255,255,.55); box-shadow: 0 0 0 3px var(--tc), 0 3px 0 3px rgba(38,49,71,.25); font-size: max(16px, calc(var(--bs) * .042)); }
+.dest.skill-t { box-shadow: 0 0 0 3px var(--violet), 0 0 18px 4px rgba(122,79,181,.8); border-color: #fff; }
+.dest.skill-t b { background: var(--violet); color: #fff; }
+.dest.skill-t.hit { box-shadow: 0 0 0 3px var(--red), 0 0 18px 4px rgba(229,72,77,.8); }
+.dest.skill-t.hit b { background: var(--red); }
+.fog { position: absolute; inset: 0; z-index: 65; pointer-events: none; background: radial-gradient(circle, rgba(60,70,90,.55), rgba(60,70,90,.2)); animation: fogOut calc(1.2s * var(--spd)) ease-out forwards; }
+.rainfx { position: absolute; inset: 0; z-index: 65; pointer-events: none; background: repeating-linear-gradient(105deg, rgba(120,170,255,.0) 0 14px, rgba(120,170,255,.5) 14px 16px); animation: rainOut calc(1.2s * var(--spd)) linear forwards; }
+/* 기술 장면 — 화면 가운데를 가로지르는 띠 */
+.cutin { position: fixed; inset: 0; z-index: 370; display: grid; place-items: center; background: rgba(12,18,30,.45); animation: fadeIn calc(.15s * var(--spd)) ease both; }
+.cutin.out { opacity: 0; transition: opacity calc(.2s * var(--spd)); }
+.ci-band { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3vw, 36px); padding: clamp(10px, 2.4vh, 22px) 16px;
+  background: var(--tc) repeating-linear-gradient(120deg, rgba(255,255,255,.18) 0 18px, rgba(255,255,255,0) 18px 36px);
+  border-top: 5px solid var(--ink); border-bottom: 5px solid var(--ink); box-shadow: 0 0 0 4px #fff inset; animation: ciIn calc(.35s * var(--spd)) cubic-bezier(.2,1.2,.4,1) both; }
+.ci-mon { position: relative; width: clamp(96px, 20vmin, 180px); aspect-ratio: 1; flex: none; filter: drop-shadow(0 6px 0 rgba(38,49,71,.35)); animation: ciMon calc(.5s * var(--spd)) ease-out both; }
+.ci-text { display: grid; gap: 4px; color: #fff; text-shadow: 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink); min-width: 0; }
+.ci-text b { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); }
+.ci-text strong { font-family: var(--pixel); font-weight: 700; font-size: var(--t4); line-height: 1.05; white-space: nowrap; }
+.ci-text em { font-style: normal; font-family: var(--pixel); font-weight: 700; font-size: var(--t1); max-width: 36ch; }
+/* 기술 고르기 창 */
+.skill-list { display: grid; gap: 10px; margin: 6px 0 10px; text-align: left; }
+.skill-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 76px; padding: 8px 14px 8px 12px; border: 3px solid var(--ink); border-radius: 14px; background: var(--paper);
+  box-shadow: inset 7px 0 0 var(--tc), 0 4px 0 var(--ink); text-align: left; }
+.skill-item:active { transform: translateY(3px); box-shadow: inset 7px 0 0 var(--tc), 0 1px 0 var(--ink); }
+.skill-item.info { box-shadow: inset 7px 0 0 var(--tc); border-style: dashed; cursor: default; }
+.si-pic { position: relative; width: 56px; height: 56px; flex: none; }
+.si-body { display: grid; gap: 2px; min-width: 0; }
+.si-body b { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); }
+.si-body b i { font-style: normal; font-family: var(--font); font-size: 12px; font-weight: 900; color: #fff; background: var(--tc); border: 2px solid var(--ink); border-radius: 8px; padding: 0 6px; margin-left: 6px; vertical-align: middle; }
+.si-body small { font-size: 14px; font-weight: 700; color: var(--ink-soft); line-height: 1.45; }
+.res-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 4px; }
+.res-pick .btn { min-height: 86px; flex-direction: column; gap: 2px; padding: 6px; }
+.res-pick img { width: 46px; height: 46px; object-fit: contain; }
+.res-pick .btn.hot { box-shadow: inset 0 -4px 0 rgba(38,49,71,.14), 0 4px 0 var(--ink), 0 0 0 4px var(--gold); }
+.bt-swapbtn .sw-pic { position: relative; display: inline-block; width: 40px; height: 40px; }
+.bt-swapbtn em { font-style: normal; font-family: var(--font); font-size: 13px; font-weight: 900; color: #fff; background: var(--violet); border: 2px solid var(--ink); border-radius: 8px; padding: 0 6px; }
+.bt-swapbtn em.home { background: var(--ink-soft); }
+/* 기술 도감 */
+.dex-types { display: grid; gap: 8px; text-align: left; margin: 8px 0 12px; }
+.dex-row { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: start; }
+.dex-row > span { font-size: 13px; font-weight: 900; color: #fff; background: var(--tc); border: 2px solid var(--ink); border-radius: 10px; padding: 4px 6px; text-align: center; }
+.dex-cards { display: grid; gap: 6px; }
+.dex-card { background: var(--paper-2); border-radius: 10px; padding: 6px 10px; font-size: 14px; font-weight: 700; line-height: 1.45; color: var(--ink-soft); }
+.dex-card b { color: var(--ink); font-size: 15px; }
+.dex-card.unseen { opacity: .55; }
+.dex-card i { font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: var(--ink-soft); border-radius: 6px; padding: 0 5px; margin-left: 4px; }
+@keyframes flyUp { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-45%) scale(1.15); } }
+@keyframes bump { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-12%); } 75% { transform: translateX(12%); } }
+@keyframes fogOut { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes rainOut { 0% { opacity: 0; background-position: 0 0; } 20% { opacity: 1; } 100% { opacity: 0; background-position: -60px 120px; } }
+@keyframes ciIn { 0% { transform: translateX(-110%) skewX(-12deg); } 100% { transform: none; } }
+@keyframes ciMon { 0% { transform: scale(.4) translateX(-40%); opacity: 0; } 100% { transform: none; opacity: 1; } }
 @keyframes grassShake { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
 @keyframes quake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-8px, 3px); } 40% { transform: translate(7px, -3px); } 60% { transform: translate(-5px, 2px); } 80% { transform: translate(4px, 0); } }
 @keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
@@ -510,7 +597,7 @@ body.game-land #toast.show { transform: none; }
 @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .cast img, .result-card img, .win-team img, .result-card .rays, .dest, .cursor::before, #toast::after, .hint.say::after, .bt-dialog .bt-more, .spot b, .box-zone:not(.opened) .chest { animation: none; }
+  .cast img, .result-card img, .win-team img, .result-card .rays, .dest, .cursor::before, #toast::after, .hint.say::after, .bt-dialog .bt-more, .spot b, .box-zone:not(.opened) .chest, .ci-band, .ci-mon, .pchip.target { animation: none; }
 }
 @media (max-height: 560px) {
   .home .inner { gap: 8px; }
@@ -530,7 +617,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-25h";
+const APP_VERSION = "2026-09-26a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -558,6 +645,39 @@ const MEMBERS = [
 ];
 const TEAM_COLORS = ["#e5484d", "#2f6fd6"]; // 오방색 적(첫 팀) · 청(두 번째 팀)
 const ROCKET_TEAM = { key: "rocket", name: "😈 로켓단", color: "#7a4fb5" };
+// ✨ 기술 27개 — 화면에 보이는 한 줄 설명 (규칙은 yut-rules.js 의 SKILLS)
+const SKILL_UI = {
+  metronome: { emoji: "👆", desc: "무슨 기술이 나올까? 다른 기술 하나가 무작위로!" },
+  wish: { emoji: "🌠", desc: "윷을 던지는 대신 원하는 결과를 골라요" },
+  nitro: { emoji: "🔥", desc: "지금 바로 2칸 앞으로!" },
+  flame: { emoji: "🔥", desc: "앞쪽 3칸 안의 상대 말을 물리쳐요!" },
+  surf: { emoji: "🌊", desc: "상대 말 하나를 2칸 뒤로 밀어요" },
+  rain: { emoji: "🌧️", desc: "우리 차례 세 번 동안 비! 도·빽도가 나오면 개로" },
+  growth: { emoji: "🌱", desc: "윷 결과 하나를 한 단계 크게! (개→걸)" },
+  sleep: { emoji: "💤", desc: "상대 말 하나가 쿨쿨 — 두 번 못 움직여요" },
+  twave: { emoji: "⚡", desc: "상대 말 하나가 한 번 못 움직여요" },
+  veil: { emoji: "❄️", desc: "얼음 장막! 상대 차례 두 번 동안 안 잡히고 기술도 안 맞아요" },
+  haze: { emoji: "🌫️", desc: "판 위의 효과를 모두 깨끗이!" },
+  counter: { emoji: "🥊", desc: "우리 팀에 온 방해 기술을 되돌려요" },
+  toxic: { emoji: "☠️", desc: "상대의 다음 윷이 빽도가 돼요" },
+  quake: { emoji: "🌋", desc: "상대 말이 모두 한 칸씩 뒤로!" },
+  fly: { emoji: "🦅", desc: "앞쪽의 가장 가까운 모서리로 날아가요" },
+  tailwind: { emoji: "🍃", desc: "우리 말이 모두 한 칸씩 앞으로" },
+  future: { emoji: "🔮", desc: "던지기 전에 결과를 맞혀 봐요. 맞히면 한 번 더!" },
+  allyswitch: { emoji: "🔄", desc: "판 위의 우리 말 두 개가 자리를 바꿔요" },
+  uturn: { emoji: "↩️", desc: "이번엔 뒤로 갈 수도 있어요" },
+  web: { emoji: "🕸️", desc: "빈 칸에 거미줄! 상대가 지나가다 걸려서 멈춰요" },
+  rock: { emoji: "🪨", desc: "빈 칸에 뾰족 바위! 상대가 거기 멈추면 집으로" },
+  spite: { emoji: "🔒", desc: "상대 팀이 세 번 동안 기술을 못 써요" },
+  bond: { emoji: "👻", desc: "이 말이 잡히면 잡은 상대도 같이 집으로!" },
+  ddance: { emoji: "🐉", desc: "한 칸 앞으로 + 한 번 더 던지기!" },
+  snatch: { emoji: "😈", desc: "상대 기술을 빼앗아 와요" },
+  iron: { emoji: "🛡️", desc: "잡으러 온 상대를 튕겨 내요!" },
+  moon: { emoji: "🌙", desc: "잡혀도 집 대신 한 칸 뒤로만" },
+};
+const TYPE_ORDER = ["노말", "불꽃", "물", "풀", "전기", "얼음", "격투", "독", "땅", "비행", "에스퍼", "벌레", "바위", "고스트", "드래곤", "악", "강철", "페어리"];
+const TARGET_LABEL = { flame: "🔥 물리치기", surf: "🌊 밀기", twave: "⚡ 마비", sleep: "💤 재우기", snatch: "😈 빼앗기", allyswitch: "🔄 바꾸기", rock: "🪨", web: "🕸️" };
+const ROCKET_NET = 0.6; // 로켓단 그물이 잡을 확률 (한 번)
 
 /* ================================================================
    작은 도구
@@ -593,6 +713,10 @@ const rarityOf = id => D.rarity[id] || "c";
 const frontUrl = id => "assets/sprites/front/" + id + ".png";
 const artUrl = id => LOCAL_ART.has(Number(id)) ? "assets/sprites/art/" + id + ".webp" : OFFICIAL + id + ".png";
 const evoPath = id => Yut.evoPath(id, D.evoFrom);
+const skillName = k => (Yut.SKILLS[k] || {}).name || "";
+const skillColor = k => D.typeColors[(Yut.SKILLS[k] || {}).type] || "#a8a878";
+// 배울 수 있는 기술 = 그 모습의 타입 기술 (두 타입이면 둘 다)
+const poolFor = id => Array.from(new Set([].concat(...typesOf(id).map(t => Yut.TYPE_SKILLS[t] || []))));
 const rootOf = id => evoPath(id)[0]; // 진화 가족의 1단계 — 판 위에서는 이 모습으로 출발한다
 const sameFamily = (list, id) => list.some(x => x !== id && rootOf(x) === rootOf(id));
 
@@ -620,11 +744,12 @@ const Store = {
     return {
       version: 1,
       sound: true,
-      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true },
+      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true, skills: true },
       stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 },
       lastPicks: {},      // { kid: [ids], mom: [ids] } — 다음 판에 미리 채워 둠
       bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }, // 윷놀이 볼 (잉글리시몬 볼과 따로) — 처음 선물 몬스터볼 3개
       collection: [],     // 윷놀이 보관함 [{ id, t, from }] — ❓ 풀숲에서 잡은 포켓몬, 다음 판부터 말로
+      seenSkills: [],     // 기술 도감: 판에서 본 기술
       game: null,         // 진행 중인 판
       lastGame: null,     // 끝난 판 (한 판 더)
     };
@@ -643,8 +768,10 @@ const Store = {
         Object.keys(d.bag).forEach(k => { d.bag[k] = Math.max(0, Math.floor(Number(d.bag[k]) || 0)); });
         const seen = {};
         d.collection = (Array.isArray(raw.collection) ? raw.collection : []).filter(x => x && x.id >= 1 && x.id <= 1025 && !seen[x.id] && (seen[x.id] = 1));
+        d.seenSkills = (Array.isArray(raw.seenSkills) ? raw.seenSkills : []).filter(k => Yut.SKILLS[k]);
       }
     } catch (e) { /* 망가진 저장은 새로 시작 */ }
+    d.game = Yut.upgrade(d.game); d.lastGame = Yut.upgrade(d.lastGame); // 기술 전(v1) 판은 기술 없이 이어서
     if (d.game && !Yut.validate(d.game)) d.game = null;
     if (d.lastGame && !Yut.validate(d.lastGame)) d.lastGame = null;
     [d.game, d.lastGame].forEach(g => g && g.teams.forEach((t, ti) => {
@@ -744,6 +871,10 @@ const SFX = {
   throwBall() { this.tone(300, 0.25, "sine", 0, 0.15); this.tone(500, 0.15, "sine", 0.2, 0.12); },
   shake() { this.tone(120, 0.15, "sine", 0, 0.25); },
   catchOk() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.16, "sine", i * 0.1)); },
+  skill() { [330, 440, 587, 784, 1175].forEach((f, i) => this.tone(f, 0.08, "sawtooth", i * 0.045, 0.07)); this.tone(1568, 0.25, "triangle", 0.25, 0.12); },
+  learn() { [659, 784, 1047, 1319, 1047, 1568].forEach((f, i) => this.tone(f, 0.14, "triangle", i * 0.09, 0.12)); },
+  clang() { this.tone(1200, 0.12, "square", 0, 0.12); this.tone(1800, 0.2, "triangle", 0.04, 0.1); this.tone(600, 0.2, "square", 0.1, 0.08); },
+  thud() { this.tone(110, 0.2, "square", 0, 0.2); this.tone(80, 0.25, "sine", 0.06, 0.2); },
 };
 const TTS = {
   voice: null, voicesLoaded: false,
@@ -918,6 +1049,7 @@ Screens.home = sec => {
       '<div class="menu-small">' +
         '<button class="btn ghost" data-act="rules">📖 윷놀이 방법</button>' +
         '<button class="btn ghost" data-act="bag">🎒 가방</button>' +
+        '<button class="btn ghost" data-act="skilldex">✨ 기술 도감</button>' +
         '<button class="btn ghost" data-act="stats">🏆 전적</button>' +
         '<button class="btn ghost" data-act="sound" id="sound-btn">' + soundLabel() + "</button>" +
       "</div>" +
@@ -927,7 +1059,7 @@ Screens.home = sec => {
 };
 
 /* ---------- 준비 ---------- */
-const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, ti: 0, picks: [[], []] };
+const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, ti: 0, picks: [[], []] };
 const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
 const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
 function chipHtml(field, value, label, color, disabled) {
@@ -951,7 +1083,9 @@ Screens.setup = sec => {
            : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + "</div>") +
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
       '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
-      '<h3>배틀 장면 (기술 쓰는 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
+      '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
+      '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 마지막 모습이 되면 기술을 하나 배워요. 말마다 한 판에 한 번 써요!" : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
+      '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
     "</div>" +
     '<div class="card-actions"><button class="btn big green cursor" data-act="to-pick">포켓몬 고르러 가기</button></div></div>';
 };
@@ -1001,7 +1135,7 @@ Screens.pick = sec => {
     '<div class="slots" id="slots"></div>' +
     '<div class="pick-actions"><button class="btn" data-act="pick-auto">🎲 알아서 골라 줘</button><button class="btn green" data-act="pick-next" id="pick-next">' + (last ? "시작!" : "다음 팀") + "</button></div>" +
     '<div class="scroll" id="pick-scroll"><div class="grid-wrap">' +
-      '<h3 class="sec-title lead">📕 내 포켓몬 <small>' + (STARTERS.length + caught.length) + "마리 — 판 위에서 마지막 모습까지 진화해요! 한 가족에서 한 마리씩</small></h3>" +
+      '<h3 class="sec-title lead">📕 내 포켓몬 <small>' + (STARTERS.length + caught.length) + "마리 — " + (Setup.skills ? "5칸마다 진화하고, 마지막 모습이 되면 기술을 배워요! " : "5칸마다 진화해요! ") + "한 가족에서 한 마리씩</small></h3>" +
       '<h3 class="sec-title">🌱 스타팅 포켓몬 <small>' + STARTERS.length + "마리</small></h3>" +
       '<div class="grid">' + STARTERS.map(cardHtml).join("") + "</div>" +
       '<h3 class="sec-title">🎯 잡은 포켓몬 <small>' + caught.length + "마리 · 잡은 순서대로</small></h3>" +
@@ -1046,6 +1180,8 @@ function autoPick() {
 ================================================================ */
 const G = {
   s: null, sel: null, newPick: null, moves: [], busy: false, paused: false, cpuTimer: null, lastEl: null,
+  target: null,   // 기술 대상을 고르는 중: { piece, key, kind, targets }
+  swapAfter: null, // 풀숲에서 말을 바꾼 뒤 윷판에서 이어서 보여 줄 것
 };
 const humanTurn = () => G.s && !G.s.teams[G.s.turn].cpu;
 const nodeXY = node => node === "goal" ? Yut.NODES[0] : Yut.NODES[node]; // 골인 = 출발 칸(참먹이) 동그라미 위
@@ -1065,7 +1201,8 @@ Screens.game = sec => {
         '<div class="throw-zone">' +
           '<div class="mat"><div class="sticks">' + [0, 1, 2, 3].map(i => '<i class="stick" data-i="' + i + '"></i>').join("") + "</div></div>" +
           '<div class="pending" id="pending"></div>' +
-          '<button class="btn big red throw" id="btn-throw" data-act="throw">윷 던지기!</button>' +
+          '<div class="act-row"><button class="btn big red throw" id="btn-throw" data-act="throw">윷 던지기!</button>' +
+            '<button class="btn big skill-btn" id="btn-skill" data-act="skill" hidden>✨ 기술</button></div>' +
           '<div class="hint" id="hint"></div>' +
         "</div>" +
       "</aside>" +
@@ -1089,9 +1226,11 @@ function fitBoard() {
     const panelW = Math.min(400, Math.max(290, W * 0.33));
     bs = Math.min(H - 64 - 28, W - panelW - 46);
     // 패널이 남는 높이보다 길면 한 단계씩 줄인다 (넘치면 위로 튀어나와 위쪽 줄 버튼을 덮는다)
-    const panel = sec.querySelector(".panel");
+    const panel = sec.querySelector(".panel"), hintEl = sec.querySelector("#hint");
+    if (hintEl) hintEl.classList.add("measure");
     if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tight");
     if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tighter");
+    if (hintEl) hintEl.classList.remove("measure");
   } else {
     const panel = sec.querySelector(".panel");
     const ph = panel && panel.scrollHeight > 40 ? panel.scrollHeight : 330; // 패널은 제 높이, 판은 남는 만큼
@@ -1116,11 +1255,17 @@ function buildBoard() {
     Yut.NODES.map((xy, n) => '<i class="tile ' + Yut.NODE_KIND[n] + '" style="left:' + pct(xy[0]) + ";top:" + pct(xy[1]) + '"></i>').join("") +
     labels.map(l => '<span class="lbl" style="left:' + pct(l[2]) + ";top:" + pct(l[3]) + '">' + l[1] + "</span>").join("") +
     '<span class="lbl arrow" style="left:' + pct(108.5) + ";top:" + pct(88) + '">⬆</span>' +
-    '<div id="spots"></div><div id="dests"></div><div id="units"></div><div id="fx"></div>';
+    '<div id="spots"></div><div id="traps"></div><div id="dests"></div><div id="units"></div><div id="fx"></div>';
 }
 
+// 말 효과 표시: ⚡ 마비 · 💤 잠 · ❄️ 장막 (왼쪽 위 모서리)
+function statusIcon(state, pieces) {
+  const f = k => pieces.some(i => ((state.pieces[i].fx || {})[k] || 0) >= state.turnNo);
+  return f("sleep") ? "💤" : f("para") ? "⚡" : f("veil") ? "❄️" : "";
+}
 function unitInner(state, order, team) {
-  return '<span class="base"></span>' +
+  const st = statusIcon(state, order);
+  return '<span class="base"></span>' + (st ? '<span class="badge-s">' + st + "</span>" : "") +
     order.slice(1, 3).map((p, k) => '<span class="behind b' + (k + 1) + '">' + spr(Yut.formOf(state, p), true) + "</span>").reverse().join("") +
     '<span class="front">' + spr(Yut.formOf(state, order[0]), true) + "</span>" +
     (order.length > 1 ? '<span class="badge-n">×' + order.length + "</span>" : "") +
@@ -1152,11 +1297,11 @@ function renderPanel() {
     const ps = G.s.pieces.map((p, i) => [p, i]).filter(x => x[0].team === ti);
     const done = ps.filter(x => x[0].state === "done").length;
     return '<div class="tcard' + (G.s.turn === ti && G.s.phase !== "over" ? " active" : "") + '" style="--tc:' + t.color + '">' +
-      '<div class="tn"><i></i>' + esc(t.name) + "<em>골인 " + done + "/" + ps.length + "</em></div>" +
+      '<div class="tn"><i></i>' + esc(t.name) + teamFxHtml(ti) + "<em>골인 " + done + "/" + ps.length + "</em></div>" +
       '<div class="pchips">' + ps.map(x => {
         const p = x[0], i = x[1], id = Yut.formOf(G.s, i);
-        return '<button class="pchip ' + p.state + '" data-act="chip" data-piece="' + i + '" aria-label="' + esc(nameOf(id)) + '">' + spr(id) +
-          (p.state === "wait" ? '<img class="ball" src="assets/items/poke-ball.png" alt="">' : "") + "</button>";
+        return '<button class="pchip ' + p.state + '" data-act="chip" data-piece="' + i + '" aria-label="' + esc(nameOf(id) + (p.skill ? " · " + skillName(p.skill) : "")) + '">' + spr(id) +
+          (p.state === "wait" ? '<img class="ball" src="assets/items/poke-ball.png" alt="">' : "") + chipBadges(i) + "</button>";
       }).join("") + "</div></div>";
   }).join("");
 }
@@ -1191,10 +1336,19 @@ function renderTop() {
   } else if (G.s.phase === "choose") label = human ? (narrow ? "말 움직이기" : "👆 말을 움직여요") : (narrow ? "로켓단 차례" : "로켓단이 고르는 중…");
   else label = "판이 끝났어요";
   btn.textContent = label;
-  btn.disabled = !on || G.busy;
-  btn.classList.toggle("go", on && !G.busy);
-  btn.classList.toggle("cursor", on && !G.busy);
+  btn.disabled = !on || G.busy || !!G.target;
+  btn.classList.toggle("go", on && !G.busy && !G.target);
+  btn.classList.toggle("cursor", on && !G.busy && !G.target);
   btn.style.background = t.color;
+  // ✨ 기술 버튼: 사람 차례에 쓸 기술이 있을 때만 (대상을 고르는 중이면 "취소")
+  const sb = $("#btn-skill");
+  if (sb) {
+    const can = G.target ? true : human && !G.busy && G.s.phase !== "over" && G.s.settings.skills !== false && Yut.legalSkills(G.s).length > 0;
+    sb.hidden = !can;
+    sb.classList.toggle("cancel", !!G.target);
+    sb.dataset.act = G.target ? "skill-cancel" : "skill";
+    sb.textContent = G.target ? "✖ 취소" : "✨ 기술"; // 폰에서는 던지기 버튼 아래 줄에 따로 들어가서 글이 다 들어간다
+  }
 }
 function hint(text) {
   baseHint = text || "";
@@ -1215,6 +1369,7 @@ function renderBagChip() {
 }
 function renderAll() {
   renderSpots();
+  renderTraps();
   renderBagChip();
   renderUnits();
   renderPanel();
@@ -1270,6 +1425,7 @@ function mountGame() {
     renderTop();
     (async () => {
       if (G.s.settings.mode === "rocket") await rocketIntro();
+      await announceStartSkills();
       await announceTurn(G.s.turn, true);
       G.busy = false;
       afterAction();
@@ -1282,6 +1438,7 @@ function mountGame() {
 
 function afterAction() {
   if (current !== "game" || !G.s) return;
+  G.target = null;
   renderAll();
   G.moves = Yut.legalMoves(G.s);
   if (G.s.phase === "over") { hint(""); return; }
@@ -1290,7 +1447,7 @@ function afterAction() {
     if (humanTurn()) prepareChoose();
     else { hint("😈 로켓단이 생각하는 중…"); cpuTick(); }
   } else {
-    hint(humanTurn() ? "🎲 윷을 던져요!" : "😈 로켓단 차례…");
+    hint(humanTurn() ? "🎲 윷을 던져요!" + (G.s.settings.skills !== false && Yut.legalSkills(G.s).length ? " ✨ 기술도 쓸 수 있어요" : "") : "😈 로켓단 차례…");
     if (!humanTurn()) cpuTick();
   }
 }
@@ -1348,6 +1505,7 @@ function showDests(ms, cpu) {
   });
 }
 function onUnitTap(el) {
+  if (G.target) { const d = $('#dests .dest[data-node="' + el.dataset.node + '"]'); if (d) d.click(); else toast("반짝이는 곳을 눌러요 (취소하려면 ✖ 취소)"); return; }
   if (G.busy || !G.s || G.s.phase !== "choose" || !humanTurn()) return;
   if (Number(el.dataset.team) !== G.s.turn) { toast("그건 상대 팀 말이에요"); return; }
   const key = "n" + el.dataset.node;
@@ -1359,6 +1517,11 @@ function onUnitTap(el) {
   select(key);
 }
 function onChipTap(i) {
+  if (G.target) {
+    if (G.target.kind === "enemyPiece" && G.target.targets.indexOf(i) >= 0) doSkill(G.target.piece, i);
+    else toast("반짝이는 곳을 눌러요 (취소하려면 ✖ 취소)");
+    return;
+  }
   if (G.busy || !G.s || G.s.phase !== "choose" || !humanTurn()) return;
   const p = G.s.pieces[i];
   if (p.team !== G.s.turn) { toast("그건 상대 팀 말이에요"); return; }
@@ -1389,6 +1552,8 @@ async function doThrow() {
   persist();
   try {
     await animSticks(t.sticks);
+    if (t.poisoned) { toast("☠️ 맹독! 윷이 " + josa(RES[t.result].name, "으로/로") + " 나왔어요…", 1600); TTS.say("맹독!"); await sleep(800); }
+    if (t.rained) { toast("🌧️ 비의 힘! " + RES[t.rained].name + " → 개!", 1600); await sleep(800); }
     await showResult(t.result);
     if (t.again) { SFX.again(); await banner(RES[t.result].name + "! 한 번 더 던져요!", null, 1000, "gold"); }
     renderPending();
@@ -1470,6 +1635,7 @@ async function playEvents(events, prev) {
     else if (e.type === "skip") await animSkip(e);
     else if (e.type === "turn") { renderAll(); await announceTurn(e.team); }
     else if (e.type === "win") await showWin(e.team);
+    else if (EVENT_ANIM[e.type]) await EVENT_ANIM[e.type](e, prev);
   }
 }
 async function animMove(e, prev) {
@@ -1487,11 +1653,17 @@ async function animMove(e, prev) {
   }
   el.classList.remove("can", "sel");
   el.classList.add("moving");
-  for (let k = 0; k < e.path.length; k++) {
+  if (e.fly && e.path.length) {                // 🦅 공중날기: 한 번에 훨훨
+    el.classList.add("flying");
+    SFX.throwBall();
+    placeAt(el, e.path[e.path.length - 1]);
+    await sleep(650);
+    el.classList.remove("flying");
+  } else for (let k = 0; k < e.path.length; k++) {
     placeAt(el, e.path[k]);
     el.classList.remove("hop"); void el.offsetWidth; el.classList.add("hop");
     SFX.hop(k);
-    await sleep(e.result < 0 ? 420 : 250);
+    await sleep(e.back || e.result < 0 ? 420 : 250);
   }
   el.classList.remove("moving", "hop", "enter");
   el.dataset.node = e.finish ? 0 : e.to.node; // 골인한 말은 참먹이(0)에 서 있다가 빠져나간다
@@ -1516,6 +1688,7 @@ async function animCapture(e, prev) {
     await sleep(800);
     vEl.remove();
   }
+  renderPanel();
 }
 
 /* ---------- 배틀: 상대 말이 있는 칸에 멈추면 기술로 물리친다 → 진 포켓몬은 집(출발 자리)으로 ---------- */
@@ -1728,9 +1901,10 @@ async function quickBattle(e, prev) {
   await sleep(220);
   SFX.hit();
   fxAt(e.node, "💥");
+  const mv = e.skill ? skillName(e.skill) : moveOf(atk);
   toast(aTeam.cpu ? "로켓단이 " + josa(foeNames, "을/를") + " 물리쳤다옹~! 😼"
-    : vTeam.cpu ? nameOf(atk) + "의 " + moveOf(atk) + "! 로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다!"
-    : nameOf(atk) + "의 " + moveOf(atk) + "! " + josa(foeNames, "을/를") + " 물리쳤다!", 2400);
+    : vTeam.cpu ? nameOf(atk) + "의 " + mv + "! 로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다!"
+    : nameOf(atk) + "의 " + mv + "! " + josa(foeNames, "을/를") + " 물리쳤다!", 2400);
   TTS.say(aTeam.cpu ? "로켓단이 물리쳤다옹!" : "물리쳤다!");
   await sleep(650);
 }
@@ -1753,7 +1927,7 @@ function battle(e, prev) {
     await c.say("앗! " + vTeam.name + "의 " + josa(foeNames, "와/과") + " 마주쳤다!");
     await c.wait(550);
     // ② 기술
-    await c.say(nameOf(atk) + "의 " + moveOf(atk) + "!", true);
+    await c.say(nameOf(atk) + "의 " + (e.skill ? skillName(e.skill) : moveOf(atk)) + "!", true);
     await stageAttack(c, atk);
     await c.wait(750);
     await c.say(josa(foeNames, "은/는") + " 힘이 쭉 빠졌다!");
@@ -1783,18 +1957,13 @@ const FORCE_CATCH = Q.get("catch"); // 테스트용: ?catch=1 늘 성공 / ?catc
 async function animWild(e) {
   const spotEl = $('#spots .spot[data-node="' + e.node + '"]');
   if (spotEl) spotEl.classList.add("shake");
-  if (G.s.teams[e.team].cpu) {
-    // 로켓단은 볼을 안 쓴다 — 풀숲을 뒤져 쫓아 버린다
-    fxAt(e.node, "💨");
-    SFX.runHome();
-    toast("로켓단이 풀숲의 " + josa(nameOf(e.id), "을/를") + " 쫓아 버렸다옹~! 😼", 2400);
-    TTS.say("로켓단이 쫓아 버렸다옹!");
-    await sleep(1300);
-  } else {
+  if (G.s.teams[e.team].cpu) await rocketNet(e);
+  else {
     await sleep(450);
     await encounter(e);
   }
   if (spotEl) spotEl.remove();
+  if (G.swapAfter) { const x = G.swapAfter; G.swapAfter = null; await afterSwapBoard(x); }
 }
 function encounter(e) {
   const R = Yut.Rewards;
@@ -1865,7 +2034,8 @@ function encounter(e) {
       if (res.ok) {
         await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", true);
         await c.wait(800);
-        await c.say(josa(name, "을/를") + " 보관함에 넣었어요! 다음 판부터 말로 쓸 수 있어요.");
+        const swapped = c.live() ? await offerSwap(c, e, id) : false;
+        if (!swapped) await c.say(josa(name, "을/를") + " 보관함에 넣었어요! 다음 판부터 말로 쓸 수 있어요.");
         await c.wait(1100);
         break;
       }
@@ -1952,6 +2122,10 @@ function cpuTick() {
   clearTimeout(G.cpuTimer);
   G.cpuTimer = setTimeout(async () => {
     if (current !== "game" || !G.s || G.busy || G.paused || humanTurn() || G.s.phase === "over") return;
+    if (G.s.settings.skills !== false) {
+      const a = Yut.cpuSkill(G.s, G.s.settings.cpuLevel);
+      if (a) { await cpuUseSkill(a); return; }
+    }
     if (G.s.phase === "throw") await doThrow();
     else if (G.s.phase === "choose") {
       const m = Yut.cpuChoose(G.s, G.s.settings.cpuLevel);
@@ -2080,9 +2254,17 @@ function makeSpots(seed) {
 function startGame(teams, opts) {
   const seed = Q.get("seed") ? Number(Q.get("seed")) : (Math.floor(Math.random() * 2147483646) + 1);
   const lineRnd = Yut.rng((seed ^ 0xe7011) >>> 0);
-  teams = teams.map(t => Object.assign({}, t, { paths: t.picks.slice(0, opts.pieces).map(id => t.cpu ? evoPath(id) : linePath(id, lineRnd)) }));
+  // 말의 진화 경로: 모두 마지막 모습까지 (로켓단도 — 또가스→또도가스, 나옹→페르시온. 처음부터 기술을 쓰면 불공평해서)
+  teams = teams.map(t => Object.assign({}, t, { paths: t.picks.slice(0, opts.pieces).map(id => linePath(id, lineRnd)) }));
+  // 기술 후보: 마지막 모습의 타입 기술 (전설은 처음부터 — 처음 모습의 타입). 시험용 ?pools=nitro,surf|toxic,quake · ?early=1
+  const forcedPools = (Q.get("pools") || "").split("|").map(x => x.split(",").filter(k => Yut.SKILLS[k]));
+  teams = teams.map((t, ti) => Object.assign({}, t, {
+    early: t.paths.map(p => Q.get("early") === "1" || p.some(x => rarityOf(x) === "l")),
+    pools: t.paths.map((p, k) => (forcedPools[ti] && forcedPools[ti][k]) ? [forcedPools[ti][k]]
+      : poolFor(Q.get("early") === "1" || p.some(x => rarityOf(x) === "l") ? p[0] : p[p.length - 1])),
+  }));
   const s = Yut.newGame({
-    pieces: opts.pieces, backdo: opts.backdo, seed, first: opts.first || 0,
+    pieces: opts.pieces, backdo: opts.backdo, seed, first: opts.first || 0, skills: opts.skills !== false,
     mode: opts.mode, cpuLevel: opts.cpuLevel, battle: opts.battle, teams, spots: makeSpots(seed),
   }, D.evoFrom);
   s.intro = true;
@@ -2095,17 +2277,508 @@ function startFromSetup() {
   const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
   if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
   else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: CAST.rocket.slice(0, Setup.pieces) });
-  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle };
+  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle, skills: Setup.skills };
   Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
   if (fam) Store.data.lastPicks[Setup.t1] = Setup.picks[1].slice();
   const first = fam ? (Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2)) : 0; // 로켓단 대결은 아이 먼저
-  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, battle: Setup.battle, first });
+  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, battle: Setup.battle, skills: Setup.skills, first });
 }
 function rematch() {
   const last = G.s && G.s.phase === "over" ? G.s : Store.data.lastGame;
   if (!last) { showScreen("home"); return; }
   const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.picks.slice() }));
-  startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
+  startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false,
+    skills: last.settings.skills !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
+}
+
+/* ================================================================
+   v3: ✨ 기술 · 🔄 말 바꾸기
+================================================================ */
+function markSeen(key) {
+  if (!key || !Yut.SKILLS[key]) return;
+  const a = Store.data.seenSkills || (Store.data.seenSkills = []);
+  if (a.indexOf(key) < 0) { a.push(key); Store.save(); }
+}
+// 팀 카드 칩: 배운 기술(왼쪽 위 — 다 쓰면 ✓) · 효과(오른쪽 위) · 다음 진화까지 점 5개(아래). 그림 가운데는 비운다
+function chipBadges(i) {
+  const s = G.s, p = s.pieces[i];
+  let h = "";
+  if (s.settings.skills !== false && p.skill && p.state !== "done") {
+    h += p.used ? '<span class="sk used" title="기술을 다 썼어요">✓</span>'
+      : '<span class="sk' + (Yut.isFinal(s, i) ? "" : " wait") + '" title="' + esc(skillName(p.skill)) + '">' + ((SKILL_UI[p.skill] || {}).emoji || "✨") + "</span>";
+  }
+  if (p.state === "board") {
+    const st = statusIcon(s, [i]);
+    if (st) h += '<span class="st">' + st + "</span>";
+    if (p.stage < s.teams[p.team].paths[p.slot].length - 1) {
+      const k = (p.walk || 0) % Yut.EVO_STEP;
+      h += '<span class="pips" aria-hidden="true">' + [0, 1, 2, 3, 4].map(j => "<i" + (j < k ? ' class="on"' : "") + "></i>").join("") + "</span>";
+    }
+  }
+  return h;
+}
+// 팀 효과: ☠️ 다음 윷 빽도 · 🔒 기술 봉인 · 🌧️ 비 (숫자 = 남은 그 팀 차례)
+function teamFxHtml(ti) {
+  const s = G.s, f = s.teams[ti].fx || {}, n = s.teams.length;
+  const teamAt = t => (((s.turn + (t - s.turnNo)) % n) + n) % n;
+  const left = until => { let c = 0; for (let t = s.turnNo; t <= until; t++) if (teamAt(t) === ti) c++; return c; };
+  let h = "";
+  if (f.poison) h += ' <span class="tfx" title="다음 윷이 빽도">☠️</span>';
+  if ((f.seal || 0) >= s.turnNo) h += ' <span class="tfx" title="기술 봉인">🔒' + left(f.seal) + "</span>";
+  if ((f.rain || 0) >= s.turnNo) h += ' <span class="tfx" title="비">🌧️' + left(f.rain) + "</span>";
+  return h;
+}
+function renderTraps() {
+  const box = $("#traps");
+  if (!box || !G.s) return;
+  box.innerHTML = (G.s.traps || []).map(t => {
+    const xy = Yut.NODES[t.node];
+    return '<div class="trap" data-node="' + t.node + '" style="left:' + pct(xy[0]) + ";top:" + pct(xy[1]) + ";--tc:" + G.s.teams[t.team].color + '">' + (t.kind === "rock" ? "🪨" : "🕸️") + "</div>";
+  }).join("");
+}
+// 말 그림·표시만 새로 (요소는 그대로 — 진행 중인 연출이 쥐고 있는 요소가 사라지지 않게)
+function refreshUnits() {
+  $$("#units .unit").forEach(el => {
+    const ps = (el.dataset.pieces || "").split(",").filter(Boolean).map(Number);
+    if (ps.length && G.s.pieces[ps[0]]) el.innerHTML = unitInner(G.s, ps, G.s.teams[Number(el.dataset.team)]);
+  });
+}
+// 한 칸의 우리 말 요소를 지금 상태에 맞춘다 (밀려와 겹치면 하나로, 없으면 치움)
+function syncUnitAt(team, node) {
+  const els = $$('#units .unit[data-team="' + team + '"][data-node="' + node + '"]');
+  const u = Yut.unitsOf(G.s, team).find(x => x.node === Number(node));
+  if (!u) { els.forEach(x => x.remove()); return null; }
+  let el = els[0];
+  els.slice(1).forEach(x => x.remove());
+  if (!el) { el = unitEl(G.s, team, u.node, u.pieces); $("#units").appendChild(el); }
+  else { el.dataset.pieces = u.pieces.join(","); el.innerHTML = unitInner(G.s, u.pieces, G.s.teams[team]); placeAt(el, u.node); }
+  return el;
+}
+
+/* ---------- 기술 쓰기: 고르기 → (대상) → 쓰기 ---------- */
+function skillItem(i, info) {
+  const p = G.s.pieces[i], id = Yut.formOf(G.s, i), K = Yut.SKILLS[p.skill], U = SKILL_UI[p.skill] || {};
+  return '<button class="skill-item' + (info ? " info" : "") + '"' + (info ? " disabled" : ' data-act="skill-pick" data-piece="' + i + '"') + ' style="--tc:' + skillColor(p.skill) + '">' +
+    '<span class="si-pic">' + spr(id) + "</span>" +
+    '<span class="si-body"><b>' + (U.emoji || "") + " " + esc(K.name) + "<i>" + esc(K.type) + "</i></b><small>" + esc(nameOf(id)) + " · " + esc(U.desc || "") + (info ? " (때가 되면 저절로 나가요)" : "") + "</small></span></button>";
+}
+function openSkillMenu() {
+  if (!G.s || G.busy || !humanTurn() || G.s.settings.skills === false) return;
+  const list = Yut.legalSkills(G.s);
+  if (!list.length) { toast("지금 쓸 수 있는 기술이 없어요"); return; }
+  SFX.tap();
+  const team = G.s.turn;
+  const reacts = G.s.pieces.map((p, i) => i).filter(i => {
+    const p = G.s.pieces[i];
+    return p.team === team && p.state === "board" && p.skill && !p.used && Yut.isFinal(G.s, i) && Yut.SKILLS[p.skill].kind === "react";
+  });
+  showModal("<h2>✨ 기술 쓰기</h2><p>한 차례에 하나, 말마다 한 판에 한 번!</p>" +
+    '<div class="skill-list">' + list.map(x => skillItem(x.piece)).join("") + "</div>" +
+    (reacts.length ? '<h2 class="sub">🛡️ 저절로 나가는 기술</h2><div class="skill-list">' + reacts.map(i => skillItem(i, true)).join("") + "</div>" : "") +
+    '<div class="btns"><button class="btn" data-act="skilldex">📖 기술 도감</button><button class="btn" data-act="close-modal">닫기</button></div>');
+}
+function beginSkill(i) {
+  if (!G.s || G.busy || !humanTurn()) return;
+  const x = Yut.legalSkills(G.s).find(e => e.piece === i);
+  if (!x) return;
+  const K = Yut.SKILLS[x.key], U = SKILL_UI[x.key] || {};
+  G.skillPiece = i;
+  if (x.target === "none") { doSkill(i, null); return; }
+  const cancel = '<div class="btns"><button class="btn" data-act="close-modal">취소</button></div>';
+  if (x.target === "result") {
+    const fut = x.key === "future";
+    showModal("<h2>" + U.emoji + " " + esc(K.name) + "</h2><p>" + (fut ? "어떤 결과가 나올까? 맞혀 봐요! <b>개·걸</b>이 잘 나와요." : "원하는 결과를 골라요! (한 번 더 던지기는 없어요)") + "</p>" +
+      '<div class="res-pick">' + x.targets.map(r => '<button class="btn' + (fut && (r === 2 || r === 3) ? " hot" : "") + '" data-act="skill-target" data-v="' + r + '"><img src="' + artUrl(CAST.yut[r]) + '" alt="">' + RES[r].name + "</button>").join("") + "</div>" + cancel);
+    return;
+  }
+  if (x.target === "pending") {
+    showModal("<h2>" + U.emoji + " " + esc(K.name) + "</h2><p>어느 결과를 크게 할까요?</p>" +
+      '<div class="res-pick">' + x.targets.map(ri => {
+        const r = G.s.pending[ri], nr = r === -1 ? 1 : Math.min(5, r + 1);
+        return '<button class="btn" data-act="skill-target" data-v="' + ri + '"><img src="' + artUrl(CAST.yut[nr]) + '" alt="">' + RES[r].name + " → " + RES[nr].name + "</button>";
+      }).join("") + "</div>" + cancel);
+    return;
+  }
+  // 윷판에서 고르기 (상대 말 · 우리 말 · 빈 칸 · 뒤로 갈 칸)
+  G.target = { piece: i, key: x.key, kind: x.target, targets: x.targets.slice() };
+  showSkillTargets(i, x);
+  renderTop();
+  hint("👆 " + K.name + ": 반짝이는 곳을 눌러요");
+  SFX.tap();
+}
+function showSkillTargets(i, x) {
+  const box = $("#dests");
+  if (!box) return;
+  box.innerHTML = "";
+  $$("#units .unit").forEach(el => el.classList.remove("can", "sel"));
+  $$(".pchip").forEach(c => c.classList.remove("can", "selected", "target"));
+  const team = G.s.pieces[i].team, u = Yut.unitOfPiece(G.s, i);
+  const ring = (node, label, target, hit) => {
+    const b = document.createElement("button");
+    b.className = "dest skill-t" + (hit ? " hit" : "") + (nodeXY(node)[0] >= 90 ? " flip" : "");
+    placeAt(b, node);
+    b.dataset.node = node;
+    b.setAttribute("aria-label", skillName(x.key));
+    b.innerHTML = label ? "<b>" + esc(label) + "</b>" : "";
+    b.addEventListener("click", ev => { ev.stopPropagation(); if (!G.busy && G.target) doSkill(i, target); });
+    box.appendChild(b);
+  };
+  if (x.target === "enemy" || x.target === "ally") x.targets.forEach(n => ring(n, TARGET_LABEL[x.key] || "", n, x.key === "flame"));
+  else if (x.target === "node") x.targets.forEach(n => ring(n, "", n, false)); // 빈 칸이 많아서 말풍선은 뺀다
+  else if (x.target === "move") x.targets.forEach(r => {
+    const d = Yut.backPlan(G.s, team, u, r);
+    if (!d) return;
+    const hit = Yut.piecesAt(G.s, d.node).some(j => G.s.pieces[j].team !== team);
+    ring(d.node, RES[r].name + " ↩️" + (hit ? " 배틀!" : ""), r, hit);
+  });
+  else if (x.target === "enemyPiece") {
+    const seen = {};
+    x.targets.forEach(j => {
+      const q = G.s.pieces[j];
+      if (q.state === "board") {
+        const n = Yut.posOf(q);
+        if (!seen[n]) { seen[n] = 1; ring(n, TARGET_LABEL.snatch + " " + skillName(q.skill), j, false); }
+      } else { const c = $('.pchip[data-piece="' + j + '"]'); if (c) c.classList.add("target"); }
+    });
+  }
+}
+async function doSkill(i, target) {
+  if (G.busy || !G.s) return;
+  let r;
+  try { r = Yut.applySkill(G.s, i, target); }
+  catch (err) { console.error(err); G.target = null; afterAction(); return; }
+  G.busy = true;
+  G.target = null;
+  G.moves = [];
+  $("#dests").innerHTML = "";
+  $$(".unit.can, .unit.sel").forEach(e => e.classList.remove("can", "sel"));
+  $$(".pchip.target").forEach(c => c.classList.remove("target"));
+  const prev = G.s;
+  G.s = r.state;
+  persist();
+  renderTop();
+  try { await playEvents(r.events, prev); } catch (e) { console.error(e); }
+  G.busy = false;
+  afterAction();
+}
+// 로켓단: 고른 대상을 잠깐 보여 주고 쓴다
+async function cpuUseSkill(a) {
+  hint("😈 로켓단이 기술을 쓴다옹!");
+  const K = Yut.SKILLS[a.key];
+  const box = $("#dests");
+  if (box && (K.target === "enemy" || K.target === "ally" || K.target === "node") && a.target != null) {
+    const b = document.createElement("div");
+    b.className = "dest skill-t cpu" + (K.target === "enemy" ? " hit" : "");
+    placeAt(b, a.target);
+    box.appendChild(b);
+  }
+  await sleep(700);
+  if (current !== "game" || G.paused || humanTurn() || G.busy) return;
+  await doSkill(a.piece, a.target);
+}
+// 기술 장면: 화면을 가로지르는 띠 (1.6초, 누르면 넘김. "배틀 장면 건너뛰기"면 짧게)
+function cutIn(id, key, team, title) {
+  return new Promise(res => {
+    const K = Yut.SKILLS[key] || {}, U = SKILL_UI[key] || {};
+    const el = document.createElement("div");
+    el.className = "cutin";
+    el.style.setProperty("--tc", skillColor(key));
+    const who = title || ((team && team.cpu ? "로켓단 " : "") + nameOf(id) + "의");
+    el.innerHTML = '<div class="ci-band"><div class="ci-mon">' + spr(id) + '</div><div class="ci-text"><b>' + esc(who) + "</b><strong>" + esc(K.name) + "!</strong><em>" + esc((U.emoji || "") + " " + (U.desc || "")) + "</em></div></div>";
+    document.body.appendChild(el);
+    SFX.skill();
+    Cry.play(id);
+    TTS.say((title ? plain(title) + " " : nameOf(id) + "의 ") + K.name + "!");
+    let done = false;
+    const close = () => { if (done) return; done = true; el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 220 * SPEED); };
+    el.addEventListener("click", close);
+    setTimeout(close, (G.s && G.s.settings.battle === false ? 900 : 1600) * SPEED);
+  });
+}
+const namesOf = ps => ps.map(i => nameOf(Yut.formOf(G.s, i))).join("·");
+function goHome(el) {
+  return new Promise(res => {
+    if (!el) return res();
+    el.classList.add("going-home");
+    placeAt(el, 0);
+    SFX.runHome();
+    setTimeout(() => { el.remove(); res(); }, 800 * SPEED);
+  });
+}
+// 기술이 만든 사건들의 연출 (playEvents 가 부른다)
+const EVENT_ANIM = {
+  async skill(e, prev) {
+    markSeen(e.key);
+    const st = prev || G.s;
+    await cutIn(Yut.formOf(st, e.piece), e.key, st.teams[e.team]);
+  },
+  async metronome(e) {
+    markSeen(e.key);
+    await cutIn(Yut.formOf(G.s, e.piece), e.key, G.s.teams[e.team], "👆 손가락흔들기 →");
+  },
+  async learn(e) {
+    markSeen(e.key);
+    const p = G.s.pieces[e.piece], name = nameOf(Yut.formOf(G.s, e.piece)), k = skillName(e.key);
+    if (p.state === "board") sparkle(Yut.posOf(p));
+    SFX.learn();
+    const msg = josa(name, "은/는") + " " + josa(k, "을/를") + " 배웠다!";
+    toast("📖 " + msg + " " + ((SKILL_UI[e.key] || {}).emoji || ""), 2200);
+    TTS.say(msg);
+    renderPanel();
+    refreshUnits();
+    await sleep(1400);
+  },
+  async push(e) {
+    const el = unitAt(e.team, e.from);
+    if (e.skill === "quake") { const b = $("#board"); if (b) { b.classList.remove("quake"); void b.offsetWidth; b.classList.add("quake"); setTimeout(() => b.classList.remove("quake"), 650 * SPEED); } }
+    if (!e.path.length) {
+      if (el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+      if (e.skill !== "quake") { toast(josa(namesOf(e.pieces), "은/는") + " 꿈쩍도 안 했다!", 1400); await sleep(700); }
+      return;
+    }
+    if (e.skill !== "quake") fxAt(e.from, "🌊");
+    if (el) {
+      el.classList.add("moving");
+      for (const n of e.path) { placeAt(el, n); el.classList.remove("hop"); void el.offsetWidth; el.classList.add("hop"); SFX.hop(1); await sleep(300); }
+      el.classList.remove("moving", "hop");
+      el.dataset.node = e.to;
+    }
+    syncUnitAt(e.team, e.to);
+    if (e.skill !== "quake") { toast("🌊 " + josa(namesOf(e.pieces), "이/가") + " " + e.path.length + "칸 밀려났어요!", 1500); await sleep(400); }
+  },
+  async status(e) {
+    const icon = { para: "⚡", sleep: "💤", veil: "❄️", poison: "☠️", seal: "🔒", rain: "🌧️" }[e.kind] || "✨";
+    const tname = G.s.teams[e.team].name, names = namesOf(e.pieces);
+    if (e.pieces.length && e.node != null) { fxAt(e.node, icon); syncUnitAt(e.team, e.node); }
+    if (e.kind === "rain") { const fx = $("#fx"); if (fx) { const r = document.createElement("div"); r.className = "rainfx"; fx.appendChild(r); setTimeout(() => r.remove(), 1300); } }
+    const msg = {
+      para: josa(names, "은/는") + " 몸이 저려서 한 번 못 움직여요!",
+      sleep: josa(names, "은/는") + " 쿨쿨 잠들었어요! 두 번 못 움직여요",
+      veil: "얼음 장막! " + josa(names, "은/는") + " 상대 차례 두 번 동안 안전해요",
+      poison: tname + "의 다음 윷은 " + (G.s.settings.backdo ? "빽도" : "도") + "!",
+      seal: josa(tname, "은/는") + " 세 번 동안 기술을 못 써요!",
+      rain: "비가 내려요! " + tname + "의 도·빽도는 개가 돼요",
+    }[e.kind] || "";
+    toast(icon + " " + msg, 2200);
+    TTS.say(plain(msg));
+    renderPanel();
+    await sleep(1100);
+  },
+  async trap(e) {
+    renderTraps();
+    fxAt(e.node, e.kind === "rock" ? "🪨" : "🕸️");
+    SFX.thud();
+    toast(e.kind === "rock" ? "🪨 뾰족 바위를 놓았어요! 상대가 여기 멈추면 집으로" : "🕸️ 거미줄을 쳤어요! 상대가 지나가다 걸려요", 2200);
+    await sleep(1000);
+  },
+  async webstop(e) {
+    fxAt(e.node, "🕸️");
+    SFX.thud();
+    renderTraps();
+    toast("🕸️ 거미줄에 걸려서 멈췄어요!", 1800);
+    await sleep(900);
+  },
+  async rock(e) {
+    fxAt(e.node, "🪨");
+    SFX.hit();
+    toast("🪨 뾰족 바위! " + josa(namesOf(e.pieces), "은/는") + " 집으로…", 2000);
+    renderTraps();
+    await goHome(G.lastEl || unitAt(e.team, e.node));
+    renderPanel();
+  },
+  async block(e) {
+    const q = G.s.pieces[e.piece];
+    fxAt(e.node, "🛡️");
+    SFX.clang();
+    await cutIn(Yut.formOf(G.s, e.piece), "iron", G.s.teams[q.team]);
+    toast("🛡️ " + nameOf(Yut.formOf(G.s, e.piece)) + "의 철벽! 튕겨 냈다!", 2000);
+    if (!e.remote && G.lastEl) {
+      const el = G.lastEl;
+      if (e.back == null) await goHome(el);
+      else { el.classList.add("moving"); placeAt(el, e.back); await sleep(420); el.classList.remove("moving"); el.dataset.node = e.back; syncUnitAt(e.team, e.back); }
+    }
+    renderPanel();
+    await sleep(400);
+  },
+  async moon(e) {
+    syncUnitAt(e.team, e.to);
+    sparkle(e.to);
+    await cutIn(Yut.formOf(G.s, e.piece), "moon", G.s.teams[e.team]);
+    toast("🌙 달빛! " + josa(nameOf(Yut.formOf(G.s, e.piece)), "은/는") + " 집 대신 한 칸 뒤로!", 2000);
+    renderPanel();
+    await sleep(600);
+  },
+  async bond(e) {
+    await cutIn(Yut.formOf(G.s, e.piece), "bond", G.s.teams[G.s.pieces[e.piece].team]);
+    toast("👻 길동무! " + namesOf(e.pieces) + "도 같이 집으로!", 2000);
+    await goHome(unitAt(e.team, e.node));
+    renderPanel();
+  },
+  async home(e) {
+    fxAt(e.node, "🔥");
+    toast("🔥 되돌아온 불꽃! " + josa(namesOf(e.pieces), "은/는") + " 집으로…", 2000);
+    await goHome(unitAt(e.team, e.node));
+    renderPanel();
+  },
+  async reflect(e) {
+    await cutIn(Yut.formOf(G.s, e.piece), "counter", G.s.teams[e.team]);
+    toast("🥊 카운터! " + josa(skillName(e.key), "을/를") + " 그대로 돌려줬다!", 2000);
+    await sleep(500);
+  },
+  async steal(e) {
+    markSeen(e.key);
+    SFX.capture();
+    toast("😈 " + nameOf(Yut.formOf(G.s, e.from)) + "의 " + josa(skillName(e.key), "을/를") + " 빼앗았다! 다음 차례부터 쓸 수 있어요", 2400);
+    renderPanel();
+    await sleep(1200);
+  },
+  async haze() {
+    const fx = $("#fx");
+    if (fx) { const f = document.createElement("div"); f.className = "fog"; fx.appendChild(f); setTimeout(() => f.remove(), 1300); }
+    SFX.runHome();
+    renderTraps();
+    refreshUnits();
+    renderPanel();
+    toast("🌫️ 흑안개! 판 위의 효과가 모두 사라졌어요", 2000);
+    await sleep(1100);
+  },
+  async grow(e) {
+    renderPending();
+    SFX.again();
+    toast("🌱 성장! " + RES[e.from].name + " → " + RES[e.to].name, 1800);
+    await sleep(900);
+  },
+  async wish(e) {
+    setSticks(Yut.sticksFor(e.result));
+    await showResult(e.result);
+    renderPending();
+  },
+  async guess(e) {
+    toast("🔮 " + RES[e.r].name + "! 맞히면 한 번 더 던져요", 1800);
+    await sleep(700);
+  },
+  async foresee(e) {
+    if (e.ok) { SFX.again(); await banner("🔮 맞혔다! 한 번 더!", null, 1100, "gold"); }
+    else { toast("🔮 아쉽다! " + josa(RES[e.result].name, "이/가") + " 나왔어요", 1600); await sleep(700); }
+  },
+  async again() { SFX.again(); await banner("🐉 한 번 더 던져요!", null, 1000, "gold"); },
+  async switch(e) {
+    const a = unitAt(e.team, e.na), b = unitAt(e.team, e.nb);
+    [[a, e.nb], [b, e.na]].forEach(([el, n]) => { if (el) { el.classList.add("flying"); placeAt(el, n); } });
+    SFX.throwBall();
+    await sleep(650);
+    [[a, e.nb], [b, e.na]].forEach(([el, n]) => { if (el) { el.classList.remove("flying"); el.dataset.node = n; } });
+    toast("🔄 사이드체인지! 자리를 바꿨어요", 1600);
+    await sleep(400);
+  },
+};
+
+/* ---------- 🔄 말 바꾸기 — 잡은 포켓몬을 그 자리에 ---------- */
+// 잡은 포켓몬의 말 정보: 1단계부터 마지막 모습까지(갈래는 무작위), 잡은 모습의 단계, 기술 후보, 전설이면 처음부터
+function swapInfo(id) {
+  const path = linePath(id, Math.random);
+  const early = path.some(x => rarityOf(x) === "l");
+  const forced = Q.get("swappool"); // 시험용
+  return { id, path, base: Math.max(0, path.indexOf(id)), early, pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(early ? id : path[path.length - 1]) };
+}
+// 조우 무대 안: "지금 말로 쓸까요?" → 바꿀 말 고르기 → "돌아와! 가라!"
+async function offerSwap(c, e, id) {
+  const s = G.s, team = e.team, root = rootOf(id), name = nameOf(id);
+  const cands = s.pieces.map((p, i) => i).filter(i => s.pieces[i].team === team && Yut.swapOk(s, i, root));
+  if (!cands.length) { await c.say("판 위에 " + nameOf(root) + " 가족이 있어서 지금은 말로 못 써요."); await c.wait(900); return false; }
+  await c.say(josa(name, "을/를") + " 지금 말로 쓸까요? 바꿀 말을 골라요!", true);
+  const tag = i => { const p = s.pieces[i]; return p.skill && p.used ? " <em>✨ 다 씀</em>" : p.state === "wait" ? ' <em class="home">집</em>' : ""; };
+  const pick = await c.menu(cands.map(i => ({ key: String(i), cls: "bt-swapbtn", html: '<span class="sw-pic">' + spr(Yut.formOf(s, i)) + "</span>" + esc(nameOf(Yut.formOf(s, i))) + tag(i) }))
+    .concat([{ key: "later", cls: "ghost", html: "나중에 (보관함에)" }]));
+  if (!pick || pick === "later" || !c.live()) return false;
+  const i = Number(pick);
+  const old = Yut.formOf(G.s, i);
+  const r = Yut.applySwap(G.s, i, swapInfo(id));
+  G.s = r.state;
+  persist();
+  await c.say("돌아와, " + nameOf(old) + "!");
+  if (e.pieces[0] === i && c.allyEl) { // 무대에 선 포켓몬이 바로 그 말이면 모습도 바꾼다
+    await c.anim(c.allyEl, [{ transform: "none", opacity: 1, filter: "none" }, { transform: "scale(.2)", opacity: 0, filter: "brightness(3)" }], 420);
+    c.allyEl.insertAdjacentHTML("afterend", btSprite(id, true, 27, 94, 33, "ally"));
+    const nx = c.allyEl.nextElementSibling;
+    c.allyEl.remove();
+    c.allyEl = nx;
+    await c.anim(c.allyEl, [{ transform: "scale(.2)", opacity: 0 }, { transform: "none", opacity: 1 }], 420);
+    const plate = $(".bt-plate.ally b", c.el);
+    if (plate) plate.textContent = name;
+  }
+  await c.say("가라, " + name + "! 🔄", true);
+  await c.wait(700);
+  G.swapAfter = { piece: i, events: r.events.slice(1), from: old, to: id };
+  return true;
+}
+// 윷판에서 이어서: 바뀐 말 모습 → (이어받아) 진화 → 기술 배우기
+async function afterSwapBoard(x) {
+  const p = G.s.pieces[x.piece];
+  let el = null;
+  if (p.state === "board") {
+    el = syncUnitAt(p.team, Yut.posOf(p));
+    const ev = x.events.find(e => e.type === "evolve");
+    const front = el && el.querySelector(".front");
+    if (front && ev) front.innerHTML = spr(G.s.teams[p.team].paths[p.slot][ev.from], true);
+    if (el) { el.classList.remove("stacked"); void el.offsetWidth; el.classList.add("stacked"); sparkle(Yut.posOf(p)); }
+  }
+  renderPanel();
+  SFX.pop();
+  toast("🔄 " + nameOf(x.from) + " → " + nameOf(x.to) + "! 새 말이 나왔어요", 1800);
+  await sleep(900);
+  G.lastEl = el;
+  await playEvents(x.events, null);
+}
+// 😼 로켓단도 풀숲에서 그물로 잡아 자기 말로 (한 번, 60%) — 로켓단 보관함은 없다 (그 판에서만)
+async function rocketNet(e) {
+  const id = e.id, name = nameOf(id);
+  fxAt(e.node, "🥅");
+  SFX.throwBall();
+  toast("😼 로켓단이 그물을 던졌다옹! 🥅", 1400);
+  TTS.say("로켓단이 그물을 던졌다옹!");
+  await sleep(1000);
+  const ok = FORCE_CATCH === "1" ? true : FORCE_CATCH === "0" ? false : Math.random() < ROCKET_NET;
+  const target = ok ? Yut.cpuSwapTarget(G.s, e.team, rootOf(id), e.pieces[0]) : null;
+  if (!ok || target == null) {
+    fxAt(e.node, "💨");
+    SFX.runHome();
+    toast(ok ? "로켓단이 " + josa(name, "을/를") + " 잡았지만… 같은 가족이 있어서 놓아줬다옹" : "그물이 찢어졌다옹! " + josa(name, "은/는") + " 풀숲으로 도망갔어요 🌿", 2400);
+    TTS.say(ok ? "놓아줬다옹" : "그물이 찢어졌다옹!");
+    await sleep(1400);
+    return;
+  }
+  const old = Yut.formOf(G.s, target);
+  const r = Yut.applySwap(G.s, target, swapInfo(id));
+  G.s = r.state;
+  persist();
+  SFX.catchOk();
+  fxAt(e.node, "😼");
+  toast("😼 로켓단이 그물로 " + josa(name, "을/를") + " 잡아 갔다옹! " + josa(nameOf(old), "은/는") + " 쉬고 " + josa(name, "이/가") + " 나온다옹~", 2800);
+  TTS.say("로켓단이 " + josa(name, "을/를") + " 잡아 갔다옹!");
+  await sleep(1200);
+  G.swapAfter = { piece: target, events: r.events.slice(1), from: old, to: id };
+}
+// 판을 시작할 때: 처음부터 기술을 아는 포켓몬(전설·진화하지 않는 포켓몬) 알려 주기
+async function announceStartSkills() {
+  if (!G.s || G.s.settings.skills === false) return;
+  const list = G.s.pieces.map((p, i) => i).filter(i => G.s.pieces[i].skill);
+  if (!list.length) return;
+  list.forEach(i => markSeen(G.s.pieces[i].skill));
+  const named = list.slice(0, 2).map(i => nameOf(Yut.formOf(G.s, i)) + "(" + skillName(G.s.pieces[i].skill) + ")").join(", ");
+  toast("✨ 처음부터 기술을 아는 포켓몬: " + named + (list.length > 2 ? " 외 " + (list.length - 2) + "마리" : ""), 2600);
+  await sleep(1700);
+}
+/* ---------- 📖 기술 도감 — 27개, 본 기술은 밝게 ---------- */
+function openSkillDex() {
+  const seen = new Set(Store.data.seenSkills || []);
+  const keys = Object.keys(Yut.SKILLS);
+  showModal("<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 5칸마다 진화하고, 마지막 모습이 되면 타입에 맞는 기술을 하나 배워요</p>" +
+    '<div class="dex-types">' + TYPE_ORDER.map(t => '<div class="dex-row" style="--tc:' + (D.typeColors[t] || "#999") + '"><span>' + esc(t) + '</span><div class="dex-cards">' +
+      (Yut.TYPE_SKILLS[t] || []).map(k => '<div class="dex-card' + (seen.has(k) ? "" : " unseen") + '"><b>' + SKILL_UI[k].emoji + " " + esc(skillName(k)) + "</b>" +
+        (Yut.SKILLS[k].kind === "react" ? "<i>저절로</i>" : "") + "<br>" + esc(SKILL_UI[k].desc) + "</div>").join("") +
+    "</div></div>").join("") + "</div>" +
+    '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button></div>');
 }
 
 /* ---------- 쉬기·그만두기 ---------- */
@@ -2151,8 +2824,10 @@ function openRules() {
       "<li>↗️ <b>위쪽 두 모서리</b>나 가운데 <b>방</b>에 딱 멈추면 지름길(대각선)로 가요.</li>" +
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
       "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
-      "<li>✨ 판을 돌면서 포켓몬이 <b>진화</b>해요. 배틀에 지면 처음 모습으로 돌아가요.</li>" +
-      "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 가방의 볼을 던져 잡으면 다음 판부터 말로 쓸 수 있어요.</li>" +
+      "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 지면 처음 모습으로 돌아가요.</li>" +
+      "<li>📖 마지막 모습이 되면 <b>기술</b>을 하나 배워요 (전설은 처음부터). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
+      "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
+      "<li>😼 로켓단도 풀숲에서 그물로 포켓몬을 잡아 가요. 먼저 가서 잡아요!</li>" +
       "<li>🎁 로켓단을 이기면 <b>보물상자</b>에서 볼 3개!</li>" +
       "<li>🏆 내 포켓몬이 먼저 전부 골인하면 이겨요!</li>" +
     "</ul>" +
@@ -2220,6 +2895,11 @@ const Act = {
   },
   "pick-back": () => { if (Setup.ti === 1) { Setup.ti = 0; showScreen("pick"); } else showScreen("setup"); },
   "throw": () => { if (humanTurn()) doThrow(); },
+  "skill": () => openSkillMenu(),
+  "skill-pick": el => { closeModal(); beginSkill(Number(el.dataset.piece)); },
+  "skill-target": el => { const i = G.skillPiece; closeModal(); if (i != null) doSkill(i, JSON.parse(el.dataset.v)); },
+  "skill-cancel": () => { SFX.tap(); afterAction(); },
+  "skilldex": openSkillDex,
   "chip": el => onChipTap(Number(el.dataset.piece)),
   "pause": openPause,
   "pause-home": () => { modalClose = null; closeModal(); G.paused = false; showScreen("home"); },
@@ -2267,6 +2947,7 @@ Store.load();
 Object.assign(Setup, {
   t0: Store.data.settings.t0, t1: Store.data.settings.t1, cpu: Store.data.settings.cpu,
   pieces: Store.data.settings.pieces, backdo: Store.data.settings.backdo, battle: Store.data.settings.battle !== false,
+  skills: Store.data.settings.skills !== false,
 });
 if (Setup.t0 === Setup.t1) Setup.t1 = Setup.t0 === "mom" ? "kid" : "mom";
 TTS.init();

@@ -138,22 +138,22 @@ t("13. 던지기 10만 번 — 결과 확률이 표와 ±0.5%p 안", () => {
   st = 1;
   for (let i = 0; i < 20000; i++) { const r = Y.throwSticks(st, false); st = r.rng; ok(r.result !== -1, "빽도 꺼짐인데 빽도"); }
 });
-t("14. 진화 [4,5,6]: 1/3 지나면 5, 2/3 지나면 6, 빽도로 퇴화 안 함, 잡히면 4", () => {
+t("14. 진화 [4,5,6]: 5칸마다 (5칸 리자드 · 10칸 리자몽, 지름길이어도 칸 수대로), 빽도로 퇴화 안 함, 잡히면 처음 모습·0칸", () => {
   let s = game();
   eq(s.teams[0].paths[0], [4, 5, 6]); eq(s.teams[0].paths[1], [172, 25]); eq(Y.evoPath(1, D.evoFrom), [1]);
-  s = move(choose(s, [4]), "new/4");       // 4/20
-  eq(Y.formOf(s, 0), 4);
-  s = move(choose(s, [4]), "n4/4");        // 8/20 = 0.4 → 2단계
+  s = move(choose(s, [4]), "new/4");       // 4칸
+  eq(Y.formOf(s, 0), 4); eq(s.pieces[0].walk, 4);
+  s = move(choose(s, [1]), "n4/1");        // 5칸 (모) → 2단계
   eq(Y.formOf(s, 0), 5);
-  s = move(choose(s, [5]), "n8/5");        // 13/20 = 0.65
-  eq(Y.formOf(s, 0), 5);
-  s = move(choose(s, [1]), "n13/1");       // 14/20 = 0.7 → 3단계
+  s = move(choose(s, [4]), "n5/4");        // 모 대각선 → 23, 9칸
+  eq(node(s, 0), 23); eq(Y.formOf(s, 0), 5);
+  s = move(choose(s, [1]), "n23/1");       // 10칸 → 3단계
   eq(Y.formOf(s, 0), 6);
-  s = move(choose(s, [-1]), "n14/-1");     // 빽도 → 13, 그대로 리자몽
-  eq(Y.formOf(s, 0), 6);
-  put(s, 2, 12);                           // 상대 말 12 → 도로 13 잡기
-  s = move(choose(s, [1], 1), "n12/1");
-  eq(s.pieces[0].state, "wait"); eq(Y.formOf(s, 0), 4, "잡히면 1단계로");
+  s = move(choose(s, [-1]), "n24/-1");     // 빽도 → 23, 그대로 리자몽
+  eq(Y.formOf(s, 0), 6); eq(s.pieces[0].walk, 10, "뒤로 간 칸은 빼지 않음");
+  put(s, 2, 21);                           // 상대 말 21 → 개로 23 잡기
+  s = move(choose(s, [2], 1), "n21/2");
+  eq(s.pieces[0].state, "wait"); eq(Y.formOf(s, 0), 4, "잡히면 처음 모습"); eq(s.pieces[0].walk, 0);
 });
 t("15. 한 팀이 전부 완주 → 판 끝, 이긴 팀 기록", () => {
   let s = put(put(game(), 0, 19), 1, 18);
@@ -242,9 +242,9 @@ t("26. 골인하는 이동은 ❓ 칸을 지나도 안 나옴", () => {
 });
 t("27. 배틀·진화와 겹치면 move → capture → evolve → wild 순서", () => {
   let s = withSpots([{ node: 8, id: 133 }]);
-  put(s, 0, 4);                  // 리자몽 라인 말(파이리)이 4번 칸
+  put(s, 0, 4); s.pieces[0].walk = 1; // 리자몽 라인 말(파이리)이 4번 칸, 1칸 와 있음
   put(s, 2, 8);                  // 상대 말이 8번 칸 (❓ 칸)
-  const r = Y.applyMove(choose(s, [4]), "n4/4"); // 8번 칸: 상대 잡기 + 8/20=0.4 → 리자드로 진화 + 풀숲
+  const r = Y.applyMove(choose(s, [4]), "n4/4"); // 8번 칸: 상대 잡기 + 5칸 → 리자드로 진화 + 풀숲
   const order = evTypes(r).filter(x => ["move", "capture", "evolve", "wild"].includes(x));
   eq(order, ["move", "capture", "evolve", "wild"]);
 });
@@ -310,6 +310,377 @@ t("33. 진화 경로를 넘기면 그대로 — 스타팅 파이리가 리자몽
   eq(s.teams[0].paths, [[4, 5, 6], [1, 2, 3]]);
   eq(s.teams[1].paths, [[23, 24], [109]]);
   ok(Y.validate(s));
+});
+
+// ---------- v3: ✨ 기술 · 🔄 말 바꾸기 ----------
+const clone = o => JSON.parse(JSON.stringify(o));
+// 기술이 있는 판: 팀 A(0) 는 기본으로 처음부터(early) 니트로차지, 팀 B(1) 는 철벽 후보·처음부터 아님
+function sk(o) {
+  o = o || {};
+  return Y.newGame({
+    pieces: o.n || 2, backdo: o.backdo !== false, seed: 5, skills: o.skills !== false,
+    teams: [
+      { name: "A", picks: [6, 25, 1, 7], pools: o.p0 || [["nitro"], ["nitro"], ["nitro"], ["nitro"]], early: o.e0 || [true, true, true, true] },
+      { name: "B", picks: [9, 26, 3, 133], pools: o.p1 || [["iron"], ["iron"], ["iron"], ["iron"]], early: o.e1 || [false, false, false, false] },
+    ],
+  }, D.evoFrom);
+}
+// turnNo 를 정해 놓고 team 의 말 고르기 / 던지기 전 (효과가 몇 번째 차례까지 가는지 볼 때)
+const at = (st, no, team, rs) => { const c = clone(st); c.turnNo = no; return choose(c, rs || [2], team); };
+const atThrow = (st, no, team) => { const c = clone(st); c.turn = team; c.turnNo = no; c.phase = "throw"; c.throwsLeft = 1; c.pending = []; return c; };
+
+t("34. 마지막 모습이 되면 기술을 배운다 · 전설(early)·진화 없는 포켓몬은 처음부터 · 기술을 끄면 안 배움", () => {
+  let s = sk();
+  eq([s.pieces[0].skill, s.pieces[1].skill, s.pieces[2].skill], ["nitro", "nitro", null]);
+  s = sk({ p1: [["surf", "rain"], ["surf"]] });
+  put(s, 2, 8); s.pieces[2].walk = 8;
+  const r = Y.applyMove(choose(s, [2], 1), "n8/2");   // 10칸 → 거북왕
+  eq(evTypes(r).filter(x => x === "evolve" || x === "learn"), ["evolve", "learn"]);
+  eq(Y.formOf(r.state, 2), 9); ok(["surf", "rain"].includes(r.state.pieces[2].skill));
+  const s1 = Y.newGame({ pieces: 1, seed: 3, teams: [{ name: "A", picks: [128], pools: [["wish"]] }, { name: "B", picks: [4], paths: [[4, 5, 6]], pools: [["nitro"]] }] }, D.evoFrom);
+  eq([s1.pieces[0].skill, s1.pieces[1].skill], ["wish", null], "진화하지 않는 켄타로스는 처음부터");
+  eq(sk({ skills: false }).pieces[0].skill, null, "기술 끄기");
+});
+t("35. 기술은 판 위의 말만 · 말마다 한 판에 한 번 · 한 차례에 하나", () => {
+  const s = sk();
+  eq(Y.legalSkills(s), [], "집에 있으면 못 씀");
+  put(s, 0, 3); put(s, 1, 7);
+  eq(Y.legalSkills(s).map(x => x.piece), [0, 1]);
+  const r = Y.applySkill(s, 0, null);
+  eq(node(r.state, 0), 5, "니트로차지 = 바로 2칸");
+  eq(Y.legalSkills(r.state), [], "한 차례에 하나");
+  eq(r.state.pieces[0].used, true);
+  eq(Y.legalSkills(atThrow(r.state, 3, 0)).map(x => x.piece), [1], "다음 차례: 쓴 말은 못 쓰고 다른 말은 씀");
+});
+t("36. 잡히면 처음 모습 · 안 쓴 기술은 남고, 다시 마지막 모습이 돼야 쓴다", () => {
+  let s = sk({ e0: [false, false], p0: [["nitro"], ["nitro"]] });
+  put(s, 0, 9); s.pieces[0].walk = 9;
+  s = move(choose(s, [1]), "n9/1");        // 10칸 → 리자몽 + 배움
+  eq(Y.formOf(s, 0), 6); eq(s.pieces[0].skill, "nitro");
+  put(s, 2, 8);
+  s = move(choose(s, [2], 1), "n8/2");     // 상대가 잡음
+  eq([s.pieces[0].state, Y.formOf(s, 0), s.pieces[0].skill, s.pieces[0].used, s.pieces[0].walk], ["wait", 4, "nitro", false, 0]);
+  put(s, 0, 3);
+  eq(Y.legalSkills(atThrow(s, 9, 0)), [], "처음 모습이면 못 씀");
+});
+t("37. 말 바꾸기 — 그 자리·업힌 채로, 간 칸 수를 이어받아 곧바로 진화, 기술은 새로 · 같은 가족은 막기", () => {
+  const s = sk({ e0: [false, false] });
+  put(s, 0, 12); put(s, 1, 12);
+  Object.assign(s.pieces[0], { walk: 12, stage: 2, skill: "nitro", used: true });
+  const r = Y.applySwap(s, 0, { id: 133, path: [133, 134], base: 0, pool: ["surf"], early: false });
+  const s2 = r.state;
+  eq(node(s2, 0), 12); eq(Y.unitsOf(s2, 0).length, 1, "업힌 채로");
+  eq([Y.formOf(s2, 0), s2.pieces[0].skill, s2.pieces[0].used, s2.teams[0].picks[0]], [134, "surf", false, 133]);
+  eq(evTypes(r), ["swap", "evolve", "learn"]);
+  ok(!Y.swapOk(s, 1, 7), "상대 팀 꼬부기 가족인데 바꿈");
+  ok(Y.swapOk(s, 0, 4), "자기 가족(파이리 말 → 리자몽)은 됨");
+  const s3 = sk({ e0: [false, false] });
+  const r3 = Y.applySwap(s3, 0, { id: 5, path: [4, 5, 6], base: 1, pool: ["nitro"], early: false });
+  eq([Y.formOf(r3.state, 0), r3.state.pieces[0].skill], [5, null], "집에 있는 말: 잡은 모습 그대로");
+  eq(Y.applySwap(s3, 1, { id: 150, path: [150], base: 0, pool: ["future"], early: true }).state.pieces[1].skill, "future", "전설은 바로");
+  let threw = false;
+  try { Y.applySwap(s, 1, { id: 8, path: [7, 8, 9], base: 1, pool: [] }); } catch (e) { threw = true; }
+  ok(threw, "같은 가족 바꾸기를 막지 않음");
+});
+t("38. 니트로차지로 잡기 → 배틀·한 번 더 · 용의춤 = 1칸 + 한 번 더", () => {
+  let s = sk(); put(s, 0, 3); put(s, 2, 5);
+  let r = Y.applySkill(s, 0, null);
+  eq(r.state.pieces[2].state, "wait"); ok(evTypes(r).includes("capture")); eq(r.state.throwsLeft, 2, "던지기 1 + 잡기 1");
+  s = sk({ p0: [["ddance"], ["ddance"]] }); put(s, 0, 3);
+  r = Y.applySkill(s, 0, null);
+  eq([node(r.state, 0), r.state.throwsLeft, r.state.pieces[0].walk], [4, 2, 1]);
+});
+t("39. 공중날기 — 앞쪽 가장 가까운 모서리·방, 참먹이면 골인, 날아가니까 거미줄 무시", () => {
+  const fly = () => sk({ p0: [["fly"], ["fly"]] });
+  let s = fly(); put(s, 0, 2);
+  const r = Y.applySkill(s, 0, null); eq([node(r.state, 0), r.state.pieces[0].route], [5, "A"]);
+  s = fly(); put(s, 0, 21);
+  eq(node(Y.applySkill(s, 0, null).state, 0), 22);
+  s = fly(); put(s, 0, 17);
+  eq(Y.applySkill(s, 0, null).state.pieces[0].state, "done");
+  s = fly(); put(s, 0, 6); s.traps = [{ node: 8, kind: "web", team: 1 }];
+  eq(node(Y.applySkill(s, 0, null).state, 0), 10);
+});
+t("40. 유턴 — 결과를 뒤로 써서 잡기 (칸 수엔 안 셈), 1칸째보다 뒤로는 안 감", () => {
+  let s = sk({ p0: [["uturn"], ["uturn"]] });
+  put(s, 0, 7); put(s, 2, 4);
+  s = choose(s, [3]);
+  eq(Y.legalSkills(s)[0].targets, [3]);
+  let r = Y.applySkill(s, 0, 3);
+  eq([node(r.state, 0), r.state.pieces[2].state, r.state.pending, r.state.pieces[0].walk], [4, "wait", [], 0]);
+  s = sk({ p0: [["uturn"], ["uturn"]] }); put(s, 0, 2);
+  r = Y.applySkill(choose(s, [5]), 0, 5);
+  eq([node(r.state, 0), r.state.pieces[0].atGoal], [1, false]);
+});
+t("41. 파도타기 2칸 · 지진 모두 1칸 (한꺼번에) — 민 팀 말 앞에서 멈춤, 1칸째보다 뒤로 안 감, 풀숲 안 걸림", () => {
+  const w = () => sk({ p0: [["surf"], ["quake"]] });
+  let s = w(); s.spots = [{ node: 6, id: 133, used: false }];
+  put(s, 0, 12); put(s, 2, 8); put(s, 3, 2);
+  let r = Y.applySkill(s, 0, 8);
+  eq(node(r.state, 2), 6); eq(r.state.spots[0].used, false, "밀려서는 풀숲 안 걸림");
+  s = w(); put(s, 0, 7); put(s, 2, 8);
+  ok(!Y.legalSkills(s).some(x => x.piece === 0), "바로 뒤가 민 팀 말이면 못 밈");
+  s = w(); put(s, 1, 14); put(s, 2, 8); put(s, 3, 9);
+  r = Y.applySkill(s, 1, null);
+  eq([node(r.state, 2), node(r.state, 3)], [7, 8], "붙어 있던 말도 한꺼번에");
+  s = w(); put(s, 1, 14); put(s, 3, 1); put(s, 2, 9);
+  eq(node(Y.applySkill(s, 1, null).state, 3), 1);
+});
+t("42. 전기자석파 — 상대의 다음 차례 한 번 못 움직임 · 수면가루 — 두 번", () => {
+  const s = sk({ p0: [["twave"], ["sleep"]] });
+  put(s, 0, 3); put(s, 1, 4); put(s, 2, 10); put(s, 3, 12);
+  const s1 = Y.applySkill(s, 0, 10).state;
+  ok(!Y.legalMoves(at(s1, 2, 1)).some(m => m.unit === "n10"), "B 의 다음 차례에 움직임");
+  ok(Y.legalMoves(at(s1, 4, 1)).some(m => m.unit === "n10"), "그다음엔 움직여야 함");
+  const s3 = Y.applySkill(atThrow(s1, 3, 0), 1, 12).state;
+  ok(!Y.legalMoves(at(s3, 4, 1)).some(m => m.unit === "n12") && !Y.legalMoves(at(s3, 6, 1)).some(m => m.unit === "n12"), "두 번 자야 함");
+  ok(Y.legalMoves(at(s3, 8, 1)).some(m => m.unit === "n12"), "세 번째엔 깸");
+});
+t("43. 오로라베일 — 상대 차례 두 번 동안 그 칸에 못 멈추고 기술도 안 맞음", () => {
+  const s = sk({ p0: [["veil"], ["veil"]], p1: [["surf"], ["surf"]], e1: [true, true] });
+  put(s, 0, 8); put(s, 2, 6); put(s, 3, 3);
+  const s1 = Y.applySkill(s, 0, null).state;
+  [2, 4].forEach(no => {
+    ok(!Y.legalMoves(at(s1, no, 1)).some(m => m.to && m.to.node === 8), "차례 " + no + ": 장막 칸에 멈춤");
+    ok(!Y.legalSkills(atThrow(s1, no, 1)).some(x => x.targets.indexOf(8) >= 0), "차례 " + no + ": 장막 말을 밈");
+  });
+  ok(Y.legalMoves(at(s1, 6, 1)).some(m => m.to && m.to.node === 8), "세 번째엔 풀림");
+});
+t("44. 맹독(다음 윷 빽도, 빽도 끈 판은 도) · 비바라기(우리 차례 세 번 도·빽도 → 개) · 비가 맹독을 이김", () => {
+  let s = sk({ p0: [["toxic"], ["rain"]] }); put(s, 0, 3); put(s, 1, 4);
+  let s1 = Y.applySkill(s, 0, null).state;
+  eq(s1.teams[1].fx.poison, true);
+  let r = Y.applyThrow(atThrow(s1, 2, 1), 3);
+  eq([r.events[0].result, r.events[0].poisoned, r.state.teams[1].fx.poison], [-1, true, false]);
+  s = sk({ p0: [["toxic"], ["rain"]], backdo: false }); put(s, 0, 3);
+  eq(Y.applyThrow(atThrow(Y.applySkill(s, 0, null).state, 2, 1), 3).events[0].result, 1);
+  s = sk({ p0: [["toxic"], ["rain"]] }); put(s, 1, 4);
+  s1 = Y.applySkill(s, 1, null).state;
+  r = Y.applyThrow(s1, 1); eq([r.events[0].result, r.events[0].rained], [2, 1]);
+  [3, 5].forEach(no => eq(Y.applyThrow(atThrow(s1, no, 0), -1).events[0].result, 2, "차례 " + no));
+  eq(Y.applyThrow(atThrow(s1, 7, 0), 1).events[0].result, 1, "네 번째 차례엔 그침");
+  const cp = clone(s1); cp.teams[0].fx.poison = true;
+  eq(Y.applyThrow(cp, 3).events[0].result, 2, "비 + 맹독 → 개");
+});
+t("45. 미래예지(맞히면 한 번 더) · 희망사항(원하는 결과, 한 번 더 없음) · 성장(한 단계, 모는 못 올림)", () => {
+  let s = sk({ p0: [["future"], ["wish"]] }); put(s, 0, 3); put(s, 1, 4);
+  const s1 = Y.applySkill(s, 0, 2).state;
+  let r = Y.applyThrow(s1, 2);
+  ok(r.events.some(e => e.type === "foresee" && e.ok)); eq([r.state.throwsLeft, r.state.phase], [1, "throw"]);
+  r = Y.applyThrow(s1, 3);
+  ok(r.events.some(e => e.type === "foresee" && !e.ok)); eq(r.state.phase, "choose");
+  const s2 = Y.applySkill(s, 1, 5).state;
+  eq([s2.pending, s2.throwsLeft, s2.phase], [[5], 0, "choose"], "모를 골라도 한 번 더 없음");
+  s = sk({ p0: [["growth"], ["growth"]] }); put(s, 0, 3);
+  s = choose(s, [3, 2]);
+  eq(Y.legalSkills(s)[0].targets, [0, 1]);
+  r = Y.applySkill(s, 0, 0);
+  eq([r.state.pending, r.state.throwsLeft], [[4, 2], 0], "기술로 만든 윷은 한 번 더 없음");
+  s = sk({ p0: [["growth"], ["growth"]] }); put(s, 0, 3); s = choose(s, [5, -1]);
+  eq(Y.legalSkills(s)[0].targets, [1]);
+  eq(Y.applySkill(s, 0, 1).state.pending, [5, 1]);
+});
+t("46. 스텔스록 — 상대가 멈추면 집으로 (지나가면·우리 말은 괜찮음) · 끈적끈적네트 — 지나가다 걸려 멈춤", () => {
+  let s = sk({ p0: [["rock"], ["web"]] }); put(s, 0, 3); put(s, 1, 4);
+  let s1 = Y.applySkill(s, 0, 9).state;
+  eq(s1.traps, [{ node: 9, kind: "rock", team: 0 }]);
+  put(s1, 2, 7);
+  const b = at(s1, 2, 1, [2, 3]);
+  ok(Y.legalMoves(b).find(m => m.id === "n7/2").rock, "미리보기에 바위 표시");
+  let r = Y.applyMove(b, "n7/2");
+  eq([r.state.pieces[2].state, r.state.traps], ["wait", []]); ok(evTypes(r).includes("rock"));
+  r = Y.applyMove(b, "n7/3");
+  eq([node(r.state, 2), r.state.traps.length], [10, 1], "지나가면 안 걸림");
+  r = Y.applyMove(at(s1, 3, 0, [5]), "n4/5");
+  eq(node(r.state, 1), 9, "우리 바위는 괜찮음");
+  s = sk({ p0: [["rock"], ["web"]] }); put(s, 1, 4);
+  s1 = Y.applySkill(s, 1, 9).state;
+  put(s1, 2, 7);
+  r = Y.applyMove(at(s1, 2, 1, [4]), "n7/4");
+  eq([node(r.state, 2), r.state.traps], [9, []]); ok(evTypes(r).includes("webstop"));
+});
+t("47. 원한(상대 기술 봉인 세 번, 저절로 기술도) · 가로챈다(빼앗은 기술은 내 것) · 흑안개(모두 지움)", () => {
+  let s = sk({ p0: [["spite"], ["snatch"]], p1: [["nitro"], ["iron"]], e1: [true, true] });
+  put(s, 0, 3); put(s, 1, 9); put(s, 2, 10); put(s, 3, 12);
+  const s1 = Y.applySkill(s, 0, null).state;
+  eq(Y.legalSkills(atThrow(s1, 2, 1)), []); eq(Y.legalSkills(atThrow(s1, 6, 1)), []);
+  eq(Y.legalSkills(atThrow(s1, 8, 1)).map(x => x.piece), [2]);
+  eq(Y.applyMove(at(s1, 3, 0, [3]), "n9/3").state.pieces[3].state, "wait", "봉인 중엔 철벽이 안 나감");
+  eq(Y.applyMove(at(s1, 9, 0, [3]), "n9/3").state.pieces[3].state, "board", "봉인이 풀리면 철벽");
+  s = sk({ p0: [["spite"], ["snatch"]], p1: [["nitro"], ["iron"]], e1: [true, true] });
+  put(s, 1, 4); put(s, 2, 10);
+  eq(Y.legalSkills(s).find(x => x.piece === 1).targets, [2, 3]);
+  const s2 = Y.applySkill(s, 1, 2).state;
+  eq([s2.pieces[1].skill, s2.pieces[1].used, s2.pieces[2].used], ["nitro", false, true]);
+  s = sk({ p0: [["haze"], ["haze"]] }); put(s, 0, 3); put(s, 2, 7);
+  s.traps = [{ node: 9, kind: "rock", team: 1 }]; s.teams[0].fx = { poison: true }; s.pieces[2].fx = { veil: 9 };
+  const s3 = Y.applySkill(s, 0, null).state;
+  eq([s3.traps, s3.teams[0].fx, s3.pieces[2].fx], [[], {}, {}]);
+});
+t("48. 화염방사 — 앞쪽 3칸 안의 상대를 집으로 + 한 번 더 (쏜 말은 제자리) · 철벽이면 막힘", () => {
+  let s = sk({ p0: [["flame"], ["flame"]] }); put(s, 0, 3); put(s, 2, 6); put(s, 3, 8);
+  eq(Y.legalSkills(s)[0].targets, [6]);
+  let r = Y.applySkill(s, 0, 6);
+  eq([r.state.pieces[2].state, node(r.state, 0), r.state.throwsLeft], ["wait", 3, 2]);
+  const cap = r.events.find(e => e.type === "capture"); ok(cap.remote && cap.skill === "flame");
+  s = sk({ p0: [["flame"], ["flame"]], p1: [["iron"], ["iron"]], e1: [true, true] }); put(s, 0, 3); put(s, 2, 5);
+  r = Y.applySkill(s, 0, 5);
+  eq([r.state.pieces[2].state, r.state.pieces[2].used], ["board", true]); ok(evTypes(r).includes("block"));
+});
+t("49. 순풍 — 우리 말 모두 한 칸 (잡지 않음, 업힘) · 사이드체인지 — 두 말 자리 바꾸기", () => {
+  let s = sk({ n: 3, p0: [["tailwind"], ["nitro"], ["nitro"]] });
+  put(s, 0, 3); put(s, 1, 6); put(s, 2, 12); put(s, 3, 4); put(s, 4, 13);
+  let r = Y.applySkill(s, 0, null);
+  eq([node(r.state, 0), node(r.state, 1), node(r.state, 2)], [3, 7, 12]);
+  eq(r.state.pieces[3].state, "board", "순풍으로는 안 잡음");
+  s = sk({ n: 3, p0: [["tailwind"], ["nitro"], ["nitro"]] }); put(s, 0, 6); put(s, 1, 7); put(s, 3, 8);
+  r = Y.applySkill(s, 0, null);
+  eq(Y.unitsOf(r.state, 0).length, 1, "업힘"); ok(evTypes(r).includes("stack"));
+  s = sk({ n: 3, p0: [["nitro"], ["allyswitch"], ["nitro"]] }); put(s, 1, 3); put(s, 2, 14);
+  eq(Y.legalSkills(s).find(x => x.piece === 1).targets, [14]);
+  r = Y.applySkill(s, 1, 14);
+  eq([node(r.state, 1), node(r.state, 2)], [14, 3]);
+});
+t("50. 손가락흔들기 — 지금 쓸 수 있는 누르는 기술 중 무작위 (자기 자신·유턴·저절로 기술은 안 나옴)", () => {
+  const seen = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    const s = sk({ p0: [["metronome"], ["nitro"]] });
+    s.srng = seed;
+    put(s, 0, 3); put(s, 2, 5);
+    const r = Y.applySkill(s, 0, null);
+    const m = r.events.find(e => e.type === "metronome");
+    ok(m && Y.SKILLS[m.key].kind === "active" && m.key !== "metronome" && m.key !== "uturn", "이상한 기술 " + (m && m.key));
+    seen[m.key] = 1;
+    ok(Y.validate(r.state), "validate " + m.key);
+  }
+  ok(Object.keys(seen).length >= 10, "여러 기술이 나와야 함: " + Object.keys(seen).join(","));
+});
+t("51. 카운터 — 방해 기술을 되돌림 (파도타기 → 쓴 말이 밀림 · 맹독 → 쓴 팀이 빽도 · 가로챈다 → 막기)", () => {
+  const c = () => sk({ p0: [["surf"], ["toxic"]], p1: [["counter"], ["counter"]], e1: [true, true] });
+  let s = c(); put(s, 0, 9); put(s, 1, 4); put(s, 2, 6); put(s, 3, 14);
+  let r = Y.applySkill(s, 0, 6);
+  eq([node(r.state, 2), node(r.state, 0)], [6, 7], "상대는 그대로, 쓴 말이 2칸 밀림");
+  ok(evTypes(r).includes("reflect"));
+  eq([2, 3].filter(j => r.state.pieces[j].used).length, 1, "카운터는 하나만 씀");
+  s = c(); put(s, 1, 4); put(s, 2, 6);
+  r = Y.applySkill(s, 1, null);
+  eq([r.state.teams[0].fx.poison, !!r.state.teams[1].fx.poison], [true, false]);
+  s = sk({ p0: [["snatch"], ["snatch"]], p1: [["counter"], ["nitro"]], e1: [true, true] }); put(s, 0, 4); put(s, 2, 6); put(s, 3, 8);
+  r = Y.applySkill(s, 0, 3);
+  eq([r.state.pieces[3].skill, r.state.pieces[3].used, r.state.pieces[0].skill], ["nitro", false, "snatch"]);
+});
+t("52. 철벽(튕겨 냄, 한 번 더 없음) · 달빛(집 대신 한 칸 뒤로) · 길동무(잡은 말도 집으로)", () => {
+  const g2 = p1 => sk({ p1, e1: [true, true] });
+  let s = g2([["iron"], ["moon"]]); put(s, 0, 4); put(s, 2, 7);
+  let r = Y.applyMove(choose(s, [3]), "n4/3");
+  eq([node(r.state, 0), r.state.pieces[2].state, r.state.pieces[0].walk], [4, "board", 0], "온 자리로, 칸도 안 셈");
+  ok(evTypes(r).includes("block") && !evTypes(r).includes("bonus"), "한 번 더 없음");
+  s = g2([["iron"], ["moon"]]); put(s, 2, 3);
+  eq(Y.applyMove(choose(s, [3]), "new/3").state.pieces[0].state, "wait", "새 말은 집으로 되돌아감");
+  s = g2([["iron"], ["moon"]]); put(s, 0, 4); put(s, 3, 7);
+  r = Y.applyMove(choose(s, [3]), "n4/3");
+  eq([node(r.state, 3), node(r.state, 0)], [6, 7]); ok(evTypes(r).includes("moon"));
+  s = g2([["iron"], ["moon"]]); put(s, 0, 4); put(s, 1, 6); put(s, 3, 7);
+  eq(node(Y.applyMove(choose(s, [3]), "n4/3").state, 3), 5, "뒤 칸에 상대 말이 있으면 더 뒤로");
+  s = g2([["bond"], ["bond"]]); put(s, 0, 4); put(s, 2, 7);
+  r = Y.applyMove(choose(s, [3]), "n4/3");
+  eq([r.state.pieces[2].state, r.state.pieces[0].state], ["wait", "wait"]); ok(evTypes(r).includes("bond"));
+});
+t("53. 옛 저장(v1, 기술 전) → 기술 없이 이어 하기", () => {
+  const old = clone(game());
+  old.v = 1;
+  ["traps", "skillTurn", "srng", "guess"].forEach(k => delete old[k]); delete old.settings.skills;
+  old.teams.forEach(tm => { delete tm.pools; delete tm.early; delete tm.fx; });
+  old.pieces.forEach(p => { delete p.walk; delete p.base; delete p.skill; delete p.used; delete p.fx; });
+  Object.assign(old.pieces[0], { state: "board", step: 7 });
+  ok(!Y.validate(old), "v1 그대로 통과");
+  const u = Y.upgrade(old);
+  ok(Y.validate(u), "올린 뒤 validate 실패");
+  eq([u.settings.skills, u.pieces[0].walk, Y.legalSkills(u)], [false, 7, []]);
+  ok(Y.validate(Y.applyMove(choose(u, [2]), "n7/2").state));
+});
+t("54. 로켓단이 잡은 포켓몬을 넣는 말 — 기술 다 쓴 말 → 집에 있는 말 → 멈춘 말, 같은 가족이면 없음", () => {
+  const s = sk({ n: 3 });
+  put(s, 3, 5); put(s, 4, 8);
+  Object.assign(s.pieces[4], { skill: "nitro", used: true });
+  eq(Y.cpuSwapTarget(s, 1, 133, 3), 4);
+  s.pieces[4].used = false;
+  eq(Y.cpuSwapTarget(s, 1, 133, 3), 5, "집에 있는 말");
+  put(s, 5, 10);
+  eq(Y.cpuSwapTarget(s, 1, 133, 3), 3, "멈춘 말");
+  eq(Y.cpuSwapTarget(s, 1, 4, 3), null, "파이리 가족이 판에 있으면 못 넣음");
+});
+t("55. 로켓단 기술 — 쉬움은 방해 기술을 안 쓰고 가끔만, 보통은 잡을 수 있으면 화염방사", () => {
+  const s = sk({ p0: [["flame"], ["surf"]] }); put(s, 0, 3); put(s, 1, 12); put(s, 2, 5); put(s, 3, 13);
+  let rs = 1; const rnd = () => { const r = Y.rand(rs); rs = r[1]; return r[0]; };
+  for (let k = 0; k < 200; k++) { const a = Y.cpuSkill(s, "easy", rnd); ok(!a, "쉬움이 방해 기술을 씀: " + (a && a.key)); }
+  let hits = 0;
+  for (let k = 0; k < 200; k++) { const a = Y.cpuSkill(s, "normal", rnd); if (a) { ok(a.key === "flame" && a.target === 5, "보통의 선택 " + JSON.stringify(a)); hits++; } }
+  ok(hits > 100, "보통이 거의 안 씀 " + hits);
+  const e = sk({ p0: [["nitro"], ["ddance"]] }); put(e, 0, 3); put(e, 1, 12);
+  let used = 0;
+  for (let k = 0; k < 300; k++) if (Y.cpuSkill(e, "easy", rnd)) used++;
+  ok(used > 40 && used < 150, "쉬움은 가끔(30%) " + used);
+});
+t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 팀 없음, 1칸째보다 뒤로 밀린 말 없음, 효과는 끝남, 판도 끝남", () => {
+  const typeOf = id => String(D.types[id - 1] || "노말").split("·");
+  const poolOf = id => [...new Set([].concat(...typeOf(id).map(tp => Y.TYPE_SKILLS[tp] || [])))];
+  const allKeys = Object.keys(Y.SKILLS);
+  let rs = 4321;
+  const rnd = () => { const r = Y.rand(rs); rs = r[1]; return r[0]; };
+  const usedKeys = {}, reacted = {};
+  let longest = 0;
+  for (let g = 0; g < 3000; g++) {
+    const n = 2 + (g % 3);
+    const mk = (name, picks) => ({ name, picks, pools: picks.map((id, k) => g % 3 === 0 ? [allKeys[(Math.floor(g / 3) + k * 9) % allKeys.length]] : poolOf(id)), early: picks.map((_, k) => (g + k) % 3 === 0) });
+    const spotRnd = Y.rng(g + 100);
+    let s = Y.newGame({
+      pieces: n, backdo: g % 4 !== 0, seed: g + 1, first: g % 2, skills: true,
+      spots: g % 2 ? Y.pickSpotNodes(spotRnd, 2).map(nd => ({ node: nd, id: 1 + Math.floor(spotRnd() * 1025) })) : undefined,
+      teams: [mk("A", [6, 25, 1, 7]), mk("B", [9, 26, 3, 133])],
+    }, D.evoFrom);
+    let steps = 0;
+    while (s.phase !== "over") {
+      if (++steps > 3000) throw new Error("끝나지 않는 판 (seed " + (g + 1) + ")");
+      const sks = Y.legalSkills(s);
+      let r;
+      if (sks.length && rnd() < 0.5) {
+        const x = sks[Math.floor(rnd() * sks.length)];
+        r = Y.applySkill(s, x.piece, x.targets[Math.floor(rnd() * x.targets.length)]);
+        usedKeys[x.key] = 1;
+      } else if (s.phase === "throw") r = Y.applyThrow(s);
+      else {
+        const ms = Y.legalMoves(s);
+        ok(ms.length > 0, "choose 인데 둘 수가 없음");
+        r = Y.applyMove(s, (g % 2 ? Y.cpuChoose(s, "normal", rnd) : ms[Math.floor(rnd() * ms.length)]).id);
+      }
+      r.events.forEach(e => { if (["block", "moon", "bond", "reflect"].includes(e.type)) reacted[e.type] = 1; });
+      s = r.state;
+      if (g % 7 === 0 && rnd() < 0.03) {
+        const cand = s.pieces.map((p, i) => i).filter(i => Y.swapOk(s, i, 133));
+        if (cand.length) s = Y.applySwap(s, cand[Math.floor(rnd() * cand.length)], { id: 133, path: [133, 134], base: 0, pool: ["surf", "rain"], early: false }).state;
+      }
+      ok(Y.validate(s), "validate 실패");
+      const where = {};
+      s.pieces.forEach(p => {
+        if (p.state !== "board") return;
+        const nd = Y.posOf(p);
+        if (where[nd]) {
+          ok(where[nd].team === p.team, "칸 " + nd + "에 두 팀");
+          ok(where[nd].route === p.route && where[nd].step === p.step && where[nd].atGoal === p.atGoal, "업힌 말의 길이 다름");
+        } else where[nd] = p;
+        ok(p.atGoal || p.step >= 1, "1칸째보다 뒤");
+        const f = p.fx || {};
+        ["para", "sleep", "veil"].forEach(k => ok(!f[k] || f[k] <= s.turnNo + 8, "끝나지 않는 효과 " + k));
+        ok(p.stage < s.teams[p.team].paths[p.slot].length, "진화 단계 범위");
+      });
+    }
+    ok(Y.teamDone(s, s.winner), "이긴 팀 말이 다 안 들어옴");
+    longest = Math.max(longest, steps);
+  }
+  eq(allKeys.filter(k => Y.SKILLS[k].kind === "active" && !usedKeys[k]), [], "한 번도 안 쓰인 기술");
+  eq(Object.keys(reacted).sort(), ["block", "bond", "moon", "reflect"], "저절로 기술이 다 나와야 함");
+  console.log("     (가장 긴 판: 동작 " + longest + "번)");
 });
 
 // ---------- 무작위 대국 (불변 조건 확인) ----------
