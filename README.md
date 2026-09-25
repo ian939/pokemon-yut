@@ -63,3 +63,4 @@ python tools/test-ui.py           # 화면 검사 (Playwright)
 - 개인·가정용 비상업 팬 프로젝트입니다.
 - 포켓몬 이미지는 [PokeAPI sprites](https://github.com/PokeAPI/sprites), 울음소리는 [PokeAPI cries](https://github.com/PokeAPI/cries)에서 가져오며, 포켓몬 관련 저작권은 Nintendo / Creatures Inc. / GAME FREAK inc.에 있습니다.
 - 윷판·윷가락·멍석·배경 그림은 이 프로젝트에서 이미지 생성으로 만들었습니다.
+- 글꼴: [갈무리(Galmuri)](https://github.com/quiple/galmuri) © 이민서 — SIL Open Font License 1.1 (`assets/fonts/OFL.md`). 게임에 쓰는 글자만 남겨 넣었습니다.
