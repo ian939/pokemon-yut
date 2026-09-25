@@ -370,7 +370,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-25a";
+const APP_VERSION = "2026-09-25b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -973,7 +973,8 @@ window.addEventListener("resize", fitBoard);
 function buildBoard() {
   const b = $("#board");
   const lines = Yut.LINES.map(l => l.map(n => Yut.NODES[n].map(v => v.toFixed(2)).join(",")).join(" "));
-  const labels = [[0, "출발·도착", 100, 111], [5, "모", 100, -10.5], [10, "뒷모", 0, -10.5], [15, "찌모", 0, 110.5], [22, "방", 50, 59.5]];
+  // 모서리 이름(모·뒷모·찌모)은 아이가 헷갈려서 뺐다 — 출발·도착과 가운데 방만 표시
+  const labels = [[0, "출발·도착", 100, 111], [22, "방", 50, 59.5]];
   b.innerHTML =
     '<svg class="lines" viewBox="-14 -14 128 128" aria-hidden="true">' +
       '<defs><pattern id="dirt" patternUnits="userSpaceOnUse" width="12" height="12">' +
@@ -1535,7 +1536,7 @@ function openRules() {
     '<ul class="rules-list">' +
       "<li>🎲 <b>윷</b>이나 <b>모</b>가 나오면 한 번 더 던져요.</li>" +
       "<li>🏁 <b>참먹이</b>(오른쪽 아래)에서 출발해 판을 돌아 다시 참먹이로 오면 <b>골인</b>!</li>" +
-      "<li>↗️ <b>모</b>·<b>뒷모</b>·<b>방</b>에 딱 멈추면 지름길(대각선)로 가요.</li>" +
+      "<li>↗️ <b>위쪽 두 모서리</b>나 가운데 <b>방</b>에 딱 멈추면 지름길(대각선)로 가요.</li>" +
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
       "<li>💥 상대 말이 있는 칸에 멈추면 <b>잡아요</b>! 잡힌 포켓몬은 몬스터볼로 돌아가고, 잡은 팀은 한 번 더!</li>" +
       "<li>✨ 판을 돌면서 포켓몬이 <b>진화</b>해요. 잡히면 처음 모습으로 돌아가요.</li>" +
