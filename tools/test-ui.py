@@ -176,15 +176,19 @@ def scenario(browser, base, errors):
     throw(); wait_idle(page)
     dest("new/1")                                  # 팀 0: 도 → 1번 칸
     throw(); wait_idle(page)
-    dest("new/1", wait=False)                      # 팀 1: 도 → 1번 칸의 팀 0 말을 잡음 → 잡기 배틀
+    dest("new/1", wait=False)                      # 팀 1: 도 → 1번 칸의 팀 0 말과 배틀 → 물리침
     page.wait_for_selector(".battle", timeout=5000)
     t0 = time.time()
-    for name, at in (("50-battle-meet", 1.5), ("50-battle-move", 2.9), ("50-battle-hit", 3.4), ("50-battle-throw", 5.9), ("50-battle-wobble", 7.6), ("50-battle-caught", 9.4)):
+    stamp = None
+    for name, at in (("50-battle-meet", 1.5), ("50-battle-move", 2.6), ("50-battle-hit", 3.1), ("50-battle-defeat", 5.3), ("50-battle-home", 6.3)):
         page.wait_for_timeout(max(0, int((t0 + at - time.time()) * 1000)))
         page.screenshot(path=str(OUT / f"{name}.png"))
-    check(page.query_selector(".bt-stamp") is not None, "잡기 배틀: 몬스터볼로 잡고 '잡았다!'")
+        el = page.query_selector(".bt-stamp")
+        stamp = stamp or (el.inner_text() if el else None)
+    check(stamp == "물리쳤다!", f"배틀: 기술로 물리침 (도장: {stamp})")
+    check(page.query_selector(".bt-ball") is None, "배틀에 몬스터볼이 안 나옴")
     page.wait_for_selector(".battle", state="detached", timeout=15000)
-    check(True, f"잡기 배틀 길이 약 {time.time() - t0:.1f}초")
+    check(True, f"배틀 길이 약 {time.time() - t0:.1f}초")
     wait_idle(page)
     page.screenshot(path=str(OUT / "51-after-capture.png"))
     check(page.evaluate("() => window.__yut.G.s.turn") == 1, "잡은 팀(1)이 한 번 더 던짐")

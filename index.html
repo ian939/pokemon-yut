@@ -235,7 +235,8 @@ img { -webkit-user-drag: none; }
 .unit.moving { z-index: 50; }
 .unit.hop .front { animation: hop calc(.24s * var(--spd)) ease-out; }
 .unit.enter .front { animation: popIn calc(.32s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
-.unit.captured { animation: toBall calc(.85s * var(--spd)) ease-in forwards; z-index: 45; }
+.unit.going-home { z-index: 45; transition: left calc(.75s * var(--spd)) cubic-bezier(.4,-.35,.6,1), top calc(.75s * var(--spd)) cubic-bezier(.4,-.35,.6,1); animation: homeFade calc(.8s * var(--spd)) ease-in forwards; }
+.unit.going-home .front { animation: hop calc(.25s * var(--spd)) ease-out 3; }
 .unit.evolving .front { animation: evoPulse calc(1s * var(--spd)) ease-in-out both; }
 .unit.evolving .front img { filter: brightness(0) invert(1) drop-shadow(0 0 5px #fff); transition: filter calc(.4s * var(--spd)); }
 .unit.evolved .front { animation: evoPop calc(.6s * var(--spd)) cubic-bezier(.2,1.6,.4,1); }
@@ -253,6 +254,7 @@ img { -webkit-user-drag: none; }
 }
 .dest b { position: absolute; top: -34%; right: -44%; background: var(--gold); color: var(--ink); border: 3px solid var(--ink); border-radius: 10px; padding: 1px 9px; font-weight: 900; font-size: max(15px, calc(var(--bs) * .034)); white-space: nowrap; box-shadow: 0 3px 0 var(--ink); line-height: 1.3; }
 .dest b small { font-size: .7em; margin-left: 3px; }
+.dest.flip b { right: auto; left: -44%; }
 .dest.hit { box-shadow: 0 0 0 3px var(--red), 0 0 18px 4px rgba(229,72,77,.8); }
 .dest.hit b { background: var(--red); color: #fff; }
 .dest.back b { background: #9cc9f5; }
@@ -381,7 +383,7 @@ body.game-land #toast.show { transform: none; }
 
 .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 390; pointer-events: none; border-radius: 3px; animation: fall linear forwards; }
 
-/* ===== 잡기 배틀 — 내 포켓몬 뒷모습 · 상대 앞모습 · 이름판 · 대화창 ===== */
+/* ===== 배틀 — 내 포켓몬 뒷모습 · 상대 앞모습 · 이름판 · 대화창 ===== */
 .battle { position: fixed; inset: 0; z-index: 360; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: rgba(12,18,30,.86); animation: fadeIn calc(.2s * var(--spd)) ease both; }
 .battle.out { opacity: 0; transition: opacity calc(.25s * var(--spd)); }
 .bt-stage {
@@ -410,7 +412,6 @@ body.game-land #toast.show { transform: none; }
 .bt-proj, .bt-burst, .bt-star { position: absolute; transform: translate(-50%, -50%); font-size: clamp(22px, 4.6vw, 48px); pointer-events: none; filter: drop-shadow(0 0 6px rgba(255,255,255,.9)); }
 .bt-burst { font-size: clamp(40px, 9vw, 96px); }
 .bt-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
-.bt-ball { position: absolute; width: 6%; transform: translate(-50%, -50%); image-rendering: pixelated; pointer-events: none; }
 .bt-stamp { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); font-family: var(--pixel); font-weight: 700; font-size: var(--t4); color: #ffd23f; white-space: nowrap; pointer-events: none;
   text-shadow: 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 4px 4px 0 var(--ink), -4px 4px 0 var(--ink), 4px -4px 0 var(--ink), -4px -4px 0 var(--ink), 0 9px 0 rgba(0,0,0,.3);
   animation: popIn calc(.35s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
@@ -429,7 +430,7 @@ body.game-land #toast.show { transform: none; }
 @keyframes ring { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.1); } }
 @keyframes glowBase { 0%, 100% { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink), 0 0 0 7px rgba(245,184,46,.35); } 50% { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink), 0 0 0 10px rgba(245,184,46,.95), 0 0 16px 8px rgba(245,184,46,.55); } }
 @keyframes glowChip { 50% { box-shadow: 0 0 0 5px var(--tc), 0 0 14px 4px rgba(245,184,46,.8); } }
-@keyframes toBall { 0% { transform: translate(-50%, -64%) scale(1); } 30% { transform: translate(-50%, -64%) scale(1.15); filter: brightness(1.8) sepia(1) hue-rotate(-40deg) saturate(4); } 100% { transform: translate(-50%, -64%) scale(0) rotate(-220deg); opacity: 0; } }
+@keyframes homeFade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes evoPulse { 0% { transform: scale(1); } 25% { transform: scale(1.12); } 50% { transform: scale(.92); } 75% { transform: scale(1.16); } 100% { transform: scale(1); } }
 @keyframes evoPop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
 @keyframes finishOut { 0% { transform: translate(-50%, -64%) scale(1); } 40% { transform: translate(-50%, -110%) scale(1.25); } 100% { transform: translate(-50%, -200%) scale(.3); opacity: 0; } }
@@ -461,7 +462,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-25d";
+const APP_VERSION = "2026-09-25e";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -722,11 +723,10 @@ const SFX = {
   win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.22, "triangle", i * 0.14)); },
   again() { [1047, 1319, 1568].forEach((f, i) => this.tone(f, 0.12, "sine", i * 0.07, 0.12)); },
   alarm() { for (let i = 0; i < 4; i++) { this.tone(880, 0.14, "square", i * 0.3, 0.08); this.tone(660, 0.14, "square", i * 0.3 + 0.15, 0.08); } },
-  // 잡기 배틀 (잉글리시몬 모험 화면과 같은 소리)
+  // 배틀 (잉글리시몬 모험 화면과 같은 소리)
   battle() { [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.1, "square", i * 0.07, 0.07)); this.tone(131, 0.4, "triangle", 0, 0.16); },
   hit() { this.tone(150, 0.18, "square", 0, 0.22); this.tone(90, 0.24, "sine", 0.05, 0.2); },
-  throwBall() { this.tone(300, 0.25, "sine", 0, 0.15); this.tone(500, 0.15, "sine", 0.2, 0.12); },
-  shake() { this.tone(120, 0.15, "sine", 0, 0.25); },
+  runHome() { [880, 660, 520, 700].forEach((f, i) => this.tone(f, 0.08, "triangle", i * 0.07, 0.1)); },
   catchOk() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.16, "sine", i * 0.1)); },
 };
 const TTS = {
@@ -1039,7 +1039,7 @@ const G = {
   s: null, sel: null, newPick: null, moves: [], busy: false, paused: false, cpuTimer: null, lastEl: null,
 };
 const humanTurn = () => G.s && !G.s.teams[G.s.turn].cpu;
-const nodeXY = node => node === "goal" ? [107, 107] : Yut.NODES[node];
+const nodeXY = node => node === "goal" ? Yut.NODES[0] : Yut.NODES[node]; // 골인 = 출발 칸(참먹이) 동그라미 위
 function placeAt(el, node) { const xy = nodeXY(node); el.style.left = pct(xy[0]); el.style.top = pct(xy[1]); }
 const unitAt = (team, node) => $('#units .unit[data-team="' + team + '"][data-node="' + node + '"]');
 
@@ -1213,7 +1213,7 @@ function persist() {
   Store.save();
 }
 
-// 이번 판 포켓몬의 모든 진화 모습(앞·뒤)을 미리 불러 둔다 — 진화·잡기 배틀 때 깜빡이지 않게
+// 이번 판 포켓몬의 모든 진화 모습(앞·뒤)을 미리 불러 둔다 — 진화·배틀 때 깜빡이지 않게
 function preloadSprites(s) {
   const seen = {};
   s.teams.forEach(t => t.paths.forEach(p => p.forEach(id => {
@@ -1299,11 +1299,13 @@ function showDests(ms, cpu) {
   box.innerHTML = "";
   distinctDests(ms).forEach(m => {
     const b = document.createElement("button");
-    b.className = "dest" + (m.finish ? " goal" : m.capture.length ? " hit" : m.result < 0 ? " back" : "") + (cpu ? " cpu" : "");
-    placeAt(b, m.finish ? "goal" : m.to.node);
+    const at = m.finish ? "goal" : m.to.node;
+    b.className = "dest" + (m.finish ? " goal" : m.capture.length ? " hit" : m.result < 0 ? " back" : "") + (cpu ? " cpu" : "") +
+      (nodeXY(at)[0] >= 90 ? " flip" : ""); // 판 오른쪽 끝 칸은 말풍선을 왼쪽에 (판 밖으로 잘리지 않게)
+    placeAt(b, at);
     b.dataset.move = m.id;
     b.setAttribute("aria-label", m.finish ? "골인" : RES[m.result].name);
-    b.innerHTML = "<b>" + (m.finish ? "🏁 골인!" : RES[m.result].name + (m.capture.length ? " 잡기!" : m.stack.length ? " 업기" : "") + "<small>" + RES[m.result].steps + "</small>") + "</b>";
+    b.innerHTML = "<b>" + (m.finish ? "🏁 골인!" : RES[m.result].name + (m.capture.length ? " 배틀!" : m.stack.length ? " 업기" : "") + "<small>" + RES[m.result].steps + "</small>") + "</b>";
     b.addEventListener("click", ev => { ev.stopPropagation(); if (!G.busy && humanTurn()) doMove(m.id); });
     box.appendChild(b);
   });
@@ -1426,7 +1428,7 @@ async function playEvents(events, prev) {
     else if (e.type === "stack") await animStack(e, prev);
     else if (e.type === "evolve") await animEvolve(e);
     else if (e.type === "finish") await animFinish(e);
-    else if (e.type === "bonus") { SFX.again(); await banner("잡았으니 한 번 더!", null, 1000, "gold"); }
+    else if (e.type === "bonus") { SFX.again(); await banner("물리쳤으니 한 번 더!", null, 1000, "gold"); }
     else if (e.type === "skip") await animSkip(e);
     else if (e.type === "turn") { renderAll(); await announceTurn(e.team); }
     else if (e.type === "win") await showWin(e.team);
@@ -1466,15 +1468,19 @@ async function animCapture(e, prev) {
   const vEl = unitAt(vTeam, e.node);
   fxAt(e.node, fxOf(Yut.formOf(prev, e.by[0])));
   await sleep(300);
-  await battle(e, prev);          // 잡기 배틀 화면
+  await battle(e, prev);          // 배틀 화면
   if (current !== "game") return;
-  if (vEl) { vEl.classList.add("captured"); SFX.capture(); await sleep(600); vEl.remove(); }
+  if (vEl) {
+    vEl.classList.add("going-home");
+    placeAt(vEl, 0);              // 집 = 출발 자리(참먹이)
+    SFX.runHome();
+    await sleep(800);
+    vEl.remove();
+  }
 }
 
-/* ---------- 잡기 배틀: 기술을 쓰고 몬스터볼로 잡는다 ---------- */
+/* ---------- 배틀: 상대 말이 있는 칸에 멈추면 기술로 물리친다 → 진 포켓몬은 집(출발 자리)으로 ---------- */
 const backUrl = id => "assets/sprites/back/" + id + ".png";
-const BALL_OF = { c: ["poke-ball", "몬스터볼"], r: ["great-ball", "슈퍼볼"], u: ["ultra-ball", "하이퍼볼"], l: ["master-ball", "마스터볼"] };
-const RARITY_RANK = { c: 0, r: 1, u: 2, l: 3 };
 // 96px 도트 그림을 무대 폭의 w% 로 키우고, 그림의 발(실제 그림 영역의 아래)을 (x%, footY%) 에 맞춘다.
 // 포켓몬 게임처럼 그림 크기는 원래 비율 그대로 (작은 포켓몬은 작게)
 function btSprite(id, back, x, footY, w, cls) {
@@ -1504,11 +1510,9 @@ function battle(e, prev) {
     const foes = e.victims.map(i => Yut.formOf(prev, i));
     const foeNames = foes.map(nameOf).join("·");
     const n = foes.length;
-    const fw = n > 1 ? 20 : 25;                                // 업힌 말을 잡으면 여럿이 조금 작게 나란히
+    const fw = n > 1 ? 20 : 25;                                // 업힌 말과 붙으면 여럿이 조금 작게 나란히
     const offs = n === 1 ? [0] : n === 2 ? [-7, 7] : [-11, 0, 11];
     const foeXY = foes.map((_, k) => [72 + offs[k], 59 + (k % 2) * 2]);
-    const rank = foes.reduce((m, id) => Math.max(m, RARITY_RANK[rarityOf(id)]), 0);
-    const ball = BALL_OF[["c", "r", "u", "l"][rank]];
     const color = D.typeColors[typesOf(atk)[0]] || "#ffcf40";
     let skip = false, typer = null, closed = false;
     const live = () => !skip;
@@ -1605,63 +1609,35 @@ function battle(e, prev) {
       await say(josa(foeNames, "은/는") + " 힘이 쭉 빠졌다!");
       await wait(450);
 
-      // ③ 몬스터볼 던지기 → 빨려 들어감 → 세 번 흔들 → 딸깍
-      await say("가랏, " + ball[1] + "!", true);
-      if (live()) SFX.throwBall();
-      const balls = foeXY.map(([x, y], k) => {
-        const b = document.createElement("img");
-        b.className = "bt-ball";
-        b.src = "assets/items/" + ball[0] + ".png";
-        b.alt = "";
-        b.style.left = "22%"; b.style.top = "82%";
-        fx.appendChild(b);
-        anim(b, [
-          { left: "22%", top: "82%", transform: "translate(-50%,-50%) rotate(0deg)" },
-          { left: ((22 + x) / 2) + "%", top: "12%", transform: "translate(-50%,-50%) rotate(420deg)", offset: 0.5 },
-          { left: x + "%", top: (y - 22) + "%", transform: "translate(-50%,-50%) rotate(760deg)" }], 640, { delay: k * 150 * SPEED, easing: "linear" });
-        return b;
-      });
-      await wait(700 + 150 * (n - 1));
-      if (live()) {
-        const fl = $(".bt-flash", o);
-        fl.style.background = "#fff";
-        anim(fl, [{ opacity: 0.8 }, { opacity: 0 }], 300, { fill: "none" });
-      }
-      foeEls.forEach(el => anim(el, [
-        { transform: "none", filter: "none", opacity: 1 },
-        { transform: "none", filter: "brightness(1.6) sepia(1) hue-rotate(-50deg) saturate(6)", offset: 0.35 },
-        { transform: "translateY(-20%) scale(0)", filter: "brightness(3)", opacity: 0 }], 480, { easing: "ease-in" }));
-      await wait(520);
-      balls.forEach((b, k) => anim(b, [
-        { left: foeXY[k][0] + "%", top: (foeXY[k][1] - 22) + "%", transform: "translate(-50%,-50%) rotate(760deg)" },
-        { left: foeXY[k][0] + "%", top: (foeXY[k][1] - 4) + "%", transform: "translate(-50%,-50%) rotate(720deg)" }], 320, { easing: "cubic-bezier(.5,0,.6,1.6)" }));
-      await wait(560);
-      for (let s = 0; s < 3 && live(); s++) {
-        SFX.shake();
-        balls.forEach(b => anim(b, [
-          { transform: "translate(-50%,-50%) rotate(0deg)" }, { transform: "translate(-50%,-50%) rotate(-24deg)", offset: 0.3 },
-          { transform: "translate(-50%,-50%) rotate(20deg)", offset: 0.7 }, { transform: "translate(-50%,-50%) rotate(0deg)" }], 400, { fill: "none" }));
-        await wait(560);
-      }
+      // ③ 물리쳤다! — 이긴 쪽(내 포켓몬) 둘레에 별
       if (live()) {
         SFX.catchOk();
-        balls.forEach((b, k) => {
-          const x = foeXY[k][0], y = foeXY[k][1] - 4; // 공은 애니메이션으로 옮겨져 있어서 style 값이 아닌 도착 좌표를 쓴다
-          ["✨", "⭐", "✨", "🌟", "✨"].forEach((s, i) => {
-            const st = put("bt-star", s, x, y);
-            const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-            anim(st, [{ transform: "translate(-50%,-50%) scale(.3)", opacity: 1 }, { transform: "translate(calc(-50% + " + (Math.cos(a) * 90).toFixed(0) + "px), calc(-50% + " + (Math.sin(a) * 70).toFixed(0) + "px)) scale(1.1)", opacity: 0 }], 900).then(() => st.remove());
-          });
+        ["✨", "⭐", "✨", "🌟", "✨"].forEach((s, i) => {
+          const st = put("bt-star", s, 27, 70);
+          const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          anim(st, [{ transform: "translate(-50%,-50%) scale(.3)", opacity: 1 }, { transform: "translate(calc(-50% + " + (Math.cos(a) * 110).toFixed(0) + "px), calc(-50% + " + (Math.sin(a) * 80).toFixed(0) + "px)) scale(1.1)", opacity: 0 }], 900).then(() => st.remove());
         });
-        stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp">잡았다!</div>');
+        stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp">물리쳤다!</div>');
       }
-      // ④ 끝 — 잡힌 포켓몬은 출발 자리에서 다시 (영영 뺏기는 게 아님)
-      if (aTeam.cpu) await say("로켓단이 " + josa(foeNames, "을/를") + " 잡았다옹~! 😼", true);
-      else if (vTeam.cpu) await say("로켓단의 " + josa(foeNames, "을/를") + " 잡았다! 로켓단은 또 당했다옹~!", true);
-      else await say("신난다! " + josa(foeNames, "을/를") + " 잡았다!", true);
-      await wait(800);
-      await say(josa(foeNames, "은/는") + " 출발 자리로 돌아가요!");
-      await wait(800);
+      if (aTeam.cpu) await say("로켓단이 " + josa(foeNames, "을/를") + " 물리쳤다옹~! 😼", true);
+      else if (vTeam.cpu) await say("로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다! 로켓단은 또 당했다옹~!", true);
+      else await say("신난다! " + josa(foeNames, "을/를") + " 물리쳤다!", true);
+      await wait(700);
+
+      // ④ 집으로 — 쓰러지지 않는다. 폴짝 뛰었다가 오른쪽으로 달려 나간다 (영영 지는 게 아니라 처음부터 다시)
+      if (live()) SFX.runHome();
+      foeEls.forEach((el, k) => {
+        const [x, y] = foeXY[k];
+        const puff = put("bt-proj", "💨", x - 8, y - 5);
+        anim(puff, [{ transform: "translate(-50%,-50%) scale(.5)", opacity: 0.9 }, { transform: "translate(-120%,-50%) scale(1.3)", opacity: 0 }], 700).then(() => puff.remove());
+        anim(el, [
+          { transform: "none", opacity: 1 },
+          { transform: "translateY(-18%)", offset: 0.25 },
+          { transform: "translateY(0)", offset: 0.45 },
+          { transform: "translateX(170%)", opacity: 0 }], 850, { easing: "ease-in", delay: k * 120 * SPEED });
+      });
+      await say(josa(foeNames, "은/는") + " 집으로 돌아갔어요. 처음부터 다시 출발해요!");
+      await wait(900);
       close();
     })().catch(err => { console.error(err); close(); });
   });
@@ -1855,7 +1831,7 @@ function openRules() {
       "<li>🏁 <b>참먹이</b>(오른쪽 아래)에서 출발해 판을 돌아 다시 참먹이로 오면 <b>골인</b>!</li>" +
       "<li>↗️ <b>위쪽 두 모서리</b>나 가운데 <b>방</b>에 딱 멈추면 지름길(대각선)로 가요.</li>" +
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
-      "<li>💥 상대 말이 있는 칸에 멈추면 <b>잡아요</b>! 잡힌 포켓몬은 몬스터볼로 돌아가고, 잡은 팀은 한 번 더!</li>" +
+      "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
       "<li>✨ 판을 돌면서 포켓몬이 <b>진화</b>해요. 잡히면 처음 모습으로 돌아가요.</li>" +
       "<li>🏆 내 포켓몬이 먼저 전부 골인하면 이겨요!</li>" +
     "</ul>" +
