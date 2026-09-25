@@ -329,6 +329,45 @@ body.game-land #toast.show { transform: none; }
 
 .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 390; pointer-events: none; border-radius: 3px; animation: fall linear forwards; }
 
+/* ===== 잡기 배틀 — 잉글리시몬 배틀 화면처럼 (내 포켓몬 뒷모습 · 상대 앞모습 · 이름판 · 대화창) ===== */
+.battle { position: fixed; inset: 0; z-index: 360; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(12,18,30,.84); animation: fadeIn calc(.2s * var(--spd)) ease both; }
+.battle.out { opacity: 0; transition: opacity calc(.25s * var(--spd)); }
+.bt-stage {
+  position: relative; width: min(100%, 1000px, calc((100vh - 190px) * 16 / 9)); aspect-ratio: 16 / 9; border-radius: 22px; overflow: hidden;
+  box-shadow: 0 0 0 5px #fff, 0 12px 30px rgba(0,0,0,.4);
+  background: linear-gradient(#8fd3ff 0 55%, #c9f0d8 55% 58%, #7ccf8e 58% 100%);
+}
+.art-battleBg .bt-stage { background: #8fd3ff url(assets/ui/battle-bg.png) center / 100% 100% no-repeat; image-rendering: pixelated; }
+.bt-pad { position: absolute; transform: translate(-50%, -50%); aspect-ratio: 3 / 1; border-radius: 50%; background: radial-gradient(ellipse at center, #c3ec9f 0 50%, #86c96a 51% 68%, rgba(40,80,30,.25) 69% 72%, rgba(0,0,0,0) 73%); }
+.art-battlePad .bt-pad { background: url(assets/ui/battle-pad.png) center / 100% 100% no-repeat; image-rendering: pixelated; border-radius: 0; }
+.bt-pad.foe { left: 72%; top: 58%; width: 34%; }
+.bt-pad.ally { left: 27%; top: 93%; width: 46%; }
+.bt-mon { position: absolute; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 6px 4px rgba(0,0,0,.25)); }
+.bt-plate { position: absolute; width: 40%; background: rgba(255,253,245,.96); border-radius: 16px; padding: 8px 14px 10px; box-shadow: 0 4px 0 rgba(0,0,0,.18); border-left: 8px solid var(--tc); }
+.bt-plate.foe { left: 4%; top: 6%; }
+.bt-plate.ally { right: 4%; top: 60%; }
+.bt-plate .bp-top { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; overflow: hidden; }
+.bt-plate b { font-size: clamp(14px, 2.4vw, 24px); font-weight: 900; overflow: hidden; text-overflow: ellipsis; }
+.bt-plate em { margin-left: auto; font-style: normal; font-size: clamp(11px, 1.6vw, 15px); font-weight: 800; color: #fff; background: var(--tc); border-radius: 99px; padding: 1px 10px; }
+.bp-hp { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.bp-hp span { font-size: clamp(10px, 1.4vw, 13px); font-weight: 900; color: #e8a200; letter-spacing: 1px; }
+.bp-hp .hpbar { flex: 1; height: clamp(8px, 1.3vw, 12px); background: #dfe6ec; border-radius: 99px; overflow: hidden; }
+.bp-hp .fill { display: block; height: 100%; width: 100%; background: #2ec46f; border-radius: 99px; transition: width calc(.8s * var(--spd)) ease-in, background-color calc(.8s * var(--spd)); }
+.bp-hp .fill.low { width: 0 !important; background: #ff4f5a; }
+.bt-fx { position: absolute; inset: 0; pointer-events: none; }
+.bt-proj, .bt-burst, .bt-star { position: absolute; transform: translate(-50%, -50%); font-size: clamp(22px, 4.6vw, 48px); pointer-events: none; filter: drop-shadow(0 0 6px rgba(255,255,255,.9)); }
+.bt-burst { font-size: clamp(40px, 9vw, 96px); }
+.bt-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.bt-ball { position: absolute; width: 6%; transform: translate(-50%, -50%); image-rendering: pixelated; pointer-events: none; }
+.bt-stamp { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); font-size: clamp(34px, 7.5vw, 80px); font-weight: 900; color: #ffd23f; white-space: nowrap; pointer-events: none;
+  text-shadow: 4px 0 0 #3a2a10, -4px 0 0 #3a2a10, 0 4px 0 #3a2a10, 0 -4px 0 #3a2a10, 3px 3px 0 #3a2a10, -3px 3px 0 #3a2a10, 3px -3px 0 #3a2a10, -3px -3px 0 #3a2a10, 0 8px 0 rgba(0,0,0,.25);
+  animation: popIn calc(.35s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
+.bt-intro { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #111 0 7%, #fff 7% 14%); animation: btIntro calc(.55s * var(--spd)) steps(6) forwards; }
+.bt-dialog { position: relative; width: min(100%, 1000px, calc((100vh - 190px) * 16 / 9)); min-height: 86px; background: #fffdf5; border: 5px solid #3a4658; border-radius: 18px; padding: 14px 22px; font-size: clamp(18px, 2.8vw, 28px); font-weight: 900; line-height: 1.4; color: var(--ink); box-shadow: 0 6px 0 rgba(0,0,0,.25); }
+.bt-dialog .bt-more { position: absolute; right: 16px; bottom: 8px; font-style: normal; color: #ff4f5a; font-size: 18px; animation: bob 1s ease-in-out infinite; }
+.bt-skip { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); background: rgba(255,255,255,.92); }
+@keyframes btIntro { 0% { opacity: 1; transform: scaleY(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: scaleY(0); } }
+
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7%); } }
 @keyframes hop { 0% { transform: translateY(0); } 45% { transform: translateY(-24%); } 100% { transform: translateY(0); } }
 @keyframes popIn { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -370,7 +409,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-25b";
+const APP_VERSION = "2026-09-25c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -563,6 +602,7 @@ const Art = {
     tileCenter: "assets/board/tile-center.png", tileStart: "assets/board/tile-start.png",
     stickFlat: "assets/ui/stick-flat.png", stickRound: "assets/ui/stick-round.png", stickBack: "assets/ui/stick-back.png",
     mat: "assets/ui/mat.png", title: "assets/ui/title-bg.webp", win: "assets/ui/win-bg.webp",
+    battleBg: "assets/ui/battle-bg.png", battlePad: "assets/ui/battle-pad.png",
   },
   load() {
     return Promise.all(Object.keys(this.list).map(k => new Promise(res => {
@@ -624,6 +664,12 @@ const SFX = {
   win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.22, "triangle", i * 0.14)); },
   again() { [1047, 1319, 1568].forEach((f, i) => this.tone(f, 0.12, "sine", i * 0.07, 0.12)); },
   alarm() { for (let i = 0; i < 4; i++) { this.tone(880, 0.14, "square", i * 0.3, 0.08); this.tone(660, 0.14, "square", i * 0.3 + 0.15, 0.08); } },
+  // 잡기 배틀 (잉글리시몬 모험 화면과 같은 소리)
+  battle() { [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.1, "square", i * 0.07, 0.07)); this.tone(131, 0.4, "triangle", 0, 0.16); },
+  hit() { this.tone(150, 0.18, "square", 0, 0.22); this.tone(90, 0.24, "sine", 0.05, 0.2); },
+  throwBall() { this.tone(300, 0.25, "sine", 0, 0.15); this.tone(500, 0.15, "sine", 0.2, 0.12); },
+  shake() { this.tone(120, 0.15, "sine", 0, 0.25); },
+  catchOk() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.16, "sine", i * 0.1)); },
 };
 const TTS = {
   voice: null, voicesLoaded: false,
@@ -755,7 +801,7 @@ function showScreen(name) {
   clearTimeout(G.cpuTimer);
   closeModal();
   TTS.stop();
-  $$(".win-screen, .rocket-intro, .result-pop, .banner").forEach(e => e.remove());
+  $$(".win-screen, .rocket-intro, .result-pop, .banner, .battle").forEach(e => e.remove());
   current = name;
   document.body.classList.remove("game-land");
   const app = $("#app");
@@ -1091,8 +1137,18 @@ function persist() {
   Store.save();
 }
 
+// 이번 판 포켓몬의 모든 진화 모습(앞·뒤)을 미리 불러 둔다 — 진화·잡기 배틀 때 깜빡이지 않게
+function preloadSprites(s) {
+  const seen = {};
+  s.teams.forEach(t => t.paths.forEach(p => p.forEach(id => {
+    if (seen[id]) return;
+    seen[id] = 1;
+    [frontUrl(id), "assets/sprites/back/" + id + ".png"].forEach(u => { const im = new Image(); im.src = u; });
+  })));
+}
 function mountGame() {
   G.busy = false; G.sel = null; G.newPick = null; G.paused = false;
+  preloadSprites(G.s);
   renderAll();
   try { history.pushState({ yut: "game" }, ""); } catch (e) {}
   if (G.s.intro) {
@@ -1330,24 +1386,209 @@ function renderPanelFrom(prev, pieces) {
   pieces.forEach(i => { const c = $('.pchip[data-piece="' + i + '"]'); if (c) { c.classList.remove("wait", "can", "selected"); c.classList.add("board"); const b = c.querySelector(".ball"); if (b) b.remove(); } });
 }
 async function animCapture(e, prev) {
-  const atk = Yut.formOf(prev, e.by[0]);
-  const atkTeam = prev.pieces[e.by[0]].team;
   const vTeam = prev.pieces[e.victims[0]].team;
   const vEl = unitAt(vTeam, e.node);
-  const who = e.victims.map(i => nameOf(Yut.formOf(prev, i))).join("·");
-  fxAt(e.node, fxOf(atk));
-  SFX.attack();
-  await sleep(380);
-  if (vEl) vEl.classList.add("captured");
-  SFX.capture();
-  Cry.play(atk);
-  let line = nameOf(atk) + "의 " + moveOf(atk) + "! " + josa(who, "이/가") + " 몬스터볼로 돌아갔어요";
-  if (G.s.teams[atkTeam].cpu) line = "로켓단이 잡았다옹~! " + line;
-  else if (G.s.teams[vTeam].cpu) line = "로켓단은 또 당했다옹~! " + line;
-  toast(line, 2800);
-  TTS.say(G.s.teams[atkTeam].cpu ? "로켓단이 잡았다옹!" : "잡았다!");
-  await sleep(900);
-  if (vEl) vEl.remove();
+  fxAt(e.node, fxOf(Yut.formOf(prev, e.by[0])));
+  await sleep(300);
+  await battle(e, prev);          // 잡기 배틀 화면
+  if (current !== "game") return;
+  if (vEl) { vEl.classList.add("captured"); SFX.capture(); await sleep(600); vEl.remove(); }
+}
+
+/* ---------- 잡기 배틀: 기술을 쓰고 몬스터볼로 잡는다 ---------- */
+const backUrl = id => "assets/sprites/back/" + id + ".png";
+const BALL_OF = { c: ["poke-ball", "몬스터볼"], r: ["great-ball", "슈퍼볼"], u: ["ultra-ball", "하이퍼볼"], l: ["master-ball", "마스터볼"] };
+const RARITY_RANK = { c: 0, r: 1, u: 2, l: 3 };
+// 96px 도트 그림을 무대 폭의 w% 로 키우고, 그림의 발(실제 그림 영역의 아래)을 (x%, footY%) 에 맞춘다.
+// 포켓몬 게임처럼 그림 크기는 원래 비율 그대로 (작은 포켓몬은 작게)
+function btSprite(id, back, x, footY, w, cls) {
+  const b = ((back ? D.boxBack : D.box) || [])[id - 1] || [16, 16, 64, 64];
+  const h = w * 16 / 9;                                  // 정사각형 칸의 높이 (무대 높이 %)
+  const top = footY - (b[1] + b[3]) / 96 * h;
+  const left = x - (b[0] + b[2] / 2) / 96 * w;
+  return '<img class="bt-mon ' + cls + '" src="' + (back ? backUrl(id) : frontUrl(id)) + '" alt="' + esc(nameOf(id)) + '" draggable="false"' +
+    ' style="left:' + left.toFixed(2) + "%;top:" + top.toFixed(2) + "%;width:" + w.toFixed(2) + '%"' +
+    ' onerror="btFail(this,' + id + "," + (back ? 1 : 0) + ')">';
+}
+function btFail(img, id, back) {
+  img.onerror = null;
+  if (back) { img.src = frontUrl(id); img.style.transform = "scaleX(-1)"; }   // 뒷모습이 없으면 앞모습을 뒤집어서
+  else img.src = "assets/items/poke-ball.png";
+}
+function btPlate(side, name, team) {
+  return '<div class="bt-plate ' + side + '" style="--tc:' + team.color + '"><div class="bp-top"><b>' + esc(name) + "</b><em>" + esc(team.name) + "</em></div>" +
+    '<div class="bp-hp"><span>HP</span><i class="hpbar"><i class="fill"></i></i></div></div>';
+}
+function battle(e, prev) {
+  return new Promise(resolve => {
+    const atkPiece = e.by[0];
+    const atk = Yut.formOf(prev, atkPiece);
+    const aTeam = prev.teams[prev.pieces[atkPiece].team];
+    const vTeam = prev.teams[prev.pieces[e.victims[0]].team];
+    const foes = e.victims.map(i => Yut.formOf(prev, i));
+    const foeNames = foes.map(nameOf).join("·");
+    const n = foes.length;
+    const fw = n > 1 ? 20 : 25;                                // 업힌 말을 잡으면 여럿이 조금 작게 나란히
+    const offs = n === 1 ? [0] : n === 2 ? [-7, 7] : [-11, 0, 11];
+    const foeXY = foes.map((_, k) => [72 + offs[k], 59 + (k % 2) * 2]);
+    const rank = foes.reduce((m, id) => Math.max(m, RARITY_RANK[rarityOf(id)]), 0);
+    const ball = BALL_OF[["c", "r", "u", "l"][rank]];
+    const color = D.typeColors[typesOf(atk)[0]] || "#ffcf40";
+    let skip = false, typer = null, closed = false;
+    const live = () => !skip;
+    const wait = ms => skip ? Promise.resolve() : sleep(ms);
+    const anim = (el, frames, ms, opt) => {
+      if (!el || !el.animate || skip) return Promise.resolve();
+      const a = el.animate(frames, Object.assign({ duration: ms * SPEED, fill: "forwards", easing: "ease-out" }, opt || {}));
+      return a.finished ? a.finished.catch(() => {}) : sleep(ms);
+    };
+
+    const o = document.createElement("div");
+    o.className = "battle";
+    o.innerHTML =
+      '<div class="bt-stage">' +
+        '<i class="bt-pad foe"></i><i class="bt-pad ally"></i>' +
+        foes.map((id, k) => btSprite(id, false, foeXY[k][0], foeXY[k][1], fw, "foe")).join("") +
+        btSprite(atk, true, 27, 94, 33, "ally") +
+        btPlate("foe", foeNames, vTeam) + btPlate("ally", nameOf(atk), aTeam) +
+        '<div class="bt-flash"></div><div class="bt-fx"></div><div class="bt-intro"></div>' +
+      "</div>" +
+      '<div class="bt-dialog"><p class="bt-text"></p><i class="bt-more">▼</i></div>' +
+      '<button class="btn bt-skip">건너뛰기 ⏭</button>';
+    document.body.appendChild(o);
+    const stage = $(".bt-stage", o), fx = $(".bt-fx", o), text = $(".bt-text", o), dialog = $(".bt-dialog", o);
+    const foeEls = $$(".bt-mon.foe", o), allyEl = $(".bt-mon.ally", o);
+
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      clearInterval(typer);
+      o.classList.add("out");
+      setTimeout(() => { o.remove(); resolve(); }, 260 * SPEED);
+    };
+    $(".bt-skip", o).addEventListener("click", ev => { ev.stopPropagation(); skip = true; TTS.stop(); close(); });
+
+    // 대화창: 한 글자씩 — 누르면 바로 다 보인다
+    const say = (msg, speak) => new Promise(res => {
+      clearInterval(typer);
+      if (skip) { text.textContent = msg; return res(); }
+      if (speak) TTS.say(msg);
+      const chars = Array.from(msg);
+      let i = 0;
+      text.textContent = "";
+      const done = () => { clearInterval(typer); text.textContent = msg; dialog.onclick = null; res(); };
+      dialog.onclick = done;
+      typer = setInterval(() => { i++; text.textContent = chars.slice(0, i).join(""); if (i >= chars.length) done(); }, Math.max(6, 34 * SPEED));
+    });
+    const put = (cls, html, x, y) => {
+      const el = document.createElement("span");
+      el.className = cls;
+      el.innerHTML = html;
+      el.style.left = x + "%"; el.style.top = y + "%";
+      fx.appendChild(el);
+      return el;
+    };
+
+    (async () => {
+      // ① 등장: 줄무늬 섬광 → 양쪽에서 미끄러져 들어옴
+      SFX.battle();
+      foeEls.forEach(el => anim(el, [{ transform: "translateX(90%)", opacity: 0 }, { transform: "none", opacity: 1 }], 520));
+      anim(allyEl, [{ transform: "translateX(-90%)", opacity: 0 }, { transform: "none", opacity: 1 }], 520);
+      await wait(600);
+      if (live()) Cry.play(foes[0]);
+      await say("앗! " + vTeam.name + "의 " + josa(foeNames, "와/과") + " 마주쳤다!");
+      await wait(550);
+
+      // ② 기술
+      await say(nameOf(atk) + "의 " + moveOf(atk) + "!", true);
+      if (live()) { SFX.attack(); Cry.play(atk); }
+      anim(allyEl, [{ transform: "none" }, { transform: "translate(14%, -12%)", offset: 0.35 }, { transform: "none" }], 460);
+      await wait(180);
+      for (let k = 0; k < 5 && live(); k++) {
+        const [tx, ty] = foeXY[k % n];
+        const p = put("bt-proj", fxOf(atk), 32, 72);
+        anim(p, [{ left: "32%", top: "72%", transform: "translate(-50%,-50%) scale(.5)" }, { left: tx + "%", top: (ty - 14) + "%", transform: "translate(-50%,-50%) scale(1.35)" }], 420, { easing: "ease-in" })
+          .then(() => p.remove());
+        await wait(90);
+      }
+      await wait(380);
+      if (live()) {
+        SFX.hit();
+        const fl = $(".bt-flash", o);
+        fl.style.background = color;
+        anim(fl, [{ opacity: 0.75 }, { opacity: 0 }], 420, { fill: "none" });
+        foeXY.forEach(([x, y]) => { const b = put("bt-burst", "💥", x, y - 14); anim(b, [{ transform: "translate(-50%,-50%) scale(.3)", opacity: 1 }, { transform: "translate(-50%,-50%) scale(1.5)", opacity: 0 }], 520).then(() => b.remove()); });
+        foeEls.forEach(el => anim(el, [
+          { transform: "translateX(0)", filter: "none" }, { transform: "translateX(-7%)", filter: "brightness(2.4)", offset: 0.15 },
+          { transform: "translateX(6%)", offset: 0.35 }, { transform: "translateX(-5%)", filter: "brightness(1.8)", offset: 0.55 },
+          { transform: "translateX(4%)", offset: 0.75 }, { transform: "translateX(0)", filter: "none" }], 520));
+        const fill = $(".bt-plate.foe .fill", o);
+        if (fill) fill.classList.add("low");
+      }
+      await wait(750);
+      await say(josa(foeNames, "은/는") + " 힘이 쭉 빠졌다!");
+      await wait(450);
+
+      // ③ 몬스터볼 던지기 → 빨려 들어감 → 세 번 흔들 → 딸깍
+      await say("가랏, " + ball[1] + "!", true);
+      if (live()) SFX.throwBall();
+      const balls = foeXY.map(([x, y], k) => {
+        const b = document.createElement("img");
+        b.className = "bt-ball";
+        b.src = "assets/items/" + ball[0] + ".png";
+        b.alt = "";
+        b.style.left = "22%"; b.style.top = "82%";
+        fx.appendChild(b);
+        anim(b, [
+          { left: "22%", top: "82%", transform: "translate(-50%,-50%) rotate(0deg)" },
+          { left: ((22 + x) / 2) + "%", top: "12%", transform: "translate(-50%,-50%) rotate(420deg)", offset: 0.5 },
+          { left: x + "%", top: (y - 22) + "%", transform: "translate(-50%,-50%) rotate(760deg)" }], 640, { delay: k * 150 * SPEED, easing: "linear" });
+        return b;
+      });
+      await wait(700 + 150 * (n - 1));
+      if (live()) {
+        const fl = $(".bt-flash", o);
+        fl.style.background = "#fff";
+        anim(fl, [{ opacity: 0.8 }, { opacity: 0 }], 300, { fill: "none" });
+      }
+      foeEls.forEach(el => anim(el, [
+        { transform: "none", filter: "none", opacity: 1 },
+        { transform: "none", filter: "brightness(1.6) sepia(1) hue-rotate(-50deg) saturate(6)", offset: 0.35 },
+        { transform: "translateY(-20%) scale(0)", filter: "brightness(3)", opacity: 0 }], 480, { easing: "ease-in" }));
+      await wait(520);
+      balls.forEach((b, k) => anim(b, [
+        { left: foeXY[k][0] + "%", top: (foeXY[k][1] - 22) + "%", transform: "translate(-50%,-50%) rotate(760deg)" },
+        { left: foeXY[k][0] + "%", top: (foeXY[k][1] - 4) + "%", transform: "translate(-50%,-50%) rotate(720deg)" }], 320, { easing: "cubic-bezier(.5,0,.6,1.6)" }));
+      await wait(560);
+      for (let s = 0; s < 3 && live(); s++) {
+        SFX.shake();
+        balls.forEach(b => anim(b, [
+          { transform: "translate(-50%,-50%) rotate(0deg)" }, { transform: "translate(-50%,-50%) rotate(-24deg)", offset: 0.3 },
+          { transform: "translate(-50%,-50%) rotate(20deg)", offset: 0.7 }, { transform: "translate(-50%,-50%) rotate(0deg)" }], 400, { fill: "none" }));
+        await wait(560);
+      }
+      if (live()) {
+        SFX.catchOk();
+        balls.forEach((b, k) => {
+          const x = foeXY[k][0], y = foeXY[k][1] - 4; // 공은 애니메이션으로 옮겨져 있어서 style 값이 아닌 도착 좌표를 쓴다
+          ["✨", "⭐", "✨", "🌟", "✨"].forEach((s, i) => {
+            const st = put("bt-star", s, x, y);
+            const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+            anim(st, [{ transform: "translate(-50%,-50%) scale(.3)", opacity: 1 }, { transform: "translate(calc(-50% + " + (Math.cos(a) * 90).toFixed(0) + "px), calc(-50% + " + (Math.sin(a) * 70).toFixed(0) + "px)) scale(1.1)", opacity: 0 }], 900).then(() => st.remove());
+          });
+        });
+        stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp">잡았다!</div>');
+      }
+      // ④ 끝 — 잡힌 포켓몬은 출발 자리에서 다시 (영영 뺏기는 게 아님)
+      if (aTeam.cpu) await say("로켓단이 " + josa(foeNames, "을/를") + " 잡았다옹~! 😼", true);
+      else if (vTeam.cpu) await say("로켓단의 " + josa(foeNames, "을/를") + " 잡았다! 로켓단은 또 당했다옹~!", true);
+      else await say("신난다! " + josa(foeNames, "을/를") + " 잡았다!", true);
+      await wait(800);
+      await say(josa(foeNames, "은/는") + " 출발 자리로 돌아가요!");
+      await wait(800);
+      close();
+    })().catch(err => { console.error(err); close(); });
+  });
 }
 async function animStack(e, prev) {
   const el = G.lastEl;

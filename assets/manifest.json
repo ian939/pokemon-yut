@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-25T09:03:39.216Z",
+  "updated": "2026-09-25T09:35:17.433Z",
   "cast": {
     "yut": [
       498,
@@ -31,6 +31,11 @@
     "bytes": 1085946,
     "missing": []
   },
+  "back": {
+    "count": 1025,
+    "bytes": 940923,
+    "missing": []
+  },
   "official_src": {
     "count": 18,
     "bytes": 2561029,
@@ -42,7 +47,7 @@
     "missing": []
   },
   "assets_total": {
-    "count": 1066,
-    "bytes": 2480747
+    "count": 2091,
+    "bytes": 3107204
   }
 }

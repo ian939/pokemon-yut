@@ -3,7 +3,8 @@
 //   node tools/fetch-assets.js
 //   python tools/postprocess.py --official     ← 공식 일러스트를 가벼운 webp로 줄이기
 //
-// - 도트 앞모습 96px: 1~1025 전부 → assets/sprites/front/{id}.png   (말·팀 고르기)
+// - 도트 앞모습 96px: 1~1025 전부 → assets/sprites/front/{id}.png   (말·팀 고르기·배틀의 상대)
+// - 도트 뒷모습 96px: 1~1025 전부 → assets/sprites/back/{id}.png    (잡기 배틀의 내 포켓몬)
 // - 공식 일러스트: 고정 출연진만   → art-src/official/{id}.png (원본, git 제외)
 // - 볼 아이콘                     → assets/items/
 // - 로켓단 도트 그림 (잉글리시몬 img/ 에서 복사) → assets/ui/
@@ -29,13 +30,14 @@ const ROCKET_IMG = ["rocket-jessie", "rocket-james", "rocket-meowth", "rocket-wo
 const jobs = [];
 for (let id = 1; id <= 1025; id++) {
   jobs.push({ kind: "front", url: BASE + "pokemon/" + id + ".png", out: path.join(ROOT, "assets/sprites/front", id + ".png"), id });
+  jobs.push({ kind: "back", url: BASE + "pokemon/back/" + id + ".png", out: path.join(ROOT, "assets/sprites/back", id + ".png"), id });
 }
 [...CAST.yut, ...CAST.rocket, ...CAST.friends].forEach(id => {
   jobs.push({ kind: "official", url: BASE + "pokemon/other/official-artwork/" + id + ".png", out: path.join(ROOT, "art-src/official", id + ".png"), id });
 });
 BALLS.forEach(b => jobs.push({ kind: "items", url: BASE + "items/" + b + ".png", out: path.join(ROOT, "assets/items", b + ".png"), id: b }));
 
-const missing = { front: [], official: [], items: [] };
+const missing = { front: [], back: [], official: [], items: [] };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function get(job) {
@@ -90,6 +92,7 @@ function dirStat(dir) {
     updated: new Date().toISOString(),
     cast: CAST,
     front: Object.assign(dirStat(path.join(ROOT, "assets/sprites/front")), { missing: missing.front.sort((a, b) => a - b) }),
+    back: Object.assign(dirStat(path.join(ROOT, "assets/sprites/back")), { missing: missing.back.sort((a, b) => a - b) }),
     official_src: Object.assign(dirStat(path.join(ROOT, "art-src/official")), { missing: missing.official }),
     items: Object.assign(dirStat(path.join(ROOT, "assets/items")), { missing: missing.items }),
     assets_total: dirStat(path.join(ROOT, "assets")),
@@ -99,6 +102,7 @@ function dirStat(dir) {
   const mb = b => (b / 1024 / 1024).toFixed(2) + "MB";
   console.log("받음", tally.ok, "· 이미 있음", tally.skip, "· 없음(404)", tally["404"], "· 실패", tally.fail);
   console.log("도트 앞모습", manifest.front.count + "개", mb(manifest.front.bytes), "없는 번호:", manifest.front.missing.join(",") || "없음");
+  console.log("도트 뒷모습", manifest.back.count + "개", mb(manifest.back.bytes), "없는 번호:", manifest.back.missing.join(",") || "없음");
   console.log("공식 일러스트 원본", manifest.official_src.count + "개", mb(manifest.official_src.bytes));
   console.log("assets 전체", mb(manifest.assets_total.bytes), manifest.assets_total.bytes > BUDGET ? "⚠️ 6MB 예산 초과!" : "(예산 6MB 안)");
 })();

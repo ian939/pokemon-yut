@@ -42,18 +42,24 @@ def official():
     print(f"공식 일러스트 → assets/sprites/art/*.webp  {total / 1024:.0f}KB")
 
 
-# ---------- 도트 앞모습의 그림 영역 ----------
+# ---------- 도트 앞모습·뒷모습의 그림 영역 ----------
 def bbox():
-    front = ROOT / "assets" / "sprites" / "front"
-    boxes = []
-    for i in range(1, 1026):
-        im = Image.open(front / f"{i}.png").convert("RGBA")
-        a = im.getchannel("A").point(lambda v: 255 if v > 24 else 0)
-        b = a.getbbox() or (16, 16, 80, 80)
-        boxes.append([b[0], b[1], b[2] - b[0], b[3] - b[1]])
     (ROOT / "data").mkdir(exist_ok=True)
-    (ROOT / "data" / "sprite-box.json").write_text(json.dumps(boxes, separators=(",", ":")) + "\n", encoding="utf-8")
-    print("그림 영역 1025개 → data/sprite-box.json (node tools/extract-data.js 로 합치기)")
+    for kind, name in (("front", "sprite-box.json"), ("back", "sprite-box-back.json")):
+        folder = ROOT / "assets" / "sprites" / kind
+        if not folder.exists():
+            continue
+        boxes = []
+        for i in range(1, 1026):
+            f = folder / f"{i}.png"
+            b = None
+            if f.exists():
+                a = Image.open(f).convert("RGBA").getchannel("A").point(lambda v: 255 if v > 24 else 0)
+                b = a.getbbox()
+            b = b or (16, 16, 80, 80)
+            boxes.append([b[0], b[1], b[2] - b[0], b[3] - b[1]])
+        (ROOT / "data" / name).write_text(json.dumps(boxes, separators=(",", ":")) + "\n", encoding="utf-8")
+        print(f"{kind} 그림 영역 1025개 → data/{name} (node tools/extract-data.js 로 합치기)")
 
 
 # ---------- Codex 그림 다듬기 ----------
@@ -205,8 +211,25 @@ def process(item):
                 small = clean_fringe(quantize(small, colors))
                 outs.append((small, dst))
         elif item.get("transparent"):
-            small = fit_square(trim(im), lowres)
+            part = trim(im)
+            if item.get("keepAspect"):
+                # 가로로 긴 발판처럼 정사각형 여백 없이 긴 변만 맞춘다
+                k = lowres / max(part.size)
+                small = premul_resize(part, (max(1, round(part.width * k)), max(1, round(part.height * k))))
+            else:
+                small = fit_square(part, lowres)
             outs.append((clean_fringe(quantize(small, colors)), item["out"]))
+        elif item.get("wh"):
+            # 16:9 배경 — 가운데를 그 비율로 잘라 목표 크기로
+            tw, th = item["wh"]
+            w, h = im.size
+            if w / h > tw / th:
+                cw = round(h * tw / th)
+                im = im.crop(((w - cw) // 2, 0, (w - cw) // 2 + cw, h))
+            else:
+                ch = round(w * th / tw)
+                im = im.crop((0, (h - ch) // 2, w, (h - ch) // 2 + ch))
+            outs.append((quantize(premul_resize(im, (tw, th)), colors), item["out"]))
         else:
             sq = center_square(im)
             small = premul_resize(sq, (lowres, lowres))

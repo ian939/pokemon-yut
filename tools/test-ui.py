@@ -34,6 +34,7 @@ OUT = pathlib.Path(_args[0]) if _args else ROOT / "art-src" / "shots"
 OUT.mkdir(parents=True, exist_ok=True)
 
 fails = []
+SKIPS = [0]  # play_to_end 에서 누른 배틀 건너뛰기 수
 
 
 def check(cond, msg):
@@ -92,6 +93,13 @@ def play_to_end(page, shots_prefix, max_steps=900):
     shot_at = {3, 12, 30}
     n = 0
     for step in range(max_steps):
+        sk = page.query_selector(".bt-skip")
+        if sk:
+            # 잡기 배틀이 뜨면 건너뛰기를 눌러 본다 (건너뛰어도 판이 이어져야 함)
+            sk.click(force=True)
+            SKIPS[0] += 1
+            page.wait_for_timeout(80)
+            continue
         st = page.evaluate("() => { const G = window.__yut.G; return G.s ? { phase: G.s.phase, cpu: G.s.teams[G.s.turn].cpu, busy: G.busy, dests: document.querySelectorAll('.dest:not(.cpu)').length, over: !!document.querySelector('.win-screen') } : null }")
         if not st:
             return False
@@ -168,9 +176,15 @@ def scenario(browser, base, errors):
     throw(); wait_idle(page)
     dest("new/1")                                  # 팀 0: 도 → 1번 칸
     throw(); wait_idle(page)
-    dest("new/1", wait=False)                      # 팀 1: 도 → 1번 칸의 팀 0 말을 잡음
-    page.wait_for_timeout(700)
-    page.screenshot(path=str(OUT / "50-capture-fx.png"))
+    dest("new/1", wait=False)                      # 팀 1: 도 → 1번 칸의 팀 0 말을 잡음 → 잡기 배틀
+    page.wait_for_selector(".battle", timeout=5000)
+    t0 = time.time()
+    for name, at in (("50-battle-meet", 1.5), ("50-battle-move", 2.9), ("50-battle-hit", 3.4), ("50-battle-throw", 5.9), ("50-battle-wobble", 7.6), ("50-battle-caught", 9.4)):
+        page.wait_for_timeout(max(0, int((t0 + at - time.time()) * 1000)))
+        page.screenshot(path=str(OUT / f"{name}.png"))
+    check(page.query_selector(".bt-stamp") is not None, "잡기 배틀: 몬스터볼로 잡고 '잡았다!'")
+    page.wait_for_selector(".battle", state="detached", timeout=15000)
+    check(True, f"잡기 배틀 길이 약 {time.time() - t0:.1f}초")
     wait_idle(page)
     page.screenshot(path=str(OUT / "51-after-capture.png"))
     check(page.evaluate("() => window.__yut.G.s.turn") == 1, "잡은 팀(1)이 한 번 더 던짐")
@@ -287,7 +301,7 @@ def main():
         ev = page.evaluate("() => window.__ev")
         for t in ("throw", "move", "turn", "evolve", "finish", "win"):
             check(t in ev, f"이벤트 '{t}' 나옴 ({ev.count(t)}번)")
-        print("   (그 밖에: 잡기 %d · 업기 %d · 쉬어 가기 %d)" % (ev.count("capture"), ev.count("stack"), ev.count("skip")))
+        print("   (그 밖에: 잡기 %d · 업기 %d · 쉬어 가기 %d · 배틀 건너뛰기 %d)" % (ev.count("capture"), ev.count("stack"), ev.count("skip"), SKIPS[0]))
         stats = page.evaluate("() => window.__yut.Store.data.stats")
         check(stats["games"] == 1, "전적 1판 기록")
         check(page.evaluate("() => window.__yut.Store.data.game") is None, "끝난 판은 이어하기에서 빠짐")

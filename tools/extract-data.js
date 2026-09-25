@@ -13,6 +13,7 @@ const ROOT = path.resolve(__dirname, "..");
 const SRC = path.resolve(process.argv[2] || process.env.ENGMON_HTML || path.join(ROOT, "..", "index.html"));
 const EVO = path.join(ROOT, "data", "evo-from.json");
 const BOX = path.join(ROOT, "data", "sprite-box.json"); // postprocess.py --bbox 결과 (도트 그림의 실제 영역)
+const BOX_BACK = path.join(ROOT, "data", "sprite-box-back.json"); // 뒷모습 그림의 실제 영역 (잡기 배틀)
 const OUT = path.join(ROOT, "data", "pokemon.js");
 
 const html = fs.readFileSync(SRC, "utf8");
@@ -79,7 +80,8 @@ let evoFrom = {};
 if (fs.existsSync(EVO)) evoFrom = JSON.parse(fs.readFileSync(EVO, "utf8"));
 else console.warn("⚠️ data/evo-from.json 이 없어요 — 먼저 node tools/fetch-evo.js 를 돌리세요 (진화 없이 만듭니다)");
 
-let box = null;
+let box = null, boxBack = null;
+if (fs.existsSync(BOX_BACK)) boxBack = JSON.parse(fs.readFileSync(BOX_BACK, "utf8"));
 if (fs.existsSync(BOX)) box = JSON.parse(fs.readFileSync(BOX, "utf8"));
 else console.warn("⚠️ data/sprite-box.json 이 없어요 — python tools/postprocess.py --bbox (말 크기 맞추기 없이 만듭니다)");
 
@@ -97,6 +99,7 @@ const D = {
   typeFx: TYPE_FX,
   typeMove: TYPE_MOVE,
   box, // [x, y, w, h] (96px 도트 그림 안의 실제 그림 영역), index = 번호-1
+  boxBack, // 뒷모습 그림의 실제 영역 — 잡기 배틀에서 발판에 발을 맞출 때
 };
 
 const body =
