@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="포켓몬 윷놀이">
+<meta name="theme-color" content="#5bb8ff">
+<link rel="icon" href="assets/ui/icon-180.png">
+<link rel="apple-touch-icon" href="assets/ui/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>포켓몬 윷놀이</title>
+<!--
+  포켓몬 윷놀이 — 잉글리시몬 도감의 포켓몬이 말이 되는 가족 윷놀이 (개인·가정용 비상업 팬 프로젝트)
+  - 규칙: yut-rules.js · 데이터: data/pokemon.js (tools 로 생성) · 그림: assets/
+  - file:// 로 열어도 동작. 잉글리시몬 도감(localStorage engmon_save_v1)은 읽기만 한다.
+-->
+<script src="lock.js"></script>
+<style>
+/* ===== 패드 터치 잠금 (pad-input-lock 스킬) — 스타일시트 맨 위 ===== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%;
+  touch-action: pan-x pan-y; overscroll-behavior: none;
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+}
+input, textarea, [contenteditable] {
+  -webkit-touch-callout: default; -webkit-user-select: text; user-select: text; touch-action: auto;
+}
+
+/* ===== 기본 ===== */
+:root {
+  --ink: #2b3645; --ink-soft: #5f6d7f; --card: #fffdf8; --line: #e2e8ef;
+  --sky: #bfe6ff; --gold: #ffc93c; --gold-ink: #5a3b00;
+  --pink: #ff4f86; --blue: #2f86f6; --purple: #8e44ad; --green: #26b366;
+  --shadow: 0 5px 0 rgba(43,54,69,.16), 0 12px 24px rgba(43,54,69,.12);
+  --font: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --spd: 1;
+}
+* { margin: 0; padding: 0; }
+body { font-family: var(--font); color: var(--ink); background: var(--sky); }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+img { -webkit-user-drag: none; }
+#app { position: fixed; inset: 0; }
+.screen {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: 24px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  min-height: 48px; min-width: 48px; padding: 10px 18px; border-radius: 16px;
+  background: #fff; box-shadow: 0 4px 0 rgba(43,54,69,.18); font-weight: 800; font-size: 17px;
+  transition: transform .08s, box-shadow .08s;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(43,54,69,.18); }
+.btn.big { min-height: 64px; font-size: 22px; padding: 10px 24px; border-radius: 20px; width: 100%; }
+.btn.big small { display: block; width: 100%; font-size: 14px; opacity: .85; font-weight: 700; }
+.btn.pink { background: var(--pink); color: #fff; }
+.btn.blue { background: var(--blue); color: #fff; }
+.btn.purple { background: var(--purple); color: #fff; }
+.btn.green { background: var(--green); color: #fff; }
+.btn.gold { background: var(--gold); color: var(--gold-ink); }
+.btn.ghost { background: rgba(255,255,255,.8); }
+.btn[disabled] { opacity: .45; pointer-events: none; }
+.btn.icon { width: 52px; height: 52px; min-height: 52px; padding: 0; font-size: 24px; border-radius: 16px; }
+
+.bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-height: 66px; }
+.bar h2 { flex: 1; text-align: center; font-size: clamp(18px, 3.2vw, 24px); font-weight: 900; }
+.bar .side { width: 52px; text-align: center; font-weight: 900; font-size: 18px; }
+
+/* ===== 처음 화면 ===== */
+.home { background: linear-gradient(#86ceff, #d7f1ff 52%, #a6e08a 53%, #6fc25a); }
+.art-title .home { background: #86ceff url(assets/ui/title-bg.webp) center 70% / cover no-repeat; }
+.home .inner { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 14px; }
+.logo {
+  font-size: clamp(46px, 11vmin, 104px); font-weight: 900; line-height: 1; text-align: center; color: #ffcb05; letter-spacing: -2px;
+  text-shadow: 4px 0 0 #2a5fa8, -4px 0 0 #2a5fa8, 0 4px 0 #2a5fa8, 0 -4px 0 #2a5fa8, 3px 3px 0 #2a5fa8, -3px 3px 0 #2a5fa8, 3px -3px 0 #2a5fa8, -3px -3px 0 #2a5fa8, 0 11px 0 rgba(20,40,80,.28);
+}
+.logo small { display: block; font-size: .4em; letter-spacing: 2px; color: #fff; margin-bottom: 4px; }
+.cast { display: flex; gap: clamp(2px, 1.2vmin, 10px); align-items: flex-end; }
+.cast .c { width: clamp(54px, 10vmin, 96px); text-align: center; }
+.cast img { width: 100%; display: block; filter: drop-shadow(0 4px 0 rgba(0,0,0,.18)); animation: bob 2.6s ease-in-out infinite; animation-delay: calc(var(--i) * -.45s); }
+.cast b { display: inline-block; margin-top: 2px; background: #fff; border-radius: 99px; padding: 1px 12px; font-weight: 900; font-size: 17px; box-shadow: 0 3px 0 rgba(0,0,0,.14); }
+.menu { width: min(420px, 100%); display: grid; gap: 12px; background: rgba(255,255,255,.62); padding: 14px; border-radius: 26px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: var(--shadow); }
+.menu-small { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.ver { position: absolute; bottom: calc(8px + env(safe-area-inset-bottom)); right: 12px; font-size: 12px; font-weight: 700; color: rgba(43,54,69,.8); background: rgba(255,255,255,.7); padding: 3px 10px; border-radius: 99px; }
+
+/* ===== 준비·고르기 ===== */
+.setup, .pick { background: linear-gradient(#bfe6ff, #eaf7ff 60%, #e5f6dc); }
+.card { background: var(--card); border-radius: 24px; box-shadow: var(--shadow); padding: 18px; margin: 4px auto 16px; width: min(720px, calc(100% - 24px)); }
+.card h3 { font-size: 18px; margin: 16px 0 8px; }
+.card h3:first-child { margin-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 52px; padding: 8px 16px; border-radius: 16px; background: #eef2f7; font-weight: 800; font-size: 18px; border: 3px solid transparent; }
+.chip.on { background: #fff; border-color: var(--c, var(--blue)); box-shadow: 0 4px 0 rgba(43,54,69,.12); }
+.chip[disabled] { opacity: .3; pointer-events: none; }
+.card-actions { width: min(720px, calc(100% - 24px)); margin: 0 auto; }
+
+.pick .bar .side { color: var(--tc); }
+.slots { display: flex; gap: 10px; justify-content: center; padding: 2px 12px 8px; flex-wrap: wrap; }
+.slot { position: relative; width: min(118px, 22vw); height: 126px; border-radius: 18px; border: 3px dashed #aebccb; background: rgba(255,255,255,.6); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.slot.empty span { font-size: 28px; font-weight: 900; color: #aebccb; }
+.slot.filled { border: 3px solid var(--tc); background: #fff; box-shadow: 0 4px 0 rgba(43,54,69,.12); }
+.slot .pic { position: relative; width: 64px; height: 64px; }
+.slot .nm { font-size: 13px; font-weight: 900; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
+.slot .evo { display: flex; align-items: center; gap: 1px; height: 26px; font-size: 11px; color: var(--ink-soft); font-weight: 800; }
+.slot .evo .mini { position: relative; width: 24px; height: 24px; }
+.slot .x { position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid var(--line); font-size: 14px; font-weight: 900; display: grid; place-items: center; box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+.pick-actions { display: flex; gap: 10px; justify-content: center; padding: 0 12px 10px; }
+.pick-actions .btn { flex: 1; max-width: 280px; }
+.grid-wrap { width: min(980px, calc(100% - 20px)); margin: 0 auto; }
+.sec-title { font-size: 18px; font-weight: 900; margin: 14px 4px 8px; display: flex; align-items: baseline; gap: 8px; }
+.sec-title small { font-size: 14px; color: var(--ink-soft); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.pcard { position: relative; min-height: 118px; border-radius: 16px; background: #fff; border: 3px solid #e3e8ee; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px; box-shadow: 0 3px 0 rgba(43,54,69,.1); }
+.pcard .pic { position: relative; width: 72px; height: 72px; }
+.pcard .nm { font-size: 13px; font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard.r-r { border-color: #86c8ff; }
+.pcard.r-u { border-color: #c79bff; }
+.pcard.r-l { border-color: #ffc93c; background: #fffbea; }
+.pcard .dots { position: absolute; left: 6px; top: 6px; display: flex; gap: 2px; }
+.pcard .dots i { width: 7px; height: 7px; border-radius: 50%; background: #c9d3de; }
+.pcard .dots i.me { background: var(--gold); }
+.pcard.on { border-color: var(--tc); box-shadow: 0 0 0 3px var(--tc); }
+.pcard.on::after { content: "✓"; position: absolute; top: 4px; right: 4px; width: 26%; aspect-ratio: 1; border-radius: 50%; background: var(--tc); color: #fff; font-weight: 900; font-size: 15px; display: grid; place-items: center; }
+.pcard.taken { opacity: .35; }
+.pcard.fam { opacity: .5; }
+.pcard .who { position: absolute; top: 4px; right: 4px; font-size: 16px; }
+.notice { background: #fff6d8; border: 3px solid #ffd76a; border-radius: 18px; padding: 14px; margin: 10px 0; font-size: 16px; line-height: 1.5; text-align: center; }
+.notice .btn { margin-top: 8px; }
+.link-row { text-align: center; margin: 18px 0 6px; }
+
+/* ===== 윷판 화면 ===== */
+.game { background: linear-gradient(#9dd7ff, #d6f1ff); }
+.game .bar { min-height: 64px; padding: 6px 12px; }
+.turn-pill { flex: 1; display: flex; justify-content: center; min-width: 0; }
+.turn-pill span { background: var(--tc, var(--ink)); color: #fff; font-weight: 900; font-size: clamp(17px, 2.6vw, 22px); padding: 9px 20px; border-radius: 99px; box-shadow: 0 4px 0 rgba(0,0,0,.18); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.game-main { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 0 14px 14px; align-items: center; justify-content: center; }
+.game.port .game-main { flex-direction: column; justify-content: flex-start; }
+.board-wrap { flex: none; width: var(--bs); height: var(--bs); }
+.panel { flex: 1 1 auto; min-width: 0; max-width: 400px; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 12px; min-height: 0; }
+.game.port .panel { display: grid; grid-template-columns: 1fr 1fr; align-items: start; width: 100%; max-width: 760px; flex: none; align-self: center; }
+.game.port .mat { width: min(100%, 200px); }
+.game.port .hint { min-height: 42px; }
+
+/* 윷판 */
+.board {
+  position: relative; width: 100%; height: 100%; border-radius: 22px; overflow: hidden;
+  box-shadow: 0 0 0 5px #fff, 0 8px 0 5px rgba(43,54,69,.16), 0 16px 32px rgba(43,54,69,.18);
+  background: #8fd16f repeating-conic-gradient(#8fd16f 0 25%, #86ca66 0 50%) 0 0 / 6.25% 6.25%;
+}
+.art-field .board { background: #8fd16f url(assets/board/field.png) center / 100% 100% no-repeat; image-rendering: pixelated; }
+.board svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.road-edge { fill: none; stroke: #6d4c2c; stroke-opacity: .5; stroke-width: 5.8; stroke-linecap: round; stroke-linejoin: round; }
+.road { fill: none; stroke: #ecd29c; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; }
+.art-path .road { stroke: url(#dirt); }
+.tile {
+  position: absolute; width: 8.4%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle at 42% 38%, #fffaf0 0 28%, #e6ddcb 56%, #b6aa93 57% 65%, rgba(0,0,0,0) 66%);
+}
+.tile.corner { width: 11.2%; background: radial-gradient(circle at 42% 38%, #fffaf0 0 26%, #e6ddcb 50%, #b6aa93 51% 57%, #ff8fb3 58% 66%, rgba(0,0,0,0) 67%); }
+.tile.center { width: 12.8%; background: radial-gradient(circle, #fff 0 9%, #2b3645 10% 15%, rgba(0,0,0,0) 16%), linear-gradient(#ef4b4b 0 46%, #2b3645 46% 54%, #fafafa 54%); border-radius: 50%; box-shadow: 0 0 0 4px #b6aa93; }
+.tile.start { width: 12.8%; background: radial-gradient(circle at 42% 38%, #fff6cf 0 26%, #ffd45e 55%, #c99a1c 56% 64%, rgba(0,0,0,0) 65%); }
+.art-tileNormal .tile.normal, .art-tileCorner .tile.corner, .art-tileCenter .tile.center, .art-tileStart .tile.start {
+  background-position: center; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; border-radius: 0; box-shadow: none;
+}
+.art-tileNormal .tile.normal { background-image: url(assets/board/tile-normal.png); }
+.art-tileCorner .tile.corner { background-image: url(assets/board/tile-corner.png); }
+.art-tileCenter .tile.center { background-image: url(assets/board/tile-center.png); }
+.art-tileStart .tile.start { background-image: url(assets/board/tile-start.png); }
+.lbl { position: absolute; transform: translate(-50%, -50%); font-size: calc(var(--bs) * .03); font-weight: 900; color: #fff; white-space: nowrap; pointer-events: none;
+  text-shadow: 0 2px 0 rgba(0,0,0,.35), 1px 0 0 rgba(0,0,0,.35), -1px 0 0 rgba(0,0,0,.35), 0 -1px 0 rgba(0,0,0,.35); }
+.lbl.arrow { font-size: calc(var(--bs) * .045); }
+
+.unit {
+  position: absolute; width: 12%; min-width: 44px; aspect-ratio: 1; transform: translate(-50%, -64%); z-index: 10; cursor: pointer;
+  transition: left calc(.2s * var(--spd)) ease-out, top calc(.2s * var(--spd)) ease-out;
+}
+.unit .base { position: absolute; left: 16%; right: 16%; bottom: 2%; height: 24%; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 3px #fff, 0 3px 0 3px rgba(0,0,0,.22); }
+.unit .front, .unit .behind { position: absolute; inset: 0; }
+.unit .behind.b1 { transform: translate(-20%, -10%) scale(.84); filter: brightness(.9); }
+.unit .behind.b2 { transform: translate(20%, -14%) scale(.78); filter: brightness(.82); }
+.unit .badge-n { position: absolute; top: -4%; right: -10%; min-width: 36%; height: 34%; padding: 0 4px; border-radius: 99px; background: #ffcc33; color: #5a3b00; border: 2px solid #fff; font-weight: 900; font-size: max(12px, calc(var(--bs) * .028)); display: grid; place-items: center; z-index: 3; }
+.unit .badge-t { position: absolute; bottom: -2%; left: -8%; width: 32%; height: 32%; border-radius: 50%; background: var(--tc); border: 2px solid #fff; font-size: max(10px, calc(var(--bs) * .02)); display: grid; place-items: center; z-index: 3; }
+.unit.can .base { animation: glowBase 1s ease-in-out infinite; }
+.unit.sel { z-index: 30; }
+.unit.sel .base { box-shadow: 0 0 0 4px #fff, 0 0 0 8px #ffd23f, 0 0 16px 8px rgba(255,210,63,.7); }
+.unit.moving { z-index: 50; }
+.unit.hop .front { animation: hop calc(.24s * var(--spd)) ease-out; }
+.unit.enter .front { animation: popIn calc(.32s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
+.unit.captured { animation: toBall calc(.85s * var(--spd)) ease-in forwards; z-index: 45; }
+.unit.evolving .front { animation: evoPulse calc(1s * var(--spd)) ease-in-out both; }
+.unit.evolving .front img { filter: brightness(0) invert(1) drop-shadow(0 0 5px #fff); transition: filter calc(.4s * var(--spd)); }
+.unit.evolved .front { animation: evoPop calc(.6s * var(--spd)) cubic-bezier(.2,1.6,.4,1); }
+.unit.finishing { animation: finishOut calc(.9s * var(--spd)) ease-in forwards; z-index: 60; }
+.unit.stacked .front { animation: popIn calc(.35s * var(--spd)) cubic-bezier(.2,1.6,.4,1); }
+
+.spr { position: absolute; inset: 0; display: block; }
+.spr img { position: absolute; image-rendering: pixelated; pointer-events: none; }
+
+.dest {
+  position: absolute; width: 12.6%; min-width: 46px; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 40; border-radius: 50%;
+  border: 4px dashed #fff; background: rgba(255,255,255,.2); box-shadow: 0 0 0 3px rgba(255,200,40,.95), 0 0 18px 4px rgba(255,210,63,.8);
+  animation: ring 1s ease-in-out infinite;
+}
+.dest b { position: absolute; top: -34%; right: -44%; background: var(--gold); color: var(--gold-ink); border: 3px solid #fff; border-radius: 14px; padding: 1px 9px; font-weight: 900; font-size: max(15px, calc(var(--bs) * .034)); white-space: nowrap; box-shadow: 0 3px 0 rgba(0,0,0,.2); line-height: 1.3; }
+.dest b small { font-size: .7em; margin-left: 3px; }
+.dest.hit { box-shadow: 0 0 0 3px #ff4f5a, 0 0 18px 4px rgba(255,79,90,.8); }
+.dest.hit b { background: #ff4f5a; color: #fff; }
+.dest.back b { background: #7cc4ff; color: #0d3b66; }
+.dest.goal b { background: var(--green); color: #fff; }
+.dest.cpu { pointer-events: none; }
+
+.fx-burst { position: absolute; transform: translate(-50%, -50%); font-size: calc(var(--bs) * .13); z-index: 70; pointer-events: none; animation: burst calc(.85s * var(--spd)) ease-out forwards; }
+.spark { position: absolute; font-size: calc(var(--bs) * .04); z-index: 70; pointer-events: none; animation: spark calc(.9s * var(--spd)) ease-out forwards; }
+
+/* 오른쪽 패널 */
+.teams { display: grid; gap: 10px; }
+.tcard { background: #fff; border-radius: 18px; padding: 10px 12px; box-shadow: var(--shadow); border: 4px solid transparent; transition: transform .2s, border-color .2s; }
+.tcard.active { border-color: var(--tc); transform: scale(1.02); }
+.tcard .tn { font-weight: 900; font-size: 18px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.tcard .tn i { flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--tc); }
+.tcard .tn em { margin-left: auto; font-style: normal; font-size: 14px; color: var(--ink-soft); }
+.pchips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.pchip { position: relative; width: 52px; height: 52px; border-radius: 14px; background: #f1f5f9; }
+.pchip.board { opacity: .45; }
+.pchip.done { background: #fff4cf; box-shadow: inset 0 0 0 3px var(--gold); }
+.pchip.done::after { content: "🏁"; position: absolute; top: -6px; right: -6px; font-size: 16px; }
+.pchip .ball { position: absolute; right: -5px; bottom: -5px; width: 42%; image-rendering: pixelated; pointer-events: none; }
+.pchip.can { box-shadow: 0 0 0 3px var(--tc); animation: glowChip 1s ease-in-out infinite; }
+.pchip.selected { box-shadow: 0 0 0 4px #ffd23f, 0 0 12px 4px rgba(255,210,63,.8); }
+
+.throw-zone { background: rgba(255,255,255,.72); border-radius: 22px; padding: 12px; box-shadow: var(--shadow); display: grid; gap: 10px; justify-items: center; }
+.mat {
+  position: relative; width: min(100%, 240px); aspect-ratio: 1.5;
+  background: radial-gradient(ellipse at center, #efd38e 0 58%, #cfa85c 59% 68%, #a47c3c 69% 71%, rgba(0,0,0,0) 72%);
+}
+.art-mat .mat { background: url(assets/ui/mat.png) center / 100% 100% no-repeat; image-rendering: pixelated; }
+.sticks { position: absolute; inset: 16% 20%; display: flex; justify-content: space-around; align-items: center; }
+.stick {
+  position: relative; width: 14%; height: 92%; border-radius: 40% / 12%; transform: rotate(var(--r, 0deg));
+  background: linear-gradient(90deg, #7f5025, #b77b3e 50%, #7f5025); border: 2px solid #5a3818;
+}
+.stick.flat { background: linear-gradient(90deg, #edcf95, #fbe9c3 50%, #edcf95); }
+.stick.flat.mark::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #e0263b; font-weight: 900; font-size: 20px; }
+.art-sticks .stick { border: 0; border-radius: 0; background: url(assets/ui/stick-round.png) center / contain no-repeat; image-rendering: pixelated; }
+.art-sticks .stick.flat { background-image: url(assets/ui/stick-flat.png); }
+.art-sticks .stick.flat.mark { background-image: url(assets/ui/stick-back.png); }
+.art-sticks .stick.flat.mark::after { display: none; }
+.stick.toss { animation: toss calc(.72s * var(--spd)) cubic-bezier(.3,.6,.4,1) both; animation-delay: calc(var(--d, 0s) * var(--spd)); }
+.pending { display: flex; gap: 6px; min-height: 42px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.pending .lab { font-size: 14px; font-weight: 800; color: var(--ink-soft); }
+.rchip { display: inline-flex; align-items: center; gap: 2px; background: #fff; border-radius: 99px; padding: 2px 12px 2px 2px; font-weight: 900; font-size: 19px; box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+.rchip img { width: 36px; height: 36px; object-fit: contain; }
+.btn.throw { width: 100%; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+@media (max-width: 520px) { .btn.throw { font-size: 16px; } .hint { font-size: 14px; } .tcard .tn { font-size: 16px; } }
+.btn.throw.go { animation: pulseBtn 1.1s ease-in-out infinite; }
+.hint { font-size: 16px; font-weight: 800; color: var(--ink-soft); text-align: center; min-height: 22px; }
+
+/* ===== 겹쳐 뜨는 것들 ===== */
+#overlay { position: fixed; inset: 0; z-index: 400; display: none; place-items: center; background: rgba(20,32,50,.5); padding: 16px; }
+#overlay.show { display: grid; }
+.modal { background: var(--card); border-radius: 26px; padding: 22px; width: min(540px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; box-shadow: var(--shadow); text-align: center; animation: popIn .25s cubic-bezier(.2,1.4,.4,1) both; }
+.modal h2 { font-size: 24px; margin-bottom: 10px; }
+.modal p { font-size: 17px; line-height: 1.55; color: var(--ink-soft); }
+.modal p b { color: var(--ink); }
+.modal .btns { display: grid; gap: 10px; margin-top: 16px; }
+.modal input { font: inherit; font-size: 26px; font-weight: 800; text-align: center; letter-spacing: 3px; width: 100%; min-height: 58px; border-radius: 16px; border: 3px solid var(--line); padding: 8px; margin-top: 12px; color: var(--ink); background: #fff; }
+.modal input:focus { outline: none; border-color: var(--blue); }
+.modal .small { font-size: 14px; margin-top: 10px; min-height: 20px; }
+.rules-res { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 14px; }
+.rules-res div { background: #f3f7fb; border-radius: 16px; padding: 6px; font-size: 14px; color: var(--ink-soft); font-weight: 700; }
+.rules-res img { width: 70%; aspect-ratio: 1; object-fit: contain; display: block; margin: 0 auto; }
+.rules-res b { display: block; font-size: 22px; color: var(--ink); }
+.rules-list { text-align: left; list-style: none; display: grid; gap: 8px; font-size: 16px; line-height: 1.5; }
+.rules-list li { background: #f7f9fc; border-radius: 14px; padding: 8px 12px; }
+.stats-list { display: grid; gap: 8px; margin: 10px 0; }
+.stats-list div { display: flex; justify-content: space-between; background: #f3f7fb; border-radius: 14px; padding: 10px 14px; font-size: 18px; font-weight: 800; }
+
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translate(-50%, calc(100% + 60px)); opacity: 0; z-index: 350; background: rgba(33,43,58,.93); color: #fff; font-weight: 800; font-size: 18px; line-height: 1.4; padding: 12px 20px; border-radius: 18px; width: max-content; max-width: calc(100% - 32px); text-align: center; transition: transform .25s, opacity .25s; pointer-events: none; }
+#toast.show { transform: translate(-50%, 0); opacity: 1; }
+body.game-land #toast { left: auto; right: 14px; max-width: min(400px, 34vw); transform: translateY(calc(100% + 60px)); }
+body.game-land #toast.show { transform: none; }
+.banner { position: fixed; left: 50%; top: 24%; z-index: 330; font-size: clamp(28px, 6.5vmin, 56px); font-weight: 900; color: #fff; padding: 14px 32px; border-radius: 26px; background: var(--bg, #2b3645); box-shadow: 0 8px 0 rgba(0,0,0,.2); white-space: nowrap; pointer-events: none; animation: bannerIn var(--dur, 1.1s) ease both; }
+.banner.gold { background: linear-gradient(#ffd95a, #ffb800); color: #5a3b00; }
+
+.result-pop { position: fixed; inset: 0; z-index: 320; display: grid; place-items: center; background: rgba(20,32,50,.28); }
+.result-pop.out { opacity: 0; transition: opacity calc(.2s * var(--spd)); }
+.result-card { position: relative; width: min(66vmin, 440px); aspect-ratio: 1; display: grid; place-items: center; animation: popIn calc(.35s * var(--spd)) cubic-bezier(.2,1.4,.4,1) both; }
+.result-card .rays { position: absolute; inset: -12%; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255,238,150,.95) 0 9deg, rgba(255,255,255,0) 9deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 25%, rgba(0,0,0,0) 70%); mask: radial-gradient(circle, #000 25%, rgba(0,0,0,0) 70%);
+  animation: spin 7s linear infinite; }
+.result-card img { position: relative; width: 60%; filter: drop-shadow(0 10px 0 rgba(0,0,0,.18)); animation: bob 1.2s ease-in-out infinite; }
+.result-name { position: absolute; bottom: 9%; font-size: min(17vmin, 120px); font-weight: 900; color: #fff; line-height: 1;
+  text-shadow: 5px 0 0 #3a2a10, -5px 0 0 #3a2a10, 0 5px 0 #3a2a10, 0 -5px 0 #3a2a10, 4px 4px 0 #3a2a10, -4px 4px 0 #3a2a10, 4px -4px 0 #3a2a10, -4px -4px 0 #3a2a10, 0 10px 0 rgba(0,0,0,.25); }
+.result-sub { position: absolute; bottom: -4%; background: #fff; border-radius: 99px; padding: 6px 18px; font-weight: 900; font-size: min(5vmin, 26px); box-shadow: 0 4px 0 rgba(0,0,0,.15); white-space: nowrap; }
+.result-pop.r4 .result-name, .result-pop.r5 .result-name { color: #ffd23f; }
+.result-pop.r-1 .result-name { color: #9fd3ff; }
+
+.win-screen, .rocket-intro { position: fixed; inset: 0; z-index: 380; display: grid; place-items: center; padding: 16px; animation: fadeIn .4s ease both; }
+.win-screen { background: linear-gradient(#7cc8ff, #d9f1ff 70%, #a6e08a); }
+.art-win .win-screen { background: #7cc8ff url(assets/ui/win-bg.webp) center / cover no-repeat; }
+.win-inner { width: min(760px, 100%); text-align: center; background: rgba(255,255,255,.7); border-radius: 30px; padding: 20px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: var(--shadow); }
+.win-inner h1 { font-size: clamp(30px, 6.5vmin, 58px); font-weight: 900; }
+.win-inner p { font-size: 18px; font-weight: 700; color: var(--ink-soft); margin: 6px 0 10px; }
+.win-team { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 16px; }
+.win-team .w { width: clamp(100px, 20vmin, 160px); animation: popIn .5s cubic-bezier(.2,1.5,.4,1) both; animation-delay: calc(var(--i) * .15s); }
+.win-team img { width: 100%; aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 6px 0 rgba(0,0,0,.15)); animation: bob 2s ease-in-out infinite; animation-delay: calc(var(--i) * -.4s); }
+.win-team img.pix { image-rendering: pixelated; }
+.win-team b { display: inline-block; background: #fff; border-radius: 99px; padding: 2px 12px; font-size: 16px; box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+.win-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.rocket-intro { background: radial-gradient(circle at 50% 40%, #6b2a8f, #1d0b2e 70%); color: #fff; text-align: center; align-content: center; gap: 16px; }
+.ri-crew { display: flex; justify-content: center; align-items: flex-end; gap: 8px; }
+.ri-crew img { height: min(30vh, 220px); image-rendering: pixelated; animation: popIn .5s cubic-bezier(.2,1.5,.4,1) both; }
+.ri-crew img:nth-child(2) { height: min(22vh, 160px); animation-delay: .15s; }
+.ri-crew img:nth-child(3) { animation-delay: .3s; }
+.ri-talk p { font-size: clamp(22px, 4.6vmin, 40px); font-weight: 900; text-shadow: 0 4px 0 rgba(0,0,0,.4); animation: fadeIn .5s ease both; }
+.ri-talk p:nth-child(2) { animation-delay: .6s; }
+.ri-talk p.ri-small { font-size: clamp(16px, 3vmin, 24px); opacity: .85; animation-delay: 1.1s; }
+.rocket-intro .btn { width: min(360px, 100%); justify-self: center; }
+.ri-flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: flash .6s ease-out; pointer-events: none; }
+
+.confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 390; pointer-events: none; border-radius: 3px; animation: fall linear forwards; }
+
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7%); } }
+@keyframes hop { 0% { transform: translateY(0); } 45% { transform: translateY(-24%); } 100% { transform: translateY(0); } }
+@keyframes popIn { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes ring { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.1); } }
+@keyframes glowBase { 0%, 100% { box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(255,210,63,.4); } 50% { box-shadow: 0 0 0 3px #fff, 0 0 0 9px rgba(255,210,63,.95), 0 0 16px 6px rgba(255,210,63,.6); } }
+@keyframes glowChip { 50% { box-shadow: 0 0 0 5px var(--tc), 0 0 14px 4px rgba(255,210,63,.8); } }
+@keyframes pulseBtn { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes toBall { 0% { transform: translate(-50%, -64%) scale(1); } 30% { transform: translate(-50%, -64%) scale(1.15); filter: brightness(1.8) sepia(1) hue-rotate(-40deg) saturate(4); } 100% { transform: translate(-50%, -64%) scale(0) rotate(-220deg); opacity: 0; } }
+@keyframes evoPulse { 0% { transform: scale(1); } 25% { transform: scale(1.12); } 50% { transform: scale(.92); } 75% { transform: scale(1.16); } 100% { transform: scale(1); } }
+@keyframes evoPop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
+@keyframes finishOut { 0% { transform: translate(-50%, -64%) scale(1); } 40% { transform: translate(-50%, -110%) scale(1.25); } 100% { transform: translate(-50%, -200%) scale(.3); opacity: 0; } }
+@keyframes burst { 0% { transform: translate(-50%, -50%) scale(.2); opacity: 0; } 30% { transform: translate(-50%, -50%) scale(1.4); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+@keyframes spark { 0% { transform: translate(0, 0) scale(.3); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.1); opacity: 0; } }
+@keyframes toss { 0% { transform: translateY(0) rotate(var(--r)); } 35% { transform: translateY(-160%) rotate(calc(var(--r) + 250deg)); } 70% { transform: translateY(8%) rotate(calc(var(--r) + 350deg)); } 85% { transform: translateY(-10%) rotate(calc(var(--r) + 362deg)); } 100% { transform: translateY(0) rotate(calc(var(--r) + 360deg)); } }
+@keyframes bannerIn { 0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; } 15% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 25% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+@keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cast img, .result-card img, .win-team img, .result-card .rays, .dest, .btn.throw.go { animation: none; }
+}
+@media (max-height: 560px) {
+  .home .inner { gap: 8px; }
+  .btn.big { min-height: 54px; font-size: 19px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlay"></div>
+<div id="toast"></div>
+
+<script src="data/pokemon.js"></script>
+<script src="yut-rules.js"></script>
+<script>
+"use strict";
+/* ================================================================
+   설정
+================================================================ */
+const APP_VERSION = "2026-09-25a";
+const D = window.YUT_DATA;
+const Q = new URLSearchParams(location.search);
+const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
+document.documentElement.style.setProperty("--spd", SPEED);
+const DB_URL = "https://elglishmon-default-rtdb.asia-southeast1.firebasedatabase.app"; // 잉글리시몬 가족 함께하기 (읽기만)
+const OFFICIAL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/";
+const CRY_BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/";
+
+// 고정 출연진 — tools/fetch-assets.js 의 CAST 와 같게 유지
+const CAST = {
+  yut: { "-1": 79, 1: 498, 2: 58, 3: 179, 4: 128, 5: 77 },  // 빽도 야돈 · 도 뚜꾸리 · 개 가디 · 걸 메리프 · 윷 켄타로스 · 모 포니타
+  rocket: [24, 109, 52, 202],                               // 아보크 · 또가스 · 나옹 · 마자용
+  friends: [25, 133, 143, 54, 132, 39, 35, 175],            // 빌려온 친구
+};
+const LOCAL_ART = new Set([].concat(Object.values(CAST.yut), CAST.rocket, CAST.friends).map(Number));
+const RES = {
+  "-1": { name: "빽도", animal: "", emoji: "↩️", steps: "뒤로 1칸", say: "빽도! 뒤로 한 칸" },
+  1: { name: "도", animal: "돼지", emoji: "🐷", steps: "1칸", say: "도! 한 칸" },
+  2: { name: "개", animal: "개", emoji: "🐶", steps: "2칸", say: "개! 두 칸" },
+  3: { name: "걸", animal: "양", emoji: "🐑", steps: "3칸", say: "걸! 세 칸" },
+  4: { name: "윷", animal: "소", emoji: "🐮", steps: "4칸", say: "윷! 네 칸, 한 번 더!" },
+  5: { name: "모", animal: "말", emoji: "🐴", steps: "5칸", say: "모! 다섯 칸, 한 번 더!" },
+};
+const MEMBERS = [
+  { key: "kid", name: "👶 아이" }, { key: "mom", name: "👩 엄마" }, { key: "dad", name: "👨 아빠" },
+  { key: "aunt", name: "👱‍♀️ 이모" }, { key: "grandma", name: "👵 할머니" }, { key: "grandpa", name: "👴 할아버지" },
+];
+const TEAM_COLORS = ["#ff4f86", "#2f86f6"];
+const ROCKET_TEAM = { key: "rocket", name: "😈 로켓단", color: "#8e44ad" };
+
+/* ================================================================
+   작은 도구
+================================================================ */
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms * SPEED));
+const pct = v => ((v + 14) / 128 * 100).toFixed(3) + "%";   // 윷판 좌표(−14~114) → %
+const plain = s => String(s).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, "").trim();
+const emojiOf = name => String(name).split(" ")[0];
+function josa(word, pair) {
+  const [a, b] = pair.split("/");
+  const c = String(word).trim().slice(-1).charCodeAt(0);
+  if (!(c >= 0xAC00 && c <= 0xD7A3)) return word + b;
+  const jong = (c - 0xAC00) % 28;
+  if (pair === "으로/로") return word + (jong === 0 || jong === 8 ? "로" : "으로");
+  return word + (jong > 0 ? a : b);
+}
+
+const nameOf = id => D.names[id - 1] || "???";
+const typesOf = id => String(D.types[id - 1] || "노말").split("·");
+const moveOf = id => D.moves[id] || D.typeMove[typesOf(id)[0]] || "몸통박치기";
+const fxOf = id => D.typeFx[typesOf(id)[0]] || "💥";
+const rarityOf = id => D.rarity[id] || "c";
+const frontUrl = id => "assets/sprites/front/" + id + ".png";
+const artUrl = id => LOCAL_ART.has(Number(id)) ? "assets/sprites/art/" + id + ".webp" : OFFICIAL + id + ".png";
+const evoPath = id => Yut.evoPath(id, D.evoFrom);
+const rootOf = id => evoPath(id)[0]; // 진화 가족의 1단계 — 판 위에서는 이 모습으로 출발한다
+const sameFamily = (list, id) => list.some(x => x !== id && rootOf(x) === rootOf(id));
+
+// 도트 그림: 96px 칸 안의 실제 그림 영역(D.box)을 기준으로 상자에 꽉 차게 (bottom=발을 아래에 맞춤)
+function spr(id, bottom, lazy) {
+  const b = (D.box && D.box[id - 1]) || [16, 16, 64, 64];
+  const m = Math.max(b[2], b[3]) / 0.9;
+  const W = 96 / m * 100;
+  const L = (0.5 - (b[0] + b[2] / 2) / m) * 100;
+  const T = bottom ? (0.97 - (b[1] + b[3]) / m) * 100 : (0.5 - (b[1] + b[3] / 2) / m) * 100;
+  return '<span class="spr"><img src="' + frontUrl(id) + '" alt="' + esc(nameOf(id)) + '" draggable="false"' + (lazy ? ' loading="lazy"' : "") +
+    ' style="width:' + W.toFixed(1) + "%;left:" + L.toFixed(1) + "%;top:" + T.toFixed(1) + '%" onerror="sprFail(this)"></span>';
+}
+function sprFail(img) { img.onerror = null; img.src = "assets/items/poke-ball.png"; img.style.cssText = "width:70%;left:15%;top:15%"; }
+function artFail(img, id) { img.onerror = null; img.src = frontUrl(id); img.classList.add("pix"); }
+
+/* ================================================================
+   저장 (윷놀이 전용) — engmon_yut_v1
+================================================================ */
+const Store = {
+  KEY: "engmon_yut_v1",
+  data: null,
+  warned: false,
+  defaults() {
+    return {
+      version: 1,
+      sound: true,
+      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom" },
+      stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 } },
+      lastPicks: {},      // { kid: [ids], mom: [ids] } — 다음 판에 미리 채워 둠
+      familyDex: null,    // { code, ids, t } — 가족 코드로 불러온 도감 (읽기만)
+      game: null,         // 진행 중인 판
+      lastGame: null,     // 끝난 판 (한 판 더)
+    };
+  },
+  load() {
+    const d = this.defaults();
+    try {
+      const raw = JSON.parse(localStorage.getItem(this.KEY));
+      if (raw && typeof raw === "object") {
+        Object.assign(d, raw);
+        d.settings = Object.assign(this.defaults().settings, raw.settings || {});
+        d.stats = Object.assign(this.defaults().stats, raw.stats || {});
+        d.stats.rocket = Object.assign({ win: 0, lose: 0 }, d.stats.rocket || {});
+      }
+    } catch (e) { /* 망가진 저장은 새로 시작 */ }
+    if (d.game && !Yut.validate(d.game)) d.game = null;
+    if (d.lastGame && !Yut.validate(d.lastGame)) d.lastGame = null;
+    this.data = d;
+  },
+  save() {
+    try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); }
+    catch (e) {
+      if (!this.warned) { this.warned = true; toast("저장이 안 되는 환경이에요. 창을 닫으면 판이 사라져요 🥲", 3200); }
+    }
+  },
+};
+
+/* ================================================================
+   잉글리시몬 도감 (읽기만 한다 — 절대 쓰지 않음)
+================================================================ */
+// 잉글리시몬 unpackMap 과 같은 정화: Firebase 가 숫자 키를 배열로 바꾼 흔적·p 접두사를 되돌린다
+function unpackMap(m, prefix) {
+  const out = {};
+  if (Array.isArray(m)) m.forEach((v, i) => { if (v) out[i] = v; });
+  else if (m && typeof m === "object") {
+    Object.keys(m).forEach(k => {
+      if (!m[k]) return;
+      out[prefix && k.charAt(0) === prefix && /\d/.test(k.charAt(1)) ? k.slice(1) : k] = m[k];
+    });
+  }
+  return out;
+}
+function caughtIds(pokedex) {
+  const ids = [];
+  Object.entries(unpackMap(pokedex, "p")).forEach(([k, e]) => {
+    const id = Number(k);
+    if (e && typeof e === "object" && (e.count || 0) >= 1 && id >= 1 && id <= 1025) ids.push(id);
+  });
+  return ids;
+}
+const Dex = {
+  ids: [], localN: 0, partner: null, refreshed: false,
+  load() {
+    const set = new Set();
+    this.localN = 0;
+    try {
+      const raw = localStorage.getItem("engmon_save_v1");
+      if (raw) {
+        const s = JSON.parse(raw);
+        const ids = caughtIds(s.pokedex || {});
+        ids.forEach(id => set.add(id));
+        this.localN = ids.length;
+        if (s.partner && ids.indexOf(Number(s.partner)) >= 0) this.partner = Number(s.partner);
+      }
+    } catch (e) {}
+    const fam = Store.data.familyDex;
+    if (fam && Array.isArray(fam.ids)) fam.ids.forEach(id => { if (id >= 1 && id <= 1025) set.add(id); });
+    this.ids = Array.from(set).sort((a, b) => a - b);
+  },
+  familyCode() {
+    try {
+      const f = JSON.parse(localStorage.getItem("engmon_family_v1"));
+      if (f && f.code) return String(f.code);
+    } catch (e) {}
+    return Store.data.familyDex ? Store.data.familyDex.code : null;
+  },
+  async fetchFamily(code) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const tm = setTimeout(() => ctrl && ctrl.abort(), 8000);
+    try {
+      const r = await fetch(DB_URL + "/families/" + encodeURIComponent(code) + "/pokedex.json", { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const ids = caughtIds((await r.json()) || {});
+      if (ids.length) {
+        Store.data.familyDex = { code, ids, t: Date.now() };
+        Store.save();
+        this.load();
+      }
+      return ids.length;
+    } finally { clearTimeout(tm); }
+  },
+};
+
+/* ================================================================
+   그림 불러오기 확인 — 없으면 CSS 로 그린 기본 모양이 보인다
+================================================================ */
+const Art = {
+  ok: {},
+  list: {
+    field: "assets/board/field.png", path: "assets/board/path.png",
+    tileNormal: "assets/board/tile-normal.png", tileCorner: "assets/board/tile-corner.png",
+    tileCenter: "assets/board/tile-center.png", tileStart: "assets/board/tile-start.png",
+    stickFlat: "assets/ui/stick-flat.png", stickRound: "assets/ui/stick-round.png", stickBack: "assets/ui/stick-back.png",
+    mat: "assets/ui/mat.png", title: "assets/ui/title-bg.webp", win: "assets/ui/win-bg.webp",
+  },
+  load() {
+    return Promise.all(Object.keys(this.list).map(k => new Promise(res => {
+      const im = new Image();
+      im.onload = () => { this.ok[k] = true; res(); };
+      im.onerror = () => res();
+      im.src = this.list[k];
+    }))).then(() => this.apply());
+  },
+  apply() {
+    const c = document.documentElement.classList;
+    Object.keys(this.ok).forEach(k => c.add("art-" + k));
+    if (this.ok.stickFlat && this.ok.stickRound && this.ok.stickBack) c.add("art-sticks");
+  },
+};
+
+/* ================================================================
+   소리 — 효과음(Web Audio 합성) · 한국어 읽어 주기 · 울음소리
+================================================================ */
+const SFX = {
+  ctx: null,
+  ensure() {
+    if (Store.data.sound === false) return false;
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      try { this.ctx = new AC(); } catch (e) { return false; }
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    return true;
+  },
+  tone(f, d, type, delay, peak) {
+    if (!this.ensure()) return;
+    d = d || 0.12; delay = (delay || 0) * SPEED; peak = peak || 0.18;
+    const t0 = this.ctx.currentTime + delay;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t0); o.stop(t0 + d + 0.05);
+  },
+  tap() { this.tone(700, 0.05, "triangle", 0, 0.1); },
+  pop() { this.tone(500, 0.06, "square", 0, 0.08); this.tone(900, 0.08, "square", 0.05, 0.08); },
+  rattle() { for (let i = 0; i < 8; i++) this.tone(260 + Math.random() * 420, 0.035, "square", i * 0.075, 0.06); },
+  land() { this.tone(170, 0.09, "triangle", 0, 0.2); this.tone(120, 0.1, "triangle", 0.07, 0.18); },
+  result(r) {
+    if (r >= 4) [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.16, "triangle", i * 0.08));
+    else if (r < 0) [440, 370, 311].forEach((f, i) => this.tone(f, 0.16, "sine", i * 0.1));
+    else [523, 659, 784].slice(0, r).forEach((f, i) => this.tone(f, 0.14, "triangle", i * 0.08));
+  },
+  hop(k) { this.tone(480 + (k % 5) * 70, 0.05, "square", 0, 0.05); },
+  attack() { this.tone(480, 0.09, "sawtooth", 0, 0.12); this.tone(720, 0.12, "sawtooth", 0.07, 0.12); },
+  capture() { this.tone(900, 0.08, "square", 0, 0.1); this.tone(600, 0.1, "square", 0.08, 0.1); this.tone(300, 0.18, "square", 0.16, 0.1); },
+  stack() { this.tone(660, 0.08, "triangle", 0); this.tone(880, 0.12, "triangle", 0.08); },
+  evolve() { [392, 440, 494, 523, 587, 659, 740, 784, 880, 988, 1047].forEach((f, i) => this.tone(f, 0.09, "sine", i * 0.08, 0.12)); },
+  finish() { [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.2, "triangle", i * 0.1)); },
+  win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.22, "triangle", i * 0.14)); },
+  again() { [1047, 1319, 1568].forEach((f, i) => this.tone(f, 0.12, "sine", i * 0.07, 0.12)); },
+  alarm() { for (let i = 0; i < 4; i++) { this.tone(880, 0.14, "square", i * 0.3, 0.08); this.tone(660, 0.14, "square", i * 0.3 + 0.15, 0.08); } },
+};
+const TTS = {
+  voice: null, voicesLoaded: false,
+  init() {
+    if (!("speechSynthesis" in window)) return;
+    const pick = () => {
+      const vs = speechSynthesis.getVoices();
+      this.voicesLoaded = vs.length > 0;
+      this.voice = vs.find(v => /^ko/i.test(v.lang)) || null;
+    };
+    pick();
+    speechSynthesis.onvoiceschanged = pick;
+  },
+  say(text) {
+    if (Store.data.sound === false || !("speechSynthesis" in window)) return;
+    if (this.voicesLoaded && !this.voice) return; // 한국어 목소리가 없으면 읽지 않는다 (엉뚱한 발음 방지)
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(plain(text));
+      u.lang = "ko-KR";
+      if (this.voice) u.voice = this.voice;
+      u.rate = 0.95; u.pitch = 1.1;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  },
+  stop() { try { speechSynthesis.cancel(); } catch (e) {} },
+};
+const Cry = {
+  a: null,
+  play(id) {
+    if (Store.data.sound === false || SPEED < 1) return;
+    try {
+      if (this.a) this.a.pause();
+      const a = new Audio(CRY_BASE + "latest/" + id + ".ogg");
+      a.volume = 0.35;
+      a.onerror = () => {
+        try { const b = new Audio(CRY_BASE + "legacy/" + id + ".ogg"); b.volume = 0.35; b.play().catch(() => {}); this.a = b; } catch (e) {}
+      };
+      a.play().catch(() => {});
+      this.a = a;
+    } catch (e) {}
+  },
+};
+// 패드는 첫 터치 안에서 소리를 켜야 한다
+document.addEventListener("pointerdown", () => SFX.ensure(), { once: true });
+
+/* ================================================================
+   알림·팝업
+================================================================ */
+let toastTimer = null;
+function toast(msg, ms) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), (ms || 1800) * Math.max(SPEED, 0.5));
+}
+function banner(text, color, ms, cls) {
+  ms = ms || 1100;
+  return new Promise(res => {
+    const b = document.createElement("div");
+    b.className = "banner" + (cls ? " " + cls : "");
+    b.textContent = text;
+    if (color) b.style.setProperty("--bg", color);
+    b.style.setProperty("--dur", (ms * SPEED / 1000) + "s");
+    document.body.appendChild(b);
+    setTimeout(() => { b.remove(); res(); }, ms * SPEED);
+  });
+}
+let modalClose = null;
+function showModal(html, onClose) {
+  const o = $("#overlay");
+  o.innerHTML = '<div class="modal" role="dialog">' + html + "</div>";
+  o.classList.add("show");
+  modalClose = onClose || null;
+}
+function closeModal() {
+  const o = $("#overlay");
+  if (!o.classList.contains("show")) return;
+  o.classList.remove("show");
+  o.innerHTML = "";
+  const f = modalClose;
+  modalClose = null;
+  if (f) f();
+}
+$("#overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeModal(); });
+
+function confetti(n) {
+  const colors = ["#ff4f86", "#2f86f6", "#ffc93c", "#26b366", "#9b5de5", "#ff8c42"];
+  for (let i = 0; i < (n || 60); i++) {
+    const c = document.createElement("i");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = (1.8 + Math.random() * 1.6) * Math.max(SPEED, 0.3) + "s";
+    c.style.animationDelay = Math.random() * 0.6 * SPEED + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4200);
+  }
+}
+function fxAt(node, html, cls) {
+  const fx = $("#fx");
+  if (!fx) return null;
+  const e = document.createElement("div");
+  e.className = cls || "fx-burst";
+  const [x, y] = nodeXY(node);
+  e.style.left = pct(x); e.style.top = pct(y);
+  e.innerHTML = html;
+  fx.appendChild(e);
+  setTimeout(() => e.remove(), 1200);
+  return e;
+}
+function sparkle(node) {
+  ["✨", "⭐", "✨", "🌟", "✨", "⭐"].forEach((s, i) => {
+    const e = fxAt(node, s, "spark");
+    if (!e) return;
+    const a = i / 6 * Math.PI * 2;
+    e.style.setProperty("--dx", Math.cos(a) * 70 + "px");
+    e.style.setProperty("--dy", Math.sin(a) * 70 - 20 + "px");
+  });
+}
+
+/* ================================================================
+   화면 전환
+================================================================ */
+const Screens = {};
+let current = "";
+function showScreen(name) {
+  clearTimeout(G.cpuTimer);
+  closeModal();
+  TTS.stop();
+  $$(".win-screen, .rocket-intro, .result-pop, .banner").forEach(e => e.remove());
+  current = name;
+  document.body.classList.remove("game-land");
+  const app = $("#app");
+  app.innerHTML = "";
+  const sec = document.createElement("section");
+  sec.className = "screen " + name;
+  app.appendChild(sec);
+  Screens[name](sec);
+}
+const soundLabel = () => Store.data.sound === false ? "🔇 소리 꺼짐" : "🔊 소리 켜짐";
+
+/* ---------- 처음 ---------- */
+Screens.home = sec => {
+  const g = Store.data.game;
+  const resume = g && g.phase !== "over";
+  sec.innerHTML =
+    '<div class="inner">' +
+      '<h1 class="logo"><small>포켓몬</small>윷놀이</h1>' +
+      '<div class="cast">' + [1, 2, 3, 4, 5].map((r, i) =>
+        '<div class="c" style="--i:' + i + '"><img src="' + artUrl(CAST.yut[r]) + '" alt="' + esc(nameOf(CAST.yut[r])) + '" draggable="false"><b>' + RES[r].name + "</b></div>").join("") + "</div>" +
+      '<div class="menu">' +
+        (resume ? '<button class="btn big gold" data-act="resume">▶ 이어하기<small>' + esc(g.teams.map(t => t.name).join("  vs  ")) + "</small></button>" : "") +
+        '<button class="btn big pink" data-act="new-family">👨‍👩‍👧 가족 대결</button>' +
+        '<button class="btn big purple" data-act="new-rocket">😈 로켓단 대결</button>' +
+      "</div>" +
+      '<div class="menu-small">' +
+        '<button class="btn ghost" data-act="rules">📖 윷놀이 방법</button>' +
+        '<button class="btn ghost" data-act="stats">🏆 전적</button>' +
+        '<button class="btn ghost" data-act="sound" id="sound-btn">' + soundLabel() + "</button>" +
+      "</div>" +
+    "</div>" +
+    '<footer class="ver">v' + APP_VERSION + "</footer>";
+  checkUpdate();
+};
+
+/* ---------- 준비 ---------- */
+const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, ti: 0, picks: [[], []] };
+const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
+const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
+function chipHtml(field, value, label, color, disabled) {
+  const on = Setup[field] === value;
+  return '<button class="chip' + (on ? " on" : "") + '" data-act="set" data-field="' + field + '" data-value="' + esc(JSON.stringify(value)) + '"' +
+    (color ? ' style="--c:' + color + '"' : "") + (disabled ? " disabled" : "") + ">" + esc(label) + "</button>";
+}
+function memberChips(field) {
+  const other = field === "t0" ? Setup.t1 : Setup.t0;
+  const color = field === "t0" ? TEAM_COLORS[0] : TEAM_COLORS[1];
+  return MEMBERS.map(m => chipHtml(field, m.key, m.name, color, Setup.mode === "family" && m.key === other)).join("");
+}
+Screens.setup = sec => {
+  const fam = Setup.mode === "family";
+  sec.innerHTML =
+    '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>' +
+      (fam ? "👨‍👩‍👧 가족 대결 준비" : "😈 로켓단 대결 준비") + '</h2><span class="side"></span></header>' +
+    '<div class="scroll"><div class="card">' +
+      "<h3>" + (fam ? "첫 번째 팀" : "우리 팀") + '</h3><div class="chips">' + memberChips("t0") + "</div>" +
+      (fam ? '<h3>두 번째 팀</h3><div class="chips">' + memberChips("t1") + "</div>"
+           : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + "</div>") +
+      '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
+      '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
+    "</div>" +
+    '<div class="card-actions"><button class="btn big green" data-act="to-pick">포켓몬 고르러 가기 ▶</button></div></div>';
+};
+
+/* ---------- 포켓몬 고르기 ---------- */
+function slotHtml(id, k) {
+  if (!id) return '<div class="slot empty"><span>' + (k + 1) + "</span></div>";
+  const path = evoPath(id);
+  const evo = path.length > 1
+    ? path.map(p => '<span class="mini">' + spr(p) + "</span>").join("<i>›</i>")
+    : "진화 없음 ✨";
+  return '<button class="slot filled" data-act="slot-remove" data-k="' + k + '" aria-label="' + esc(nameOf(id)) + ' 빼기">' +
+    '<span class="pic">' + spr(id) + '</span><span class="nm">' + esc(nameOf(id)) + '</span><span class="evo">' + evo + '</span><span class="x">✕</span></button>';
+}
+function takenBy(id) {
+  const ti = Setup.ti;
+  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
+  if (other.indexOf(id) < 0 && !sameFamily(other, id)) return null;
+  return Setup.mode === "family" ? memberOf(teamKey(1 - ti)) : ROCKET_TEAM;
+}
+function cardHtml(id) {
+  const mine = Setup.picks[Setup.ti];
+  const t = takenBy(id);
+  const path = evoPath(id);
+  const dots = path.length > 1 ? '<span class="dots">' + path.map(p => '<i class="' + (p === id ? "me" : "") + '"></i>').join("") + "</span>" : "";
+  return '<button class="pcard r-' + rarityOf(id) + (mine.indexOf(id) >= 0 ? " on" : "") + (t ? " taken" : "") + (!t && mine.indexOf(id) < 0 && sameFamily(mine, id) ? " fam" : "") + '" data-act="pick" data-id="' + id + '"' + (t ? " disabled" : "") + ">" +
+    dots + (t ? '<span class="who">' + esc(emojiOf(t.name)) + "</span>" : "") +
+    '<span class="pic">' + spr(id, false, true) + '</span><span class="nm">' + esc(nameOf(id)) + "</span></button>";
+}
+function dexSections() {
+  if (!Dex.ids.length) return "";
+  return D.gens.map(g => {
+    const ids = Dex.ids.filter(id => id >= g.from && id <= g.to);
+    if (!ids.length) return "";
+    return '<h3 class="sec-title">' + g.emoji + " " + esc(g.region) + " <small>" + ids.length + "마리</small></h3>" +
+      '<div class="grid">' + ids.map(cardHtml).join("") + "</div>";
+  }).join("");
+}
+Screens.pick = sec => {
+  const ti = Setup.ti, n = Setup.pieces;
+  const member = memberOf(teamKey(ti));
+  sec.style.setProperty("--tc", TEAM_COLORS[ti]);
+  const last = Setup.mode === "rocket" || ti === 1;
+  const friends = CAST.friends.filter(id => Dex.ids.indexOf(id) < 0); // 도감에 있는 친구는 두 번 보이지 않게
+  sec.innerHTML =
+    '<header class="bar"><button class="btn icon" data-act="pick-back" aria-label="뒤로">←</button><h2>' + esc(member.name) + ' 팀 포켓몬 고르기</h2><span class="side" id="pick-count"></span></header>' +
+    '<div class="slots" id="slots"></div>' +
+    '<div class="pick-actions"><button class="btn" data-act="pick-auto">🎲 알아서 골라 줘</button><button class="btn green" data-act="pick-next" id="pick-next">' + (last ? "▶ 시작!" : "다음 팀 ▶") + "</button></div>" +
+    '<div class="scroll" id="pick-scroll"><div class="grid-wrap">' +
+      (Dex.ids.length
+        ? '<h3 class="sec-title">📕 내 도감 <small>' + Dex.ids.length + "마리 — 진화형을 고르면 판 위에서 진화해요! 한 가족에서 한 마리씩</small></h3>" + dexSections()
+        : '<div class="notice">📕 잉글리시몬 도감을 찾지 못했어요.<br>빌려온 친구와 함께 하거나, 가족 코드로 도감을 불러올 수 있어요.<br><button class="btn blue" data-act="family-code">🔗 가족 코드로 도감 불러오기</button></div>') +
+      (friends.length ? '<h3 class="sec-title">🤝 빌려온 친구</h3><div class="grid">' + friends.map(cardHtml).join("") + "</div>" : "") +
+      (Dex.ids.length ? '<div class="link-row"><button class="btn ghost" data-act="family-code">🔗 가족 코드로 도감 더 불러오기</button></div>' : "") +
+    "</div></div>";
+  updatePick();
+  refreshFamilyDex();
+};
+function updatePick() {
+  const ti = Setup.ti, n = Setup.pieces, mine = Setup.picks[ti];
+  const slots = $("#slots");
+  if (!slots) return;
+  slots.innerHTML = Array.from({ length: n }, (_, k) => slotHtml(mine[k], k)).join("");
+  $("#pick-count").textContent = mine.length + "/" + n;
+  $("#pick-next").disabled = mine.length < n;
+  $$(".pcard").forEach(c => {
+    const id = Number(c.dataset.id), on = mine.indexOf(id) >= 0;
+    c.classList.toggle("on", on);
+    c.classList.toggle("fam", !on && !c.classList.contains("taken") && sameFamily(mine, id));
+  });
+}
+// 가족 코드가 있으면 가족이 모은 도감을 조용히 한 번 더 받아 온다 (읽기만)
+function refreshFamilyDex() {
+  if (Dex.refreshed || !navigator.onLine || !/^https?:$/.test(location.protocol)) return;
+  const code = Dex.familyCode();
+  if (!code) return;
+  Dex.refreshed = true;
+  const before = Dex.ids.length;
+  Dex.fetchFamily(code).then(() => {
+    if (current === "pick" && Dex.ids.length !== before) { const sc = $("#pick-scroll"), top = sc ? sc.scrollTop : 0; showScreen("pick"); const sc2 = $("#pick-scroll"); if (sc2) sc2.scrollTop = top; }
+  }).catch(() => {});
+}
+function validPicks(list, ti) {
+  const avail = new Set(Dex.ids.concat(CAST.friends));
+  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
+  const out = [];
+  (list || []).forEach(id => { if (avail.has(id) && other.indexOf(id) < 0 && !sameFamily(other, id) && out.indexOf(id) < 0 && !sameFamily(out, id)) out.push(id); });
+  return out.slice(0, Setup.pieces);
+}
+function autoPick() {
+  const ti = Setup.ti, mine = Setup.picks[ti];
+  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
+  const free = id => mine.indexOf(id) < 0 && other.indexOf(id) < 0 && !sameFamily(other, id) && !sameFamily(mine, id);
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  // 진화 장면을 볼 수 있는 진화형을 먼저, 그다음 도감 나머지, 모자라면 빌려온 친구
+  const dex = shuffle(Dex.ids.filter(free));
+  const pool = dex.filter(id => evoPath(id).length > 1).concat(dex.filter(id => evoPath(id).length === 1), shuffle(CAST.friends.filter(free)));
+  while (mine.length < Setup.pieces && pool.length) { const id = pool.shift(); if (free(id)) mine.push(id); }
+}
+
+/* ================================================================
+   윷판 화면
+================================================================ */
+const G = {
+  s: null, sel: null, newPick: null, moves: [], busy: false, paused: false, cpuTimer: null, lastEl: null,
+};
+const humanTurn = () => G.s && !G.s.teams[G.s.turn].cpu;
+const nodeXY = node => node === "goal" ? [107, 107] : Yut.NODES[node];
+function placeAt(el, node) { const xy = nodeXY(node); el.style.left = pct(xy[0]); el.style.top = pct(xy[1]); }
+const unitAt = (team, node) => $('#units .unit[data-team="' + team + '"][data-node="' + node + '"]');
+
+Screens.game = sec => {
+  sec.innerHTML =
+    '<header class="bar"><button class="btn icon" data-act="pause" aria-label="잠깐 쉬기">⏸</button>' +
+      '<div class="turn-pill" id="turn-pill"></div>' +
+      '<button class="btn icon" data-act="sound-game" id="sound-icon" aria-label="소리">' + (Store.data.sound === false ? "🔇" : "🔊") + "</button></header>" +
+    '<div class="game-main">' +
+      '<div class="board-wrap"><div class="board" id="board"></div></div>' +
+      '<aside class="panel">' +
+        '<div class="teams" id="teams"></div>' +
+        '<div class="throw-zone">' +
+          '<div class="mat"><div class="sticks">' + [0, 1, 2, 3].map(i => '<i class="stick" data-i="' + i + '"></i>').join("") + "</div></div>" +
+          '<div class="pending" id="pending"></div>' +
+          '<button class="btn big pink throw" id="btn-throw" data-act="throw">윷 던지기!</button>' +
+          '<div class="hint" id="hint"></div>' +
+        "</div>" +
+      "</aside>" +
+    "</div>";
+  fitBoard();
+  buildBoard();
+  mountGame();
+};
+
+function fitBoard() {
+  const sec = $(".screen.game");
+  if (!sec) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  const land = W >= H * 1.05;
+  sec.classList.toggle("land", land);
+  sec.classList.toggle("port", !land);
+  document.body.classList.toggle("game-land", land);
+  let bs;
+  if (land) {
+    const panelW = Math.min(400, Math.max(290, W * 0.33));
+    bs = Math.min(H - 64 - 28, W - panelW - 46);
+  } else {
+    const panel = sec.querySelector(".panel");
+    const ph = panel && panel.scrollHeight > 40 ? panel.scrollHeight : 330; // 패널은 제 높이, 판은 남는 만큼
+    bs = Math.min(W - 28, H - 64 - 14 - 14 - ph - 14);
+  }
+  sec.style.setProperty("--bs", Math.max(250, Math.floor(bs)) + "px");
+}
+window.addEventListener("resize", fitBoard);
+
+function buildBoard() {
+  const b = $("#board");
+  const lines = Yut.LINES.map(l => l.map(n => Yut.NODES[n].map(v => v.toFixed(2)).join(",")).join(" "));
+  const labels = [[0, "출발·도착", 100, 111], [5, "모", 100, -10.5], [10, "뒷모", 0, -10.5], [15, "찌모", 0, 110.5], [22, "방", 50, 59.5]];
+  b.innerHTML =
+    '<svg class="lines" viewBox="-14 -14 128 128" aria-hidden="true">' +
+      '<defs><pattern id="dirt" patternUnits="userSpaceOnUse" width="12" height="12">' +
+        '<image href="assets/board/path.png" width="12" height="12" preserveAspectRatio="none" style="image-rendering:pixelated"/></pattern></defs>' +
+      lines.map(p => '<polyline class="road-edge" points="' + p + '"/>').join("") +
+      lines.map(p => '<polyline class="road" points="' + p + '"/>').join("") +
+    "</svg>" +
+    Yut.NODES.map((xy, n) => '<i class="tile ' + Yut.NODE_KIND[n] + '" style="left:' + pct(xy[0]) + ";top:" + pct(xy[1]) + '"></i>').join("") +
+    labels.map(l => '<span class="lbl" style="left:' + pct(l[2]) + ";top:" + pct(l[3]) + '">' + l[1] + "</span>").join("") +
+    '<span class="lbl arrow" style="left:' + pct(108.5) + ";top:" + pct(88) + '">⬆</span>' +
+    '<div id="dests"></div><div id="units"></div><div id="fx"></div>';
+}
+
+function unitInner(state, order, team) {
+  return '<span class="base"></span>' +
+    order.slice(1, 3).map((p, k) => '<span class="behind b' + (k + 1) + '">' + spr(Yut.formOf(state, p), true) + "</span>").reverse().join("") +
+    '<span class="front">' + spr(Yut.formOf(state, order[0]), true) + "</span>" +
+    (order.length > 1 ? '<span class="badge-n">×' + order.length + "</span>" : "") +
+    '<span class="badge-t">' + esc(emojiOf(team.name)) + "</span>";
+}
+function unitEl(state, ti, node, pieces) {
+  const t = state.teams[ti];
+  const el = document.createElement("div");
+  el.className = "unit";
+  el.style.setProperty("--tc", t.color);
+  el.dataset.team = ti;
+  el.dataset.node = node;
+  el.dataset.pieces = pieces.join(",");
+  el.innerHTML = unitInner(state, pieces, t);
+  placeAt(el, node);
+  el.addEventListener("click", ev => { ev.stopPropagation(); onUnitTap(el); });
+  return el;
+}
+function renderUnits() {
+  const box = $("#units");
+  if (!box) return;
+  box.innerHTML = "";
+  G.s.teams.forEach((_, ti) => Yut.unitsOf(G.s, ti).forEach(u => box.appendChild(unitEl(G.s, ti, u.node, u.pieces))));
+}
+function renderPanel() {
+  const box = $("#teams");
+  if (!box) return;
+  box.innerHTML = G.s.teams.map((t, ti) => {
+    const ps = G.s.pieces.map((p, i) => [p, i]).filter(x => x[0].team === ti);
+    const done = ps.filter(x => x[0].state === "done").length;
+    return '<div class="tcard' + (G.s.turn === ti && G.s.phase !== "over" ? " active" : "") + '" style="--tc:' + t.color + '">' +
+      '<div class="tn"><i></i>' + esc(t.name) + "<em>골인 " + done + "/" + ps.length + "</em></div>" +
+      '<div class="pchips">' + ps.map(x => {
+        const p = x[0], i = x[1], id = Yut.formOf(G.s, i);
+        return '<button class="pchip ' + p.state + '" data-act="chip" data-piece="' + i + '" aria-label="' + esc(nameOf(id)) + '">' + spr(id) +
+          (p.state === "wait" ? '<img class="ball" src="assets/items/poke-ball.png" alt="">' : "") + "</button>";
+      }).join("") + "</div></div>";
+  }).join("");
+}
+function renderPending() {
+  const box = $("#pending");
+  if (!box) return;
+  box.innerHTML = G.s.pending.length
+    ? '<span class="lab">남은 결과</span>' + G.s.pending.map(r => '<span class="rchip"><img src="' + artUrl(CAST.yut[r]) + '" alt="">' + RES[r].name + "</span>").join("")
+    : "";
+}
+function setSticks(sticks) {
+  const mark = G.s.settings.backdo;
+  $$(".stick").forEach((el, i) => {
+    el.classList.toggle("flat", !!sticks[i]);
+    el.classList.toggle("mark", mark && i === 0);
+  });
+}
+function renderTop() {
+  const t = G.s.teams[G.s.turn];
+  const pill = $("#turn-pill");
+  if (pill) pill.innerHTML = G.s.phase === "over"
+    ? '<span style="--tc:' + G.s.teams[G.s.winner].color + '">🎉 ' + esc(G.s.teams[G.s.winner].name) + " 승리!</span>"
+    : '<span style="--tc:' + t.color + '">' + esc(t.name) + " 차례</span>";
+  const btn = $("#btn-throw");
+  if (!btn) return;
+  const human = humanTurn();
+  let label = "윷 던지기!", on = false;
+  if (G.s.phase === "throw") {
+    if (human) { on = true; label = G.s.pending.length ? "🎲 한 번 더 던지기!" : "🎲 윷 던지기!"; }
+    else label = "로켓단이 던지는 중…";
+  } else if (G.s.phase === "choose") label = human ? "👆 말을 움직여요" : "로켓단이 고르는 중…";
+  else label = "판이 끝났어요";
+  btn.textContent = label;
+  btn.disabled = !on || G.busy;
+  btn.classList.toggle("go", on && !G.busy);
+  btn.style.background = t.color;
+}
+function hint(text) { const h = $("#hint"); if (h) h.textContent = text || ""; }
+function renderAll() {
+  renderUnits();
+  renderPanel();
+  renderPending();
+  renderTop();
+  fitBoard();
+  setSticks(G.s.lastThrow ? G.s.lastThrow.sticks : [true, false, true, false]);
+  $("#dests") && ($("#dests").innerHTML = "");
+}
+
+function persist() {
+  const s = G.s;
+  if (s.phase === "over") {
+    if (!s.recorded) {
+      s.recorded = true;
+      const w = s.teams[s.winner];
+      const st = Store.data.stats;
+      st.games = (st.games || 0) + 1;
+      if (s.settings.mode === "rocket") { if (w.cpu) st.rocket.lose++; else st.rocket.win++; }
+      else st.family[w.key] = (st.family[w.key] || 0) + 1;
+    }
+    Store.data.game = null;
+    Store.data.lastGame = s;
+  } else Store.data.game = s;
+  Store.save();
+}
+
+function mountGame() {
+  G.busy = false; G.sel = null; G.newPick = null; G.paused = false;
+  renderAll();
+  try { history.pushState({ yut: "game" }, ""); } catch (e) {}
+  if (G.s.intro) {
+    delete G.s.intro;
+    persist();
+    G.busy = true;
+    renderTop();
+    (async () => {
+      if (G.s.settings.mode === "rocket") await rocketIntro();
+      await announceTurn(G.s.turn, true);
+      G.busy = false;
+      afterAction();
+    })();
+  } else {
+    toast("이어서 해요! 🎲");
+    afterAction();
+  }
+}
+
+function afterAction() {
+  if (current !== "game" || !G.s) return;
+  renderAll();
+  G.moves = Yut.legalMoves(G.s);
+  if (G.s.phase === "over") { hint(""); return; }
+  if (G.paused) return;
+  if (G.s.phase === "choose") {
+    if (humanTurn()) prepareChoose();
+    else { hint("😈 로켓단이 생각하는 중…"); cpuTick(); }
+  } else {
+    hint(humanTurn() ? "🎲 버튼을 눌러 윷을 던져요!" : "😈 로켓단 차례…");
+    if (!humanTurn()) cpuTick();
+  }
+}
+
+/* ---------- 말 고르기 ---------- */
+function distinctDests(ms) {
+  const by = {};
+  ms.forEach(m => {
+    const k = m.finish ? "goal" : String(m.to.node);
+    if (!by[k] || (m.finish && m.result < by[k].result)) by[k] = m; // 골인은 가장 작은 결과로
+  });
+  return Object.keys(by).map(k => by[k]);
+}
+function prepareChoose() {
+  const units = Array.from(new Set(G.moves.map(m => m.unit)));
+  units.forEach(u => {
+    if (u === "new") $$(".pchip.wait").filter(c => G.s.pieces[Number(c.dataset.piece)].team === G.s.turn).forEach(c => c.classList.add("can"));
+    else { const el = unitAt(G.s.turn, u.slice(1)); if (el) el.classList.add("can"); }
+  });
+  if (units.length === 1) select(units[0]);
+  hint(units.length === 1 ? "👆 반짝이는 칸을 눌러 말을 움직여요" : "👆 움직일 말을 먼저 골라요");
+}
+function select(key, cpu) {
+  G.sel = key;
+  $$("#units .unit").forEach(el => el.classList.remove("sel"));
+  $$(".pchip").forEach(c => c.classList.remove("selected"));
+  if (key === "new") {
+    const waiting = Yut.waitingOf(G.s, G.s.turn);
+    if (G.newPick == null || waiting.indexOf(G.newPick) < 0) G.newPick = waiting[0];
+    const c = $('.pchip[data-piece="' + G.newPick + '"]');
+    if (c) c.classList.add("selected");
+  } else {
+    const el = unitAt(G.s.turn, key.slice(1));
+    if (el) el.classList.add("sel");
+  }
+  showDests(G.moves.filter(m => m.unit === key), cpu);
+  if (!cpu && key === "new") hint("👆 반짝이는 칸을 누르면 " + josa(nameOf(Yut.formOf(G.s, G.newPick)), "이/가") + " 출발해요");
+}
+function showDests(ms, cpu) {
+  const box = $("#dests");
+  if (!box) return;
+  box.innerHTML = "";
+  distinctDests(ms).forEach(m => {
+    const b = document.createElement("button");
+    b.className = "dest" + (m.finish ? " goal" : m.capture.length ? " hit" : m.result < 0 ? " back" : "") + (cpu ? " cpu" : "");
+    placeAt(b, m.finish ? "goal" : m.to.node);
+    b.dataset.move = m.id;
+    b.setAttribute("aria-label", m.finish ? "골인" : RES[m.result].name);
+    b.innerHTML = "<b>" + (m.finish ? "🏁 골인!" : RES[m.result].name + (m.capture.length ? " 잡기!" : m.stack.length ? " 업기" : "") + "<small>" + RES[m.result].steps + "</small>") + "</b>";
+    b.addEventListener("click", ev => { ev.stopPropagation(); if (!G.busy && humanTurn()) doMove(m.id); });
+    box.appendChild(b);
+  });
+}
+function onUnitTap(el) {
+  if (G.busy || !G.s || G.s.phase !== "choose" || !humanTurn()) return;
+  if (Number(el.dataset.team) !== G.s.turn) { toast("그건 상대 팀 말이에요"); return; }
+  const key = "n" + el.dataset.node;
+  const ms = G.moves.filter(m => m.unit === key);
+  if (!ms.length) { toast("이 말은 지금 못 움직여요"); return; }
+  const ds = distinctDests(ms);
+  if (G.sel === key && ds.length === 1) { doMove(ds[0].id); return; }
+  SFX.tap();
+  select(key);
+}
+function onChipTap(i) {
+  if (G.busy || !G.s || G.s.phase !== "choose" || !humanTurn()) return;
+  const p = G.s.pieces[i];
+  if (p.team !== G.s.turn) { toast("그건 상대 팀 말이에요"); return; }
+  if (p.state === "wait") {
+    const ms = G.moves.filter(m => m.unit === "new");
+    if (!ms.length) { toast(G.s.pending.every(r => r < 0) ? "빽도로는 새 말을 낼 수 없어요" : "지금은 새 말을 낼 수 없어요"); return; }
+    const ds = distinctDests(ms);
+    if (G.sel === "new" && G.newPick === i && ds.length === 1) { doMove(ds[0].id); return; }
+    SFX.tap();
+    G.newPick = i;
+    select("new");
+  } else if (p.state === "board") {
+    const el = unitAt(p.team, Yut.posOf(p));
+    if (el) onUnitTap(el);
+  } else toast("벌써 골인했어요! 🏁");
+}
+
+/* ---------- 던지기 ---------- */
+const Force = { q: (Q.get("force") || "").split(",").filter(Boolean).map(Number), next() { return this.q.length ? this.q.shift() : null; } };
+async function doThrow() {
+  if (G.busy || !G.s || G.s.phase !== "throw") return;
+  G.busy = true;
+  G.moves = [];
+  renderTop();
+  const r = Yut.applyThrow(G.s, Force.next());
+  const t = r.events[0];
+  G.s = r.state;
+  persist();
+  try {
+    await animSticks(t.sticks);
+    await showResult(t.result);
+    if (t.again) { SFX.again(); await banner(RES[t.result].name + "! 한 번 더 던져요!", null, 1000, "gold"); }
+    renderPending();
+    await playEvents(r.events.slice(1), null);
+  } catch (e) { console.error(e); }
+  G.busy = false;
+  afterAction();
+}
+async function animSticks(sticks) {
+  const els = $$(".stick");
+  SFX.rattle();
+  els.forEach((el, i) => {
+    el.style.setProperty("--d", (i * 0.05) + "s");
+    el.style.setProperty("--r", (Math.random() * 30 - 15).toFixed(1) + "deg");
+    el.classList.remove("toss"); void el.offsetWidth; el.classList.add("toss");
+  });
+  let k = 0;
+  const iv = setInterval(() => { k++; els.forEach((el, i) => el.classList.toggle("flat", (k + i) % 2 === 0)); }, Math.max(30, 90 * SPEED));
+  await sleep(720);
+  clearInterval(iv);
+  setSticks(sticks);
+  SFX.land();
+  await sleep(220);
+}
+function showResult(r) {
+  return new Promise(res => {
+    const info = RES[r];
+    const w = document.createElement("div");
+    w.className = "result-pop r" + r;
+    w.innerHTML = '<div class="result-card"><div class="rays"></div><img src="' + artUrl(CAST.yut[r]) + '" alt="' + esc(nameOf(CAST.yut[r])) + '">' +
+      '<div class="result-name">' + info.name + "!</div>" +
+      '<div class="result-sub">' + info.emoji + " " + (info.animal ? info.animal + " · " : "") + info.steps + (Yut.RESULTS[r].again ? " · 한 번 더!" : "") + "</div></div>";
+    document.body.appendChild(w);
+    SFX.result(r);
+    TTS.say(info.say);
+    let done = false;
+    const close = () => {
+      if (done) return;
+      done = true;
+      w.classList.add("out");
+      setTimeout(() => { w.remove(); res(); }, 200 * SPEED);
+    };
+    w.addEventListener("click", close);
+    setTimeout(close, (r >= 4 ? 1600 : 1250) * SPEED);
+  });
+}
+
+/* ---------- 두기 ---------- */
+async function doMove(id) {
+  if (G.busy || !G.s) return;
+  const m = G.moves.find(x => x.id === id);
+  if (!m) return;
+  G.busy = true;
+  G.moves = [];
+  $("#dests").innerHTML = "";
+  $$(".unit.can, .unit.sel").forEach(e => e.classList.remove("can", "sel"));
+  const prev = G.s;
+  const r = Yut.applyMove(prev, id, m.unit === "new" ? G.newPick : undefined);
+  G.s = r.state;
+  persist();
+  renderTop();
+  renderPending(); // 방금 쓴 결과는 바로 칩에서 뺀다
+  try { await playEvents(r.events, prev); } catch (e) { console.error(e); }
+  G.newPick = null;
+  G.sel = null;
+  G.busy = false;
+  afterAction();
+}
+async function playEvents(events, prev) {
+  for (const e of events) {
+    if (current !== "game") return;
+    if (e.type === "move") await animMove(e, prev);
+    else if (e.type === "capture") await animCapture(e, prev);
+    else if (e.type === "stack") await animStack(e, prev);
+    else if (e.type === "evolve") await animEvolve(e);
+    else if (e.type === "finish") await animFinish(e);
+    else if (e.type === "bonus") { SFX.again(); await banner("잡았으니 한 번 더!", null, 1000, "gold"); }
+    else if (e.type === "skip") await animSkip(e);
+    else if (e.type === "turn") { renderAll(); await announceTurn(e.team); }
+    else if (e.type === "win") await showWin(e.team);
+  }
+}
+async function animMove(e, prev) {
+  let el;
+  if (e.unit === "new") {
+    el = unitEl(prev, e.team, 0, e.pieces);
+    el.classList.add("enter");
+    $("#units").appendChild(el);
+    renderPanelFrom(prev, e.pieces);
+    SFX.pop();
+    await sleep(340);
+  } else {
+    el = unitAt(e.team, e.from.node);
+    if (!el) { el = unitEl(prev, e.team, e.from.node, e.pieces); $("#units").appendChild(el); }
+  }
+  el.classList.remove("can", "sel");
+  el.classList.add("moving");
+  for (let k = 0; k < e.path.length; k++) {
+    placeAt(el, e.path[k]);
+    el.classList.remove("hop"); void el.offsetWidth; el.classList.add("hop");
+    SFX.hop(k);
+    await sleep(e.result < 0 ? 420 : 250);
+  }
+  el.classList.remove("moving", "hop", "enter");
+  el.dataset.node = e.finish ? 0 : e.to.node; // 골인한 말은 참먹이(0)에 서 있다가 빠져나간다
+  G.lastEl = el;
+}
+// 새 말이 나가는 순간 패널의 그 칸만 먼저 "판 위"로 바꿔 보여 준다
+function renderPanelFrom(prev, pieces) {
+  pieces.forEach(i => { const c = $('.pchip[data-piece="' + i + '"]'); if (c) { c.classList.remove("wait", "can", "selected"); c.classList.add("board"); const b = c.querySelector(".ball"); if (b) b.remove(); } });
+}
+async function animCapture(e, prev) {
+  const atk = Yut.formOf(prev, e.by[0]);
+  const atkTeam = prev.pieces[e.by[0]].team;
+  const vTeam = prev.pieces[e.victims[0]].team;
+  const vEl = unitAt(vTeam, e.node);
+  const who = e.victims.map(i => nameOf(Yut.formOf(prev, i))).join("·");
+  fxAt(e.node, fxOf(atk));
+  SFX.attack();
+  await sleep(380);
+  if (vEl) vEl.classList.add("captured");
+  SFX.capture();
+  Cry.play(atk);
+  let line = nameOf(atk) + "의 " + moveOf(atk) + "! " + josa(who, "이/가") + " 몬스터볼로 돌아갔어요";
+  if (G.s.teams[atkTeam].cpu) line = "로켓단이 잡았다옹~! " + line;
+  else if (G.s.teams[vTeam].cpu) line = "로켓단은 또 당했다옹~! " + line;
+  toast(line, 2800);
+  TTS.say(G.s.teams[atkTeam].cpu ? "로켓단이 잡았다옹!" : "잡았다!");
+  await sleep(900);
+  if (vEl) vEl.remove();
+}
+async function animStack(e, prev) {
+  const el = G.lastEl;
+  if (!el) return;
+  const ti = Number(el.dataset.team);
+  $$('#units .unit[data-team="' + ti + '"][data-node="' + e.node + '"]').forEach(x => { if (x !== el) x.remove(); });
+  el.dataset.pieces = e.pieces.join(",");
+  el.innerHTML = unitInner(prev, e.pieces, G.s.teams[ti]);
+  el.classList.remove("stacked"); void el.offsetWidth; el.classList.add("stacked");
+  SFX.stack();
+  toast("업었다! " + e.pieces.length + "마리가 같이 가요 🤝", 1800);
+  TTS.say("업었다! 같이 가요");
+  await sleep(700);
+}
+async function animEvolve(e) {
+  const p = G.s.pieces[e.piece];
+  const path = G.s.teams[p.team].paths[p.slot];
+  const el = G.lastEl;
+  if (!el) return;
+  const node = Number(el.dataset.node) || 0;
+  for (let st = e.from; st < e.to; st++) {
+    const a = path[st], b = path[st + 1];
+    const front = el.querySelector(".front");
+    front.innerHTML = spr(a, true);
+    el.classList.remove("evolved");
+    void el.offsetWidth;
+    el.classList.add("evolving");
+    SFX.evolve();
+    const msg = josa(nameOf(a), "이/가") + " " + josa(nameOf(b), "으로/로") + " 진화했어요!";
+    toast("✨ 어? " + nameOf(a) + "의 모습이…!", 1200);
+    await sleep(1000);
+    front.innerHTML = spr(b, true);
+    el.classList.remove("evolving");
+    void el.offsetWidth;
+    el.classList.add("evolved");
+    sparkle(node);
+    Cry.play(b);
+    toast("✨ " + msg, 2200);
+    TTS.say(msg);
+    await sleep(1150);
+  }
+  el.classList.remove("evolved");
+}
+async function animFinish(e) {
+  const el = G.lastEl;
+  const names = e.pieces.map(i => nameOf(Yut.formOf(G.s, i)));
+  sparkle(0);
+  SFX.finish();
+  toast("🏁 " + names.join("·") + " 골인!", 2000);
+  TTS.say(names.join(", ") + " 골인!");
+  if (el) { el.classList.add("finishing"); await sleep(900); el.remove(); }
+  else await sleep(900);
+}
+async function animSkip(e) {
+  const allBack = e.results.every(r => r < 0);
+  toast(allBack ? "↩️ 빽도! 판 위에 말이 없어서 쉬어 가요 😴" : "움직일 수 있는 말이 없어서 쉬어 가요 😴", 2000);
+  TTS.say("쉬어 가요");
+  await sleep(1400);
+}
+async function announceTurn(ti, first) {
+  const t = G.s.teams[ti];
+  const text = t.cpu ? "😈 로켓단 차례다옹~" : (first ? t.name + " 팀부터 시작!" : t.name + " 차례!");
+  TTS.say(t.cpu ? "로켓단 차례다옹" : plain(t.name) + (first ? " 팀부터 시작해요!" : " 차례예요!"));
+  await banner(text, t.color, first ? 1400 : 1050);
+}
+
+/* ---------- 로켓단 ---------- */
+function cpuTick() {
+  clearTimeout(G.cpuTimer);
+  G.cpuTimer = setTimeout(async () => {
+    if (current !== "game" || !G.s || G.busy || G.paused || humanTurn() || G.s.phase === "over") return;
+    if (G.s.phase === "throw") await doThrow();
+    else if (G.s.phase === "choose") {
+      const m = Yut.cpuChoose(G.s, G.s.settings.cpuLevel);
+      if (!m) return;
+      if (m.unit === "new") G.newPick = Yut.waitingOf(G.s, G.s.turn)[0];
+      select(m.unit, true);
+      await sleep(700);
+      if (current !== "game" || G.paused) return;
+      await doMove(m.id);
+    }
+  }, 850 * SPEED);
+}
+function rocketIntro() {
+  return new Promise(res => {
+    const o = document.createElement("div");
+    o.className = "rocket-intro";
+    o.innerHTML = '<div class="ri-flash"></div>' +
+      '<div class="ri-crew"><img src="assets/ui/rocket-jessie.png" alt="로사" onerror="this.remove()"><img src="assets/ui/rocket-meowth.png" alt="나옹" onerror="this.remove()"><img src="assets/ui/rocket-james.png" alt="로이" onerror="this.remove()"></div>' +
+      '<div class="ri-talk"><p>귀염둥이 악당, 포켓몬의 감초~!</p><p>우리는 로켓단이다옹~!</p><p class="ri-small">윷놀이로 한판 붙자옹! 😼</p></div>' +
+      '<button class="btn big gold" id="ri-go">⚔️ 대결 시작!</button>';
+    document.body.appendChild(o);
+    SFX.alarm();
+    TTS.say("귀염둥이 악당, 포켓몬의 감초! 우리는 로켓단이다옹!");
+    $("#ri-go").addEventListener("click", () => { TTS.stop(); o.remove(); res(); });
+  });
+}
+
+/* ---------- 승리 ---------- */
+async function showWin(ti) {
+  const s = G.s, t = s.teams[ti];
+  const finals = t.paths.map(p => p[p.length - 1]);
+  const rocket = s.settings.mode === "rocket";
+  const title = rocket && t.cpu ? "😼 로켓단이 이겼다옹~!" : "🎉 " + t.name + " 팀 승리!";
+  const sub = rocket ? (t.cpu ? "아깝다! 다음엔 꼭 이길 수 있어요. 한 판 더 해 볼까요?" : "로켓단은 또 지는 거냐옹~! 😵") : "포켓몬이 모두 골인했어요!";
+  hint("");
+  SFX.win();
+  confetti(80);
+  Cry.play(finals[0]);
+  TTS.say(plain(title));
+  await sleep(500);
+  const o = document.createElement("div");
+  o.className = "win-screen";
+  o.innerHTML = '<div class="win-inner"><h1>' + esc(title) + "</h1><p>" + esc(sub) + "</p>" +
+    '<div class="win-team">' + finals.map((id, k) =>
+      '<div class="w" style="--i:' + k + '"><img src="' + artUrl(id) + '" alt="" onerror="artFail(this,' + id + ')"><b>' + esc(nameOf(id)) + "</b></div>").join("") + "</div>" +
+    '<div class="win-btns"><button class="btn big gold" data-act="rematch">🔁 한 판 더</button><button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
+  document.body.appendChild(o);
+}
+function startGame(teams, opts) {
+  const seed = Q.get("seed") ? Number(Q.get("seed")) : (Math.floor(Math.random() * 2147483646) + 1);
+  const s = Yut.newGame({
+    pieces: opts.pieces, backdo: opts.backdo, seed, first: opts.first || 0,
+    mode: opts.mode, cpuLevel: opts.cpuLevel, teams,
+  }, D.evoFrom);
+  s.intro = true;
+  G.s = s;
+  persist();
+  showScreen("game");
+}
+function startFromSetup() {
+  const fam = Setup.mode === "family";
+  const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
+  if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
+  else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: CAST.rocket.slice(0, Setup.pieces) });
+  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1 };
+  Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
+  if (fam) Store.data.lastPicks[Setup.t1] = Setup.picks[1].slice();
+  const first = fam ? (Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2)) : 0; // 로켓단 대결은 아이 먼저
+  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, first });
+}
+function rematch() {
+  const last = G.s && G.s.phase === "over" ? G.s : Store.data.lastGame;
+  if (!last) { showScreen("home"); return; }
+  const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.picks.slice() }));
+  startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
+}
+
+/* ---------- 쉬기·그만두기 ---------- */
+function openPause() {
+  if (!G.s || current !== "game") return;
+  G.paused = true;
+  clearTimeout(G.cpuTimer);
+  showModal(
+    '<h2>⏸ 잠깐 쉬어요</h2><p>판은 자동으로 저장돼요.<br>나갔다 와도 <b>이어하기</b>로 계속할 수 있어요.</p>' +
+    '<div class="btns"><button class="btn big green" data-act="close-modal">▶ 계속하기</button>' +
+    '<button class="btn big" data-act="pause-home">🏠 처음 화면으로</button>' +
+    '<button class="btn" data-act="pause-giveup">🏳️ 이 판 그만두기</button></div>',
+    () => { G.paused = false; if (current === "game" && !G.busy) afterAction(); }
+  );
+}
+// 되돌릴 수 없는 일은 글자를 직접 써야 실행된다
+function typedConfirm(title, text, word, onYes) {
+  showModal(
+    "<h2>" + esc(title) + "</h2><p>" + text + '<br>아래 칸에 <b>' + esc(word) + "</b> 라고 써 주세요.</p>" +
+    '<input id="confirm-in" autocomplete="off" spellcheck="false" placeholder="' + esc(word) + '">' +
+    '<div class="btns"><button class="btn big pink" id="confirm-yes" disabled>' + esc(title) + '</button><button class="btn" data-act="close-modal">취소</button></div>',
+    () => { G.paused = false; if (current === "game" && !G.busy) afterAction(); }
+  );
+  const inp = $("#confirm-in"), yes = $("#confirm-yes");
+  inp.addEventListener("input", () => { yes.disabled = inp.value.trim() !== word; });
+  yes.addEventListener("click", () => { if (inp.value.trim() === word) { modalClose = null; closeModal(); onYes(); } });
+  setTimeout(() => inp.focus(), 60);
+}
+window.addEventListener("popstate", () => {
+  // 브라우저 뒤로 가기: 게임 중이면 바로 나가지 않고 "잠깐 쉬어요"
+  if (current === "game") { try { history.pushState({ yut: "game" }, ""); } catch (e) {} if (!$("#overlay").classList.contains("show")) openPause(); }
+});
+
+/* ---------- 도움말 ---------- */
+function openRules() {
+  showModal(
+    "<h2>📖 윷놀이 방법</h2>" +
+    '<div class="rules-res">' + [1, 2, 3, 4, 5, -1].map(r =>
+      '<div><img src="' + artUrl(CAST.yut[r]) + '" alt=""><b>' + RES[r].name + "</b>" + (RES[r].animal ? RES[r].emoji + " " + RES[r].animal + " · " : "") + RES[r].steps + "</div>").join("") + "</div>" +
+    '<ul class="rules-list">' +
+      "<li>🎲 <b>윷</b>이나 <b>모</b>가 나오면 한 번 더 던져요.</li>" +
+      "<li>🏁 <b>참먹이</b>(오른쪽 아래)에서 출발해 판을 돌아 다시 참먹이로 오면 <b>골인</b>!</li>" +
+      "<li>↗️ <b>모</b>·<b>뒷모</b>·<b>방</b>에 딱 멈추면 지름길(대각선)로 가요.</li>" +
+      "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
+      "<li>💥 상대 말이 있는 칸에 멈추면 <b>잡아요</b>! 잡힌 포켓몬은 몬스터볼로 돌아가고, 잡은 팀은 한 번 더!</li>" +
+      "<li>✨ 판을 돌면서 포켓몬이 <b>진화</b>해요. 잡히면 처음 모습으로 돌아가요.</li>" +
+      "<li>🏆 내 포켓몬이 먼저 전부 골인하면 이겨요!</li>" +
+    "</ul>" +
+    '<div class="btns"><button class="btn big green" data-act="close-modal">알겠어요!</button></div>'
+  );
+}
+function openStats() {
+  const st = Store.data.stats;
+  const fam = MEMBERS.filter(m => st.family[m.key]).map(m => "<div><span>" + esc(m.name) + "</span><span>" + st.family[m.key] + "승</span></div>").join("");
+  showModal(
+    "<h2>🏆 전적</h2>" +
+    "<p>가족 대결</p>" + '<div class="stats-list">' + (fam || "<div><span>아직 기록이 없어요</span><span></span></div>") + "</div>" +
+    "<p>로켓단 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.rocket.win + '번</span></div><div><span>😼 로켓단이 이겼어요</span><span>' + st.rocket.lose + "번</span></div></div>" +
+    "<p>모두 " + (st.games || 0) + "판</p>" +
+    '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button><button class="btn" data-act="stats-clear">🗑️ 전적 지우기</button></div>'
+  );
+}
+function openFamilyCode() {
+  showModal(
+    "<h2>🔗 가족 코드로 도감 불러오기</h2>" +
+    "<p>잉글리시몬 <b>가족 함께하기</b>의 6자리 코드를 넣으면<br>가족이 모은 포켓몬을 불러와요. (읽기만 해요)</p>" +
+    '<input id="fam-code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC234" value="' + esc(Dex.familyCode() || "") + '">' +
+    '<div class="btns"><button class="btn big green" data-act="fam-load">불러오기</button><button class="btn" data-act="close-modal">닫기</button></div>' +
+    '<p class="small" id="fam-msg"></p>'
+  );
+  const inp = $("#fam-code");
+  inp.addEventListener("input", () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+  setTimeout(() => inp.focus(), 60);
+}
+
+/* ================================================================
+   누르기 처리 (data-act)
+================================================================ */
+const Act = {
+  "home": () => showScreen("home"),
+  "resume": () => { G.s = Store.data.game; if (!G.s) return showScreen("home"); showScreen("game"); },
+  "new-family": () => { Setup.mode = "family"; showScreen("setup"); },
+  "new-rocket": () => { Setup.mode = "rocket"; showScreen("setup"); },
+  "rules": openRules,
+  "stats": openStats,
+  "sound": () => { Store.data.sound = Store.data.sound === false; Store.save(); const b = $("#sound-btn"); if (b) b.textContent = soundLabel(); if (Store.data.sound) SFX.tap(); else TTS.stop(); },
+  "sound-game": () => { Act.sound(); const b = $("#sound-icon"); if (b) b.textContent = Store.data.sound === false ? "🔇" : "🔊"; },
+  "set": el => {
+    const v = JSON.parse(el.dataset.value);
+    Setup[el.dataset.field] = v;
+    const sc = $(".scroll"), top = sc ? sc.scrollTop : 0;
+    showScreen("setup");
+    const sc2 = $(".scroll"); if (sc2) sc2.scrollTop = top;
+    SFX.tap();
+  },
+  "to-pick": () => {
+    Dex.load();
+    Setup.ti = 0;
+    Setup.picks = [[], []];
+    Setup.picks[0] = validPicks(Store.data.lastPicks[Setup.t0], 0);
+    if (!Setup.picks[0].length && Dex.partner) Setup.picks[0] = [Dex.partner]; // 잉글리시몬 파트너를 첫 칸에
+    if (Setup.mode === "family") Setup.picks[1] = validPicks(Store.data.lastPicks[Setup.t1], 1);
+    showScreen("pick");
+  },
+  "pick": el => {
+    const id = Number(el.dataset.id), mine = Setup.picks[Setup.ti];
+    const k = mine.indexOf(id);
+    if (k >= 0) mine.splice(k, 1);
+    else if (sameFamily(mine, id)) { toast(nameOf(rootOf(id)) + " 가족은 벌써 골랐어요! 한 가족에서 한 마리만 골라요", 2400); return; }
+    else if (mine.length >= Setup.pieces) { toast("벌써 " + Setup.pieces + "마리를 골랐어요. 위에서 하나 빼고 골라요"); return; }
+    else { mine.push(id); SFX.pop(); }
+    updatePick();
+  },
+  "slot-remove": el => { Setup.picks[Setup.ti].splice(Number(el.dataset.k), 1); SFX.tap(); updatePick(); },
+  "pick-auto": () => { autoPick(); SFX.pop(); updatePick(); },
+  "pick-next": () => {
+    if (Setup.picks[Setup.ti].length < Setup.pieces) return;
+    if (Setup.mode === "family" && Setup.ti === 0) {
+      Setup.ti = 1;
+      Setup.picks[1] = validPicks(Setup.picks[1], 1);
+      showScreen("pick");
+    } else startFromSetup();
+  },
+  "pick-back": () => { if (Setup.ti === 1) { Setup.ti = 0; showScreen("pick"); } else showScreen("setup"); },
+  "family-code": openFamilyCode,
+  "fam-load": async () => {
+    const inp = $("#fam-code"), msg = $("#fam-msg");
+    const code = (inp.value || "").toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) { msg.textContent = "6자리 코드를 넣어 주세요"; return; }
+    msg.textContent = "불러오는 중…";
+    try {
+      const n = await Dex.fetchFamily(code);
+      if (!n) { msg.textContent = "그 코드에는 모은 포켓몬이 없어요. 코드를 다시 확인해 주세요"; return; }
+      closeModal();
+      toast("📕 가족 도감에서 " + n + "마리를 불러왔어요!", 2400);
+      if (current === "pick") showScreen("pick");
+    } catch (e) { msg.textContent = "불러오지 못했어요. 인터넷 연결을 확인해 주세요"; }
+  },
+  "throw": () => { if (humanTurn()) doThrow(); },
+  "chip": el => onChipTap(Number(el.dataset.piece)),
+  "pause": openPause,
+  "pause-home": () => { modalClose = null; closeModal(); G.paused = false; showScreen("home"); },
+  "pause-giveup": () => typedConfirm("판 그만두기", "이 판을 지우면 되돌릴 수 없어요.", "그만", () => {
+    Store.data.game = null; Store.save(); G.s = null; G.paused = false; showScreen("home"); toast("판을 정리했어요");
+  }),
+  "stats-clear": () => typedConfirm("전적 지우기", "전적을 모두 지우면 되돌릴 수 없어요.", "지우기", () => {
+    Store.data.stats = Store.defaults().stats; Store.save(); toast("전적을 지웠어요");
+  }),
+  "rematch": rematch,
+  "win-home": () => showScreen("home"),
+  "close-modal": closeModal,
+  "app-update": () => location.replace(location.pathname + "?v=" + Date.now()),
+};
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]");
+  if (!el || el.disabled) return;
+  const f = Act[el.dataset.act];
+  if (f) f(el, e);
+});
+
+/* ================================================================
+   새 버전 알림 — 패드가 옛 파일을 붙들고 있으면 알려 준다
+================================================================ */
+let updateChecked = false;
+async function checkUpdate() {
+  if (updateChecked || !navigator.onLine || !/^https?:$/.test(location.protocol)) return; // file:// 은 건너뜀
+  updateChecked = true;
+  try {
+    const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(await r.text());
+    if (!m || m[1] === APP_VERSION) return;
+    showModal(
+      '<h2>🎁 새 버전이 나왔어요!</h2><p>지금 <b>v' + esc(APP_VERSION) + "</b> 을 쓰고 있어요.<br>새 버전 <b>v" + esc(m[1]) + "</b> 으로 바꿔 볼까요?</p>" +
+      '<div class="btns"><button class="btn big green" data-act="app-update">🔄 새 버전으로 바꾸기</button><button class="btn" data-act="close-modal">나중에</button></div>'
+    );
+  } catch (e) { /* 오프라인이면 조용히 */ }
+}
+
+/* ================================================================
+   시작
+================================================================ */
+Store.load();
+Object.assign(Setup, {
+  t0: Store.data.settings.t0, t1: Store.data.settings.t1, cpu: Store.data.settings.cpu,
+  pieces: Store.data.settings.pieces, backdo: Store.data.settings.backdo,
+});
+if (Setup.t0 === Setup.t1) Setup.t1 = Setup.t0 === "mom" ? "kid" : "mom";
+Dex.load();
+TTS.init();
+Art.load();
+showScreen("home");
+window.__yut = { G, Store, Dex, Art, Setup, Yut, Act }; // 테스트용
+</script>
+</body>
+</html>
