@@ -278,7 +278,8 @@ t("30. 던지기 — 성공률이 잡을 확률과 같고, 흔들기는 성공 3
     ok(Math.abs(okN / N - R.catchRate(b)) < 0.01, R.BALL_INFO[b].name + " 성공 " + (okN / N * 100).toFixed(1) + "%");
   });
 });
-t("31. 야생 포켓몬 — 희귀도 60·25·12·3 (±1%p), 아직 없는 포켓몬 먼저", () => {
+t("31. 야생 포켓몬 — 희귀도 50·30·10·10 (±1%p), 아직 없는 포켓몬 먼저", () => {
+  eq(Y.Rewards.WILD_ODDS, { c: 50, r: 30, u: 10, l: 10 });
   const pools = { c: [], r: [], u: [], l: [] };
   for (let id = 1; id <= 1025; id++) pools[D.rarity[id] || "c"].push(id);
   const R = Y.Rewards, rnd = Y.rng(9), N = 50000, cnt = { c: 0, r: 0, u: 0, l: 0 };
@@ -299,6 +300,16 @@ t("32. ❓ 칸 고르기 — 2칸, 후보 칸 안에서, 서로 붙지 않게", 
     ok(ns.every(n => Y.SPOT_NODES.includes(n)), "후보 밖 " + ns);
     ok(Math.abs(ns[0] - ns[1]) !== 1, "붙은 칸 " + ns); // 후보 칸은 모두 바깥 길이라 번호 차이 1 = 바로 옆 칸
   }
+});
+
+t("33. 진화 경로를 넘기면 그대로 — 스타팅 파이리가 리자몽까지 (사람 팀은 마지막 모습까지)", () => {
+  const s = Y.newGame({ pieces: 2, seed: 1, teams: [
+    { name: "A", picks: [4, 1], paths: [[4, 5, 6], [1, 2, 3]] },
+    { name: "B", picks: [24, 109] },   // 넘기지 않으면 고른 모습까지 (로켓단)
+  ] }, D.evoFrom);
+  eq(s.teams[0].paths, [[4, 5, 6], [1, 2, 3]]);
+  eq(s.teams[1].paths, [[23, 24], [109]]);
+  ok(Y.validate(s));
 });
 
 // ---------- 무작위 대국 (불변 조건 확인) ----------

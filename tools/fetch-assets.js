@@ -22,7 +22,6 @@ const BUDGET = 6 * 1024 * 1024;
 const CAST = {
   yut: [498, 58, 179, 128, 77, 79],            // 도·개·걸·윷·모·빽도
   rocket: [24, 109, 52, 202],                  // 로켓단 말: 아보크·또가스·나옹·마자용
-  friends: [25, 133, 143, 54, 132, 39, 35, 175], // 빌려온 친구
 };
 const BALLS = ["poke-ball", "great-ball", "ultra-ball", "luxury-ball", "master-ball"]; // v2 볼 5단계
 const ROCKET_IMG = ["rocket-jessie", "rocket-james", "rocket-meowth", "rocket-wobbuffet"];
@@ -32,7 +31,7 @@ for (let id = 1; id <= 1025; id++) {
   jobs.push({ kind: "front", url: BASE + "pokemon/" + id + ".png", out: path.join(ROOT, "assets/sprites/front", id + ".png"), id });
   jobs.push({ kind: "back", url: BASE + "pokemon/back/" + id + ".png", out: path.join(ROOT, "assets/sprites/back", id + ".png"), id });
 }
-[...CAST.yut, ...CAST.rocket, ...CAST.friends].forEach(id => {
+[...CAST.yut, ...CAST.rocket].forEach(id => {
   jobs.push({ kind: "official", url: BASE + "pokemon/other/official-artwork/" + id + ".png", out: path.join(ROOT, "art-src/official", id + ".png"), id });
 });
 BALLS.forEach(b => jobs.push({ kind: "items", url: BASE + "items/" + b + ".png", out: path.join(ROOT, "assets/items", b + ".png"), id: b }));

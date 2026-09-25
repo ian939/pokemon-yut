@@ -6,7 +6,7 @@
   1. 가족 대결: 처음 → 준비 → 팀 2개 고르기 → 판을 끝까지 → 우승 화면 (가로 1180×820)
   2. 로켓단 대결: 등장 연출 → 컴퓨터가 스스로 둔다 → 끝까지 (세로 820×1180)
   3. 이어하기: 판 중간에 새로고침 → 같은 차례·같은 위치
-  4. 잉글리시몬 도감 읽기: 망가진 저장(p 접두사)도 정화해서 잡은 포켓몬만 보여 줌 / 도감이 없으면 안내
+  4. 고르기 명단: 스타팅 포켓몬 27마리 + ❓ 풀숲에서 잡은 포켓몬(잡은 순서대로) / 같은 진화 가족 막기
   5. 새 버전 감지: 서버 파일의 APP_VERSION 이 다르면 알림
   6. 누르는 것 44×44px 이상, 가로 스크롤 없음 (폰 390×844 포함)
   7. 콘솔 오류 0개
@@ -58,11 +58,8 @@ def serve():
     return httpd
 
 
-# 잉글리시몬 저장 흉내: 진화형 섞어서 + Firebase 흔적(p 접두사) + count 0 (유령) 하나
-DEX = [1, 2, 3, 4, 5, 6, 7, 9, 25, 26, 133, 134, 135, 143, 147, 148, 149, 172, 175, 176, 246, 248, 387, 390, 393, 906, 909, 912, 1000]
-POKEDEX = {("p" + str(i) if i % 3 == 0 else str(i)): {"count": 1, "first": 1} for i in DEX}
-POKEDEX["150"] = {"count": 0, "first": 1}  # 유령 항목 — 나오면 안 됨
-ENGMON_SAVE = json.dumps({"version": 1, "pokedex": POKEDEX, "partner": 6})
+# 윷놀이 저장 흉내: ❓ 풀숲에서 잡은 포켓몬 (잡은 순서: 리자드 → 가디 → 이브이)
+YUT_SAVE = json.dumps({"collection": [{"id": 5, "t": 1, "from": "wild"}, {"id": 58, "t": 2, "from": "wild"}, {"id": 133, "t": 3, "from": "wild"}]})
 
 MEASURE = """() => {
   const bad = [];
@@ -86,6 +83,11 @@ def measure(page, name):
 
 def wait_idle(page, timeout=20000):
     page.wait_for_function("() => window.__yut && !window.__yut.G.busy", timeout=timeout)
+
+
+def wait_idle_or_popup(page, timeout=20000):
+    """계산이 끝나거나, 배틀·야생 조우 창(건너뛰기 버튼)이 뜰 때까지."""
+    page.wait_for_function("() => window.__yut && (!window.__yut.G.busy || document.querySelector('.bt-skip'))", timeout=timeout)
 
 
 def play_to_end(page, shots_prefix, max_steps=900):
@@ -114,7 +116,7 @@ def play_to_end(page, shots_prefix, max_steps=900):
             if n in shot_at:
                 page.wait_for_timeout(120)
                 page.screenshot(path=str(OUT / f"{shots_prefix}-throw{n}.png"))
-            wait_idle(page)
+            wait_idle_or_popup(page)
         elif st["phase"] == "choose":
             if st["dests"] == 0:
                 # 여러 말 중 고르는 상황: 반짝이는 말을 누른다
@@ -135,7 +137,7 @@ def play_to_end(page, shots_prefix, max_steps=900):
                     if pick:
                         break
                 (pick or dests[-1]).click(force=True)
-                wait_idle(page)
+                wait_idle_or_popup(page)
         elif st["phase"] == "over":
             page.wait_for_timeout(300)
     return False
@@ -143,9 +145,8 @@ def play_to_end(page, shots_prefix, max_steps=900):
 
 def scenario(browser, base, errors):
     """윷 결과를 정해 두고(?force=) 잡기·쉬어 가기·업기·여러 결과·진화를 실제 속도로 일으켜 찍는다.
-    팀 0: 리자몽(파이리→리자드→리자몽)·라이츄 / 팀 1: 거북왕·이상해꽃, 말 2개, 팀 0 먼저(seed 2)."""
+    팀 0: 파이리(→리자드→리자몽)·이상해씨 / 팀 1: 꼬부기·치코리타 (스타팅), 말 2개, 팀 0 먼저(seed 2)."""
     ctx = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True)
-    ctx.add_init_script("if (!localStorage.getItem('engmon_save_v1')) localStorage.setItem('engmon_save_v1', " + json.dumps(ENGMON_SAVE) + ");")
     page = ctx.new_page()
     page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
     page.goto(base + "?seed=2&spots=none&force=1,1,2,-1,3,4,4,2")  # 풀숲 없이 (v1 연출만)
@@ -154,11 +155,11 @@ def scenario(browser, base, errors):
     page.click("[data-act=set][data-field=pieces][data-value='2']")
     page.click("[data-act=to-pick]")
     page.evaluate("() => { window.__yut.Setup.picks[0] = []; }")
-    page.click(".pcard[data-id='6']")
-    page.click(".pcard[data-id='26']")
+    page.click(".pcard[data-id='4']")
+    page.click(".pcard[data-id='1']")
     page.click("#pick-next")
-    page.click(".pcard[data-id='9']")
-    page.click(".pcard[data-id='3']")
+    page.click(".pcard[data-id='7']")
+    page.click(".pcard[data-id='152']")
     page.click("#pick-next")
     wait_idle(page)
 
@@ -236,7 +237,6 @@ def scenario_v2(browser, base, errors):
     """v2: ❓ 풀숲 야생 조우 (잡기·놓치기·볼 없음) · 로켓단 쫓아내기 · 보물상자 · 보관함 → 고르기."""
     def ctx_page(vw=1180, vh=820, bag=None):
         ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True)
-        ctx.add_init_script("if (!localStorage.getItem('engmon_save_v1')) localStorage.setItem('engmon_save_v1', " + json.dumps(ENGMON_SAVE) + ");")
         if bag is not None:
             ctx.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', " + json.dumps(json.dumps({"bag": bag})) + ");")
         page = ctx.new_page()
@@ -279,7 +279,7 @@ def scenario_v2(browser, base, errors):
     page.click("[data-act=pause]"); page.click("[data-act=pause-home]")
     page.click("text=가족 대결"); page.click("[data-act=to-pick]")
     page.wait_for_timeout(200)
-    check("윷놀이에서 잡은 포켓몬" in page.inner_text("#pick-scroll") and page.query_selector(".pcard[data-id='58']") is not None, "고르기 화면에 🎯 윷놀이에서 잡은 포켓몬 (가디)")
+    check("잡은 포켓몬" in page.inner_text("#pick-scroll") and page.query_selector(".pcard[data-id='58']") is not None, "고르기 화면 🎯 잡은 포켓몬에 가디가 생김")
     page.screenshot(path=str(OUT / "73-pick-collection.png"))
     page.goto(base + "?fast=1"); page.wait_for_timeout(300)
     page.click("[data-act=bag]"); page.wait_for_timeout(200)
@@ -349,6 +349,35 @@ def scenario_v2(browser, base, errors):
     check(store(page, "[d.bag.master, d.bag.luxury, d.bag.poke]") == [1, 1, 4], "새로고침해도 상자 볼이 두 번 안 들어감")
     ctx.close()
 
+    # ⑥ 설정에서 "배틀 장면 건너뛰기" — 배틀 화면 없이 물리치고, 진 말은 집으로, 이긴 팀은 한 번 더
+    ctx, page = ctx_page()
+    page.goto(base + "?seed=2&spots=none&force=1,1"); page.wait_for_timeout(300)
+    page.click("text=가족 대결")
+    page.click("[data-act=set][data-field=pieces][data-value='2']")
+    page.click("[data-act=set][data-field=battle][data-value='false']")
+    page.screenshot(path=str(OUT / "77-setup-battle-skip.png"))
+    page.click("[data-act=to-pick]")
+    page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    wait_idle(page)
+    check(page.evaluate("() => window.__yut.G.s.settings.battle") is False and store(page, "d.settings.battle") is False, "건너뛰기 설정이 판과 저장에 들어감")
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/1']", force=True); wait_idle(page)
+    page.click("#btn-throw", force=True); wait_idle(page)
+    page.click(".dest[data-move='new/1']", force=True)    # 팀 1 이 팀 0 말을 잡음
+    saw_battle = False
+    t0 = time.time()
+    while time.time() - t0 < 2.5:
+        saw_battle = saw_battle or page.query_selector(".battle") is not None
+        page.wait_for_timeout(100)
+    wait_idle(page)
+    hint_txt = page.inner_text("#hint")
+    page.screenshot(path=str(OUT / "78-battle-skipped.png"))
+    st = page.evaluate("() => { const s = window.__yut.G.s; return [s.turn, s.phase, s.pieces[0].state]; }")
+    check(not saw_battle, "배틀 화면이 안 뜸")
+    check(st == [1, "throw", "wait"], f"진 말은 대기로, 이긴 팀이 한 번 더 던짐 ({st})")
+    ctx.close()
+
 
 def main():
     httpd = serve()
@@ -368,7 +397,7 @@ def main():
 
         # ---------- 1. 가족 대결 (가로 패드) ----------
         ctx = browser.new_context(viewport={"width": 1180, "height": 820}, device_scale_factor=1, has_touch=True)
-        ctx.add_init_script("if (!localStorage.getItem('engmon_save_v1')) localStorage.setItem('engmon_save_v1', " + json.dumps(ENGMON_SAVE) + ");")
+        ctx.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', " + json.dumps(YUT_SAVE) + ");")
         page = ctx.new_page()
         page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
         page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
@@ -390,9 +419,9 @@ def main():
         page.click("[data-act=to-pick]")
         page.wait_for_timeout(300)
         page.screenshot(path=str(OUT / "03-pick-empty.png"))
-        ids = page.evaluate("() => window.__yut.Dex.ids")
-        check(sorted(ids) == sorted(DEX), f"도감 정화: 잡은 {len(DEX)}마리만 (p 접두사 복원, 유령 제외) → {len(ids)}마리")
-        check(page.evaluate("() => window.__yut.Setup.picks[0][0]") == 6, "잉글리시몬 파트너(리자몽)가 첫 칸에 미리 들어감")
+        grids = page.eval_on_selector_all("#pick-scroll .grid", "gs => gs.map(g => [...g.querySelectorAll('.pcard')].map(c => +c.dataset.id))")
+        check(len(grids) == 2 and len(grids[0]) == 27 and grids[0][:3] == [1, 4, 7], f"명단: 스타팅 포켓몬 27마리 ({len(grids[0]) if grids else 0}마리)")
+        check(len(grids) == 2 and grids[1] == [5, 58, 133], f"명단: 잡은 포켓몬이 잡은 순서대로 뒤에 (리자드 → 가디 → 이브이: {grids[1] if len(grids) > 1 else None})")
         page.click("[data-act=pick-auto]")
         page.wait_for_timeout(200)
         page.screenshot(path=str(OUT / "04-pick-team1.png"))
@@ -402,19 +431,23 @@ def main():
         t1 = page.evaluate("() => window.__yut.Setup.picks[0]")
         ok_taken = page.evaluate("(ids) => ids.every(id => document.querySelector('.pcard[data-id=\"' + id + '\"]').classList.contains('taken'))", t1)
         check(ok_taken, "두 번째 팀 화면에서 첫 팀 포켓몬(과 같은 진화 가족)은 못 고름")
-        # 같은 가족 두 마리 고르기 막기: 첫 카드와 같은 가족 카드를 눌러 본다
-        fam = page.evaluate("() => { const Y = window.__yut; const ids = Y.Dex.ids; const r = id => Y.Yut.evoPath(id, window.YUT_DATA.evoFrom)[0]; for (const a of ids) for (const b of ids) if (a !== b && r(a) === r(b) && !document.querySelector('.pcard[data-id=\"' + a + '\"]').classList.contains('taken')) return [a, b]; return null; }")
-        if fam:
-            page.evaluate("() => { window.__yut.Setup.picks[1] = []; }")
-            page.click(f".pcard[data-id='{fam[0]}']")
-            page.click(f".pcard[data-id='{fam[1]}']", force=True)
-            n2 = page.evaluate("() => window.__yut.Setup.picks[1].length")
-            check(n2 == 1, f"같은 진화 가족은 한 팀에 한 마리만 (#{fam[0]}·#{fam[1]} → {n2}마리)")
+        # 같은 가족 두 마리 막기: 스타팅 파이리(4)와 잡은 리자드(5)
+        page.goto(base + "?fast=1&seed=12"); page.wait_for_timeout(300)
+        page.click("text=가족 대결"); page.click("[data-act=to-pick]")
+        page.evaluate("() => { window.__yut.Setup.picks[0] = []; }")
+        page.click(".pcard[data-id='4']")
+        page.click(".pcard[data-id='5']", force=True)
+        n2 = page.evaluate("() => window.__yut.Setup.picks[0]")
+        check(n2 == [4], f"같은 진화 가족은 한 팀에 한 마리만 (파이리·리자드 → {n2})")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
         page.click("[data-act=pick-auto]")
         page.screenshot(path=str(OUT / "05-pick-team2.png"))
         page.click("#pick-next")
         page.wait_for_timeout(200)
         page.screenshot(path=str(OUT / "06-game-start.png"))
+        # 고르기 화면의 "파이리 가족은 벌써 골랐어요!" 알림이 윷판 안내 칸을 덮으면 안 된다
+        check(not page.evaluate("() => document.querySelector('#toast').classList.contains('show')"),
+              "앞 화면 알림은 윷판으로 넘어오면 사라짐 (안내 칸을 덮지 않음)")
         wait_idle(page)
         page.screenshot(path=str(OUT / "07-game-ready.png"))
         measure(page, "윷판 화면(가로)")
@@ -463,7 +496,6 @@ def main():
 
         # ---------- 2. 로켓단 대결 (세로 패드) ----------
         ctx = browser.new_context(viewport={"width": 820, "height": 1180}, has_touch=True)
-        ctx.add_init_script("if (!localStorage.getItem('engmon_save_v1')) localStorage.setItem('engmon_save_v1', " + json.dumps(ENGMON_SAVE) + ");")
         page = ctx.new_page()
         page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
         page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
@@ -498,7 +530,7 @@ def main():
         measure(page, "폰 처음 화면")
         page.click("text=가족 대결")
         page.click("[data-act=to-pick]")
-        check(page.query_selector(".notice") is not None, "도감이 없으면 안내 + 가족 코드 버튼")
+        check(page.query_selector(".empty-grid") is not None, "잡은 포켓몬이 없으면 ❓ 풀숲 안내")
         page.screenshot(path=str(OUT / "41-phone-nodex.png"))
         page.click("[data-act=pick-auto]")
         page.click("#pick-next")

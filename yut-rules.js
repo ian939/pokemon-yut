@@ -222,11 +222,12 @@
       v: 1,
       seed,
       rng: seed,
-      settings: { pieces: n, backdo: o.backdo !== false, mode: o.mode || "family", cpuLevel: o.cpuLevel || "normal" },
+      settings: { pieces: n, backdo: o.backdo !== false, mode: o.mode || "family", cpuLevel: o.cpuLevel || "normal", battle: o.battle !== false }, // battle: 배틀 장면 보기 (화면 쪽 설정)
       teams: o.teams.map(t => ({
         name: t.name, color: t.color, cpu: !!t.cpu, key: t.key || null,
         picks: t.picks.slice(0, n),
-        paths: t.picks.slice(0, n).map(id => evoPath(id, evoFrom)),
+        // 진화 경로: 화면 쪽이 정해 넘기면 그대로 (사람 팀은 마지막 모습까지), 없으면 고른 모습까지
+        paths: Array.isArray(t.paths) && t.paths.length >= n ? t.paths.slice(0, n) : t.picks.slice(0, n).map(id => evoPath(id, evoFrom)),
       })),
       pieces: [],
       turn: o.first || 0,
@@ -454,7 +455,7 @@
     luxury: { name: "럭셔리볼", img: "luxury-ball", odds: 5 },
     master: { name: "마스터볼", img: "master-ball", odds: 5 },
   };
-  const WILD_ODDS = { c: 60, r: 25, u: 12, l: 3 }; // 잉글리시몬 모험 조우와 같게
+  const WILD_ODDS = { c: 50, r: 30, u: 10, l: 10 }; // ❓ 풀숲에서 나오는 희귀도 (사용자 확정 2026-09-25)
   const Rewards = {
     BALLS, BALL_INFO, WILD_ODDS, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
     catchRate(ball) { return ball === "master" ? 1 : 0.6 + 0.05 * Math.max(0, BALLS.indexOf(ball)); },

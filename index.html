@@ -14,9 +14,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>포켓몬 윷놀이</title>
 <!--
-  포켓몬 윷놀이 — 잉글리시몬 도감의 포켓몬이 말이 되는 가족 윷놀이 (개인·가정용 비상업 팬 프로젝트)
+  포켓몬 윷놀이 — 스타팅 포켓몬 + ❓ 풀숲에서 잡은 포켓몬이 말이 되는 가족 윷놀이 (개인·가정용 비상업 팬 프로젝트)
   - 규칙: yut-rules.js · 데이터: data/pokemon.js (tools 로 생성) · 그림: assets/
-  - file:// 로 열어도 동작. 잉글리시몬 도감(localStorage engmon_save_v1)은 읽기만 한다.
+  - file:// 로 열어도 동작. 저장은 윷놀이 것(localStorage engmon_yut_v1)만 쓴다 — 잉글리시몬 저장은 읽지도 쓰지도 않는다.
 -->
 <script src="lock.js"></script>
 <style>
@@ -141,6 +141,7 @@ img { -webkit-user-drag: none; }
 .slot .nm { font-size: 14px; font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
 .slot .evo { display: flex; align-items: center; gap: 1px; height: 26px; font-size: 11px; color: var(--ink-soft); font-weight: 800; }
 .slot .evo .mini { position: relative; width: 24px; height: 24px; }
+.slot .evo b { font-size: 13px; font-weight: 900; color: var(--ink); }
 .slot .x { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; border-radius: 8px; background: var(--paper); border: 3px solid var(--ink); font-size: 13px; font-weight: 900; display: grid; place-items: center; }
 .pick-actions { display: flex; gap: 12px; justify-content: center; padding: 0 12px 12px; }
 .pick-actions .btn { flex: 1; max-width: 300px; }
@@ -169,6 +170,7 @@ img { -webkit-user-drag: none; }
 .pcard .who { position: absolute; top: 4px; right: 4px; font-size: 16px; }
 .notice { background: var(--paper); border: 4px solid var(--ink); border-radius: 16px; box-shadow: var(--win), var(--lift); padding: 16px; margin: 12px 0; font-size: 16px; font-weight: 700; line-height: 1.6; text-align: center; }
 .notice .btn { margin-top: 10px; }
+.grid.empty-grid { display: block; text-align: center; padding: 20px 16px; font-size: 16px; font-weight: 700; line-height: 1.6; }
 .link-row { text-align: center; margin: 20px 0 6px; }
 
 /* ===== 윷판 화면 ===== */
@@ -181,6 +183,17 @@ img { -webkit-user-drag: none; }
 .panel { flex: 1 1 auto; min-width: 0; max-width: 400px; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 14px; min-height: 0; }
 .game.port .panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; width: 100%; max-width: 760px; flex: none; align-self: center; }
 .game.port .mat { width: min(100%, 200px); }
+/* 가로 화면이 낮으면(주소창 때문에 패드는 700px 안팎) 패널을 줄여서 위쪽 줄(가방·소리 버튼)을 덮지 않게 */
+.game.land.tight .panel, .game.land.tight .teams { gap: 8px; }
+.game.land.tight .tcard { padding: 6px 10px 8px; }
+.game.land.tight .pchips { margin-top: 4px; }
+.game.land.tight .pchip { width: 46px; height: 46px; }
+.game.land.tight .throw-zone { padding: 10px 12px; gap: 6px; }
+.game.land.tight .mat { width: min(100%, 170px); }
+.game.land.tight .pending { min-height: 36px; }
+.game.land.tight .btn.throw { min-height: 56px; }
+.game.land.tight .hint { min-height: calc(var(--t1) * 1.45 * 2 + 20px); }
+.game.land.tighter .mat { display: none; } /* 결과는 결과 팝업으로 보이니 멍석은 빼도 된다 */
 /* 세로 화면: 안내 칸 높이를 고정 — 글이 길어져도 판 크기가 들썩이지 않게 (3줄, 폰은 4줄) */
 .game.port .hint { height: calc(var(--t1) * 1.45 * 3 + 20px); min-height: 0; overflow: hidden; }
 @media (max-width: 520px) {
@@ -517,12 +530,11 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-25f";
+const APP_VERSION = "2026-09-25h";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
 document.documentElement.style.setProperty("--spd", SPEED);
-const DB_URL = "https://elglishmon-default-rtdb.asia-southeast1.firebasedatabase.app"; // 잉글리시몬 가족 함께하기 (읽기만)
 const OFFICIAL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/";
 const CRY_BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/";
 
@@ -530,9 +542,8 @@ const CRY_BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pok
 const CAST = {
   yut: { "-1": 79, 1: 498, 2: 58, 3: 179, 4: 128, 5: 77 },  // 빽도 야돈 · 도 뚜꾸리 · 개 가디 · 걸 메리프 · 윷 켄타로스 · 모 포니타
   rocket: [24, 109, 52, 202],                               // 아보크 · 또가스 · 나옹 · 마자용
-  friends: [25, 133, 143, 54, 132, 39, 35, 175],            // 빌려온 친구
 };
-const LOCAL_ART = new Set([].concat(Object.values(CAST.yut), CAST.rocket, CAST.friends).map(Number));
+const LOCAL_ART = new Set([].concat(Object.values(CAST.yut), CAST.rocket).map(Number));
 const RES = {
   "-1": { name: "빽도", animal: "", emoji: "↩️", steps: "뒤로 1칸", say: "빽도! 뒤로 한 칸" },
   1: { name: "도", animal: "돼지", emoji: "🐷", steps: "1칸", say: "도! 한 칸" },
@@ -569,7 +580,11 @@ function josa(word, pair) {
 
 const nameOf = id => D.names[id - 1] || "???";
 const collectionIds = () => Store.data.collection.map(x => x.id);
-const ownedSet = () => new Set(Dex.ids.concat(collectionIds())); // 잉글리시몬 도감 + 윷놀이 보관함
+// 스타팅 포켓몬 — 1~9세대 첫 파트너 27마리. 처음에는 이것만 고를 수 있고, ❓ 풀숲에서 잡을 때마다 명단이 늘어난다
+const STARTERS = [1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501, 650, 653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912];
+const caughtOnly = () => collectionIds().filter(id => STARTERS.indexOf(id) < 0); // 잡은 순서대로
+const rosterIds = () => STARTERS.concat(caughtOnly());                          // 고를 수 있는 포켓몬
+const ownedSet = () => new Set(rosterIds());
 const bagTotal = () => Yut.Rewards.BALLS.reduce((t, b) => t + (Store.data.bag[b] || 0), 0);
 const typesOf = id => String(D.types[id - 1] || "노말").split("·");
 const moveOf = id => D.moves[id] || D.typeMove[typesOf(id)[0]] || "몸통박치기";
@@ -605,12 +620,11 @@ const Store = {
     return {
       version: 1,
       sound: true,
-      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom" },
+      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true },
       stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 },
       lastPicks: {},      // { kid: [ids], mom: [ids] } — 다음 판에 미리 채워 둠
       bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }, // 윷놀이 볼 (잉글리시몬 볼과 따로) — 처음 선물 몬스터볼 3개
       collection: [],     // 윷놀이 보관함 [{ id, t, from }] — ❓ 풀숲에서 잡은 포켓몬, 다음 판부터 말로
-      familyDex: null,    // { code, ids, t } — 가족 코드로 불러온 도감 (읽기만)
       game: null,         // 진행 중인 판
       lastGame: null,     // 끝난 판 (한 판 더)
     };
@@ -621,6 +635,7 @@ const Store = {
       const raw = JSON.parse(localStorage.getItem(this.KEY));
       if (raw && typeof raw === "object") {
         Object.assign(d, raw);
+        delete d.familyDex; // 옛 버전(잉글리시몬 가족 도감 읽기)이 남긴 것
         d.settings = Object.assign(this.defaults().settings, raw.settings || {});
         d.stats = Object.assign(this.defaults().stats, raw.stats || {});
         d.stats.rocket = Object.assign({ win: 0, lose: 0 }, d.stats.rocket || {});
@@ -645,72 +660,6 @@ const Store = {
     catch (e) {
       if (!this.warned) { this.warned = true; toast("저장이 안 되는 환경이에요. 창을 닫으면 판이 사라져요 🥲", 3200); }
     }
-  },
-};
-
-/* ================================================================
-   잉글리시몬 도감 (읽기만 한다 — 절대 쓰지 않음)
-================================================================ */
-// 잉글리시몬 unpackMap 과 같은 정화: Firebase 가 숫자 키를 배열로 바꾼 흔적·p 접두사를 되돌린다
-function unpackMap(m, prefix) {
-  const out = {};
-  if (Array.isArray(m)) m.forEach((v, i) => { if (v) out[i] = v; });
-  else if (m && typeof m === "object") {
-    Object.keys(m).forEach(k => {
-      if (!m[k]) return;
-      out[prefix && k.charAt(0) === prefix && /\d/.test(k.charAt(1)) ? k.slice(1) : k] = m[k];
-    });
-  }
-  return out;
-}
-function caughtIds(pokedex) {
-  const ids = [];
-  Object.entries(unpackMap(pokedex, "p")).forEach(([k, e]) => {
-    const id = Number(k);
-    if (e && typeof e === "object" && (e.count || 0) >= 1 && id >= 1 && id <= 1025) ids.push(id);
-  });
-  return ids;
-}
-const Dex = {
-  ids: [], localN: 0, partner: null, refreshed: false,
-  load() {
-    const set = new Set();
-    this.localN = 0;
-    try {
-      const raw = localStorage.getItem("engmon_save_v1");
-      if (raw) {
-        const s = JSON.parse(raw);
-        const ids = caughtIds(s.pokedex || {});
-        ids.forEach(id => set.add(id));
-        this.localN = ids.length;
-        if (s.partner && ids.indexOf(Number(s.partner)) >= 0) this.partner = Number(s.partner);
-      }
-    } catch (e) {}
-    const fam = Store.data.familyDex;
-    if (fam && Array.isArray(fam.ids)) fam.ids.forEach(id => { if (id >= 1 && id <= 1025) set.add(id); });
-    this.ids = Array.from(set).sort((a, b) => a - b);
-  },
-  familyCode() {
-    try {
-      const f = JSON.parse(localStorage.getItem("engmon_family_v1"));
-      if (f && f.code) return String(f.code);
-    } catch (e) {}
-    return Store.data.familyDex ? Store.data.familyDex.code : null;
-  },
-  async fetchFamily(code) {
-    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const tm = setTimeout(() => ctrl && ctrl.abort(), 8000);
-    try {
-      const r = await fetch(DB_URL + "/families/" + encodeURIComponent(code) + "/pokedex.json", { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const ids = caughtIds((await r.json()) || {});
-      if (ids.length) {
-        Store.data.familyDex = { code, ids, t: Date.now() };
-        Store.save();
-        this.load();
-      }
-      return ids.length;
-    } finally { clearTimeout(tm); }
   },
 };
 
@@ -939,6 +888,9 @@ function showScreen(name) {
   current = name;
   clearTimeout(hintTimer);
   hintTimer = null;
+  // 앞 화면에서 띄운 알림이 다음 화면(윷판 안내 칸 등)을 덮지 않게 치운다
+  clearTimeout(toastTimer);
+  $("#toast").classList.remove("show");
   document.body.classList.remove("game-land");
   const app = $("#app");
   app.innerHTML = "";
@@ -975,7 +927,7 @@ Screens.home = sec => {
 };
 
 /* ---------- 준비 ---------- */
-const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, ti: 0, picks: [[], []] };
+const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, ti: 0, picks: [[], []] };
 const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
 const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
 function chipHtml(field, value, label, color, disabled) {
@@ -999,16 +951,25 @@ Screens.setup = sec => {
            : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + "</div>") +
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
       '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
+      '<h3>배틀 장면 (기술 쓰는 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
     "</div>" +
     '<div class="card-actions"><button class="btn big green cursor" data-act="to-pick">포켓몬 고르러 가기</button></div></div>';
 };
 
-/* ---------- 포켓몬 고르기 ---------- */
+/* ---------- 포켓몬 고르기 — 스타팅 포켓몬 + ❓ 풀숲에서 잡은 포켓몬 (잡은 순서대로) ---------- */
+// 진화 라인의 마지막 모습들 (갈래가 여럿이면 여러 개: 이브이 → 샤미드·쥬피썬더·…)
+const EVO_TO = (() => { const m = {}; Object.keys(D.evoFrom).forEach(c => { const p = D.evoFrom[c]; (m[p] = m[p] || []).push(Number(c)); }); return m; })();
+const finalsOf = id => (EVO_TO[id] && EVO_TO[id].length) ? [].concat(...EVO_TO[id].map(finalsOf)) : [id];
+// 말의 진화 경로: 1단계 → … → 마지막 모습 (스타팅 포켓몬은 1단계라서 끝까지 가야 진화한다). 갈래가 여럿이면 판마다 무작위
+function linePath(id, rnd) { const fs = finalsOf(id); return evoPath(fs[Math.floor(rnd() * fs.length)]); }
+// 보여 주기용: 갈래가 하나면 끝까지, 여럿이면 고른 포켓몬까지 + "?"
+function lineShow(id) { const fs = finalsOf(id); return fs.length > 1 ? { path: evoPath(id), more: true } : { path: evoPath(fs[0]), more: false }; }
+
 function slotHtml(id, k) {
   if (!id) return '<div class="slot empty"><span>' + (k + 1) + "</span></div>";
-  const path = evoPath(id);
-  const evo = path.length > 1
-    ? path.map(p => '<span class="mini">' + spr(p) + "</span>").join("<i>›</i>")
+  const L = lineShow(id);
+  const evo = L.path.length > 1 || L.more
+    ? L.path.map(p => '<span class="mini">' + spr(p) + "</span>").join("<i>›</i>") + (L.more ? "<i>›</i><b>?</b>" : "")
     : "진화 없음 ✨";
   return '<button class="slot filled" data-act="slot-remove" data-k="' + k + '" aria-label="' + esc(nameOf(id)) + ' 빼기">' +
     '<span class="pic">' + spr(id) + '</span><span class="nm">' + esc(nameOf(id)) + '</span><span class="evo">' + evo + '</span><span class="x">✕</span></button>';
@@ -1022,43 +983,33 @@ function takenBy(id) {
 function cardHtml(id) {
   const mine = Setup.picks[Setup.ti];
   const t = takenBy(id);
-  const path = evoPath(id);
-  const dots = path.length > 1 ? '<span class="dots">' + path.map(p => '<i class="' + (p === id ? "me" : "") + '"></i>').join("") + "</span>" : "";
+  const L = lineShow(id);
+  const dots = L.path.length > 1 || L.more
+    ? '<span class="dots">' + L.path.map(p => '<i class="' + (p === id ? "me" : "") + '"></i>').join("") + (L.more ? "<i></i>" : "") + "</span>" : "";
   return '<button class="pcard r-' + rarityOf(id) + (mine.indexOf(id) >= 0 ? " on" : "") + (t ? " taken" : "") + (!t && mine.indexOf(id) < 0 && sameFamily(mine, id) ? " fam" : "") + '" data-act="pick" data-id="' + id + '"' + (t ? " disabled" : "") + ">" +
     dots + (t ? '<span class="who">' + esc(emojiOf(t.name)) + "</span>" : "") +
     '<span class="pic">' + spr(id, false, true) + '</span><span class="nm">' + esc(nameOf(id)) + "</span></button>";
 }
-function dexSections() {
-  if (!Dex.ids.length) return "";
-  return D.gens.map(g => {
-    const col = new Set(collectionIds());
-    const ids = Dex.ids.filter(id => id >= g.from && id <= g.to && !col.has(id)); // 보관함에 있으면 그쪽에만
-    if (!ids.length) return "";
-    return '<h3 class="sec-title">' + g.emoji + " " + esc(g.region) + " <small>" + ids.length + "마리</small></h3>" +
-      '<div class="grid">' + ids.map(cardHtml).join("") + "</div>";
-  }).join("");
-}
 Screens.pick = sec => {
-  const ti = Setup.ti, n = Setup.pieces;
+  const ti = Setup.ti;
   const member = memberOf(teamKey(ti));
   sec.style.setProperty("--tc", TEAM_COLORS[ti]);
   const last = Setup.mode === "rocket" || ti === 1;
-  const col = collectionIds().slice().reverse(); // 윷놀이 보관함 (최근에 잡은 것부터)
-  const friends = CAST.friends.filter(id => Dex.ids.indexOf(id) < 0 && col.indexOf(id) < 0); // 도감·보관함에 있는 친구는 두 번 보이지 않게
+  const caught = caughtOnly(); // 잡은 순서대로 (먼저 잡은 것부터)
   sec.innerHTML =
     '<header class="bar"><button class="btn icon" data-act="pick-back" aria-label="뒤로">←</button><h2>' + esc(member.name) + ' 팀 포켓몬 고르기</h2><span class="side" id="pick-count"></span></header>' +
     '<div class="slots" id="slots"></div>' +
     '<div class="pick-actions"><button class="btn" data-act="pick-auto">🎲 알아서 골라 줘</button><button class="btn green" data-act="pick-next" id="pick-next">' + (last ? "시작!" : "다음 팀") + "</button></div>" +
     '<div class="scroll" id="pick-scroll"><div class="grid-wrap">' +
-      (col.length ? '<h3 class="sec-title">🎯 윷놀이에서 잡은 포켓몬 <small>' + col.length + '마리</small></h3><div class="grid">' + col.map(cardHtml).join("") + "</div>" : "") +
-      (Dex.ids.length
-        ? '<h3 class="sec-title lead">📕 내 도감 <small>' + Dex.ids.length + "마리 — 진화형을 고르면 판 위에서 진화해요! 한 가족에서 한 마리씩</small></h3>" + dexSections()
-        : '<div class="notice">📕 잉글리시몬 도감을 찾지 못했어요.<br>빌려온 친구와 함께 하거나, 가족 코드로 도감을 불러올 수 있어요.<br><button class="btn blue" data-act="family-code">🔗 가족 코드로 도감 불러오기</button></div>') +
-      (friends.length ? '<h3 class="sec-title">🤝 빌려온 친구</h3><div class="grid">' + friends.map(cardHtml).join("") + "</div>" : "") +
-      (Dex.ids.length ? '<div class="link-row"><button class="btn ghost" data-act="family-code">🔗 가족 코드로 도감 더 불러오기</button></div>' : "") +
+      '<h3 class="sec-title lead">📕 내 포켓몬 <small>' + (STARTERS.length + caught.length) + "마리 — 판 위에서 마지막 모습까지 진화해요! 한 가족에서 한 마리씩</small></h3>" +
+      '<h3 class="sec-title">🌱 스타팅 포켓몬 <small>' + STARTERS.length + "마리</small></h3>" +
+      '<div class="grid">' + STARTERS.map(cardHtml).join("") + "</div>" +
+      '<h3 class="sec-title">🎯 잡은 포켓몬 <small>' + caught.length + "마리 · 잡은 순서대로</small></h3>" +
+      (caught.length
+        ? '<div class="grid">' + caught.map(cardHtml).join("") + "</div>"
+        : '<div class="grid empty-grid">🌿 윷판의 <b>❓ 풀숲</b>에서 포켓몬을 잡으면 여기에 하나씩 늘어나요!</div>') +
     "</div></div>";
   updatePick();
-  refreshFamilyDex();
 };
 function updatePick() {
   const ti = Setup.ti, n = Setup.pieces, mine = Setup.picks[ti];
@@ -1074,19 +1025,8 @@ function updatePick() {
     c.classList.toggle("fam", !on && !c.classList.contains("taken") && sameFamily(mine, id));
   });
 }
-// 가족 코드가 있으면 가족이 모은 도감을 조용히 한 번 더 받아 온다 (읽기만)
-function refreshFamilyDex() {
-  if (Dex.refreshed || !navigator.onLine || !/^https?:$/.test(location.protocol)) return;
-  const code = Dex.familyCode();
-  if (!code) return;
-  Dex.refreshed = true;
-  const before = Dex.ids.length;
-  Dex.fetchFamily(code).then(() => {
-    if (current === "pick" && Dex.ids.length !== before) { const sc = $("#pick-scroll"), top = sc ? sc.scrollTop : 0; showScreen("pick"); const sc2 = $("#pick-scroll"); if (sc2) sc2.scrollTop = top; }
-  }).catch(() => {});
-}
 function validPicks(list, ti) {
-  const avail = new Set(Dex.ids.concat(CAST.friends, collectionIds()));
+  const avail = ownedSet();
   const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
   const out = [];
   (list || []).forEach(id => { if (avail.has(id) && other.indexOf(id) < 0 && !sameFamily(other, id) && out.indexOf(id) < 0 && !sameFamily(out, id)) out.push(id); });
@@ -1097,9 +1037,7 @@ function autoPick() {
   const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
   const free = id => mine.indexOf(id) < 0 && other.indexOf(id) < 0 && !sameFamily(other, id) && !sameFamily(mine, id);
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  // 진화 장면을 볼 수 있는 진화형을 먼저, 그다음 도감 나머지, 모자라면 빌려온 친구
-  const dex = shuffle(Array.from(new Set(Dex.ids.concat(collectionIds()))).filter(free));
-  const pool = dex.filter(id => evoPath(id).length > 1).concat(dex.filter(id => evoPath(id).length === 1), shuffle(CAST.friends.filter(free)));
+  const pool = shuffle(rosterIds().filter(free));
   while (mine.length < Setup.pieces && pool.length) { const id = pool.shift(); if (free(id)) mine.push(id); }
 }
 
@@ -1146,9 +1084,14 @@ function fitBoard() {
   sec.classList.toggle("port", !land);
   document.body.classList.toggle("game-land", land);
   let bs;
+  sec.classList.remove("tight", "tighter");
   if (land) {
     const panelW = Math.min(400, Math.max(290, W * 0.33));
     bs = Math.min(H - 64 - 28, W - panelW - 46);
+    // 패널이 남는 높이보다 길면 한 단계씩 줄인다 (넘치면 위로 튀어나와 위쪽 줄 버튼을 덮는다)
+    const panel = sec.querySelector(".panel");
+    if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tight");
+    if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tighter");
   } else {
     const panel = sec.querySelector(".panel");
     const ph = panel && panel.scrollHeight > 40 ? panel.scrollHeight : 330; // 패널은 제 높이, 판은 남는 만큼
@@ -1236,7 +1179,7 @@ function renderTop() {
   const pill = $("#turn-pill");
   if (pill) pill.innerHTML = G.s.phase === "over"
     ? '<span style="--tc:' + G.s.teams[G.s.winner].color + '">🎉 ' + esc(G.s.teams[G.s.winner].name) + " 승리!</span>"
-    : '<span style="--tc:' + t.color + '">' + esc(t.name) + " 차례</span>";
+    : '<span style="--tc:' + t.color + '">' + esc(t.name) + (window.innerWidth < 520 ? "" : " 차례") + "</span>"; // 폰: 이름만 (잘리지 않게)
   const btn = $("#btn-throw");
   if (!btn) return;
   const human = humanTurn();
@@ -1563,7 +1506,8 @@ async function animCapture(e, prev) {
   const vEl = unitAt(vTeam, e.node);
   fxAt(e.node, fxOf(Yut.formOf(prev, e.by[0])));
   await sleep(300);
-  await battle(e, prev);          // 배틀 화면
+  if (G.s.settings.battle === false) await quickBattle(e, prev); // 설정에서 "배틀 장면 건너뛰기"
+  else await battle(e, prev);     // 배틀 화면
   if (current !== "game") return;
   if (vEl) {
     vEl.classList.add("going-home");
@@ -1773,6 +1717,22 @@ async function stageThrow(c, ball, res) {
   await c.anim(c.foeEls[0], [
     { transform: "translateY(-20%) scale(0)", filter: "brightness(3)", opacity: 0 },
     { transform: "none", filter: "none", opacity: 1 }], 380, { easing: "cubic-bezier(.2,1.5,.4,1)" });
+}
+
+// 배틀 장면을 건너뛸 때: 윷판 위에서 💥 + 안내 칸 한 줄로 끝 (진 말이 집으로 가는 건 그대로)
+async function quickBattle(e, prev) {
+  const atk = Yut.formOf(prev, e.by[0]);
+  const aTeam = prev.teams[prev.pieces[e.by[0]].team], vTeam = prev.teams[prev.pieces[e.victims[0]].team];
+  const foeNames = e.victims.map(i => nameOf(Yut.formOf(prev, i))).join("·");
+  SFX.attack();
+  await sleep(220);
+  SFX.hit();
+  fxAt(e.node, "💥");
+  toast(aTeam.cpu ? "로켓단이 " + josa(foeNames, "을/를") + " 물리쳤다옹~! 😼"
+    : vTeam.cpu ? nameOf(atk) + "의 " + moveOf(atk) + "! 로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다!"
+    : nameOf(atk) + "의 " + moveOf(atk) + "! " + josa(foeNames, "을/를") + " 물리쳤다!", 2400);
+  TTS.say(aTeam.cpu ? "로켓단이 물리쳤다옹!" : "물리쳤다!");
+  await sleep(650);
 }
 
 /* ---------- 배틀: 상대 말이 있는 칸에 멈추면 — 기술로 물리친다 → 진 포켓몬은 집(출발 자리)으로 ---------- */
@@ -2087,7 +2047,7 @@ async function openBox() {
 function openBag() {
   const R = Yut.Rewards, inGame = current === "game";
   if (inGame) { G.paused = true; clearTimeout(G.cpuTimer); }
-  const col = Store.data.collection.slice().reverse();
+  const col = Store.data.collection.slice(); // 잡은 순서대로
   showModal(
     "<h2>🎒 가방</h2>" +
     '<div class="bag-list">' + R.BALLS.map(b => '<div class="' + ((Store.data.bag[b] || 0) ? "" : "zero") + '"><img src="assets/items/' + R.BALL_INFO[b].img + '.png" alt=""><span>' + R.BALL_INFO[b].name +
@@ -2119,9 +2079,11 @@ function makeSpots(seed) {
 }
 function startGame(teams, opts) {
   const seed = Q.get("seed") ? Number(Q.get("seed")) : (Math.floor(Math.random() * 2147483646) + 1);
+  const lineRnd = Yut.rng((seed ^ 0xe7011) >>> 0);
+  teams = teams.map(t => Object.assign({}, t, { paths: t.picks.slice(0, opts.pieces).map(id => t.cpu ? evoPath(id) : linePath(id, lineRnd)) }));
   const s = Yut.newGame({
     pieces: opts.pieces, backdo: opts.backdo, seed, first: opts.first || 0,
-    mode: opts.mode, cpuLevel: opts.cpuLevel, teams, spots: makeSpots(seed),
+    mode: opts.mode, cpuLevel: opts.cpuLevel, battle: opts.battle, teams, spots: makeSpots(seed),
   }, D.evoFrom);
   s.intro = true;
   G.s = s;
@@ -2133,17 +2095,17 @@ function startFromSetup() {
   const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
   if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
   else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: CAST.rocket.slice(0, Setup.pieces) });
-  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1 };
+  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle };
   Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
   if (fam) Store.data.lastPicks[Setup.t1] = Setup.picks[1].slice();
   const first = fam ? (Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2)) : 0; // 로켓단 대결은 아이 먼저
-  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, first });
+  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, battle: Setup.battle, first });
 }
 function rematch() {
   const last = G.s && G.s.phase === "over" ? G.s : Store.data.lastGame;
   if (!last) { showScreen("home"); return; }
   const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.picks.slice() }));
-  startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
+  startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
 }
 
 /* ---------- 쉬기·그만두기 ---------- */
@@ -2208,19 +2170,6 @@ function openStats() {
     '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button><button class="btn" data-act="stats-clear">🗑️ 전적 지우기</button></div>'
   );
 }
-function openFamilyCode() {
-  showModal(
-    "<h2>🔗 가족 코드로 도감 불러오기</h2>" +
-    "<p>잉글리시몬 <b>가족 함께하기</b>의 6자리 코드를 넣으면<br>가족이 모은 포켓몬을 불러와요. (읽기만 해요)</p>" +
-    '<input id="fam-code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC234" value="' + esc(Dex.familyCode() || "") + '">' +
-    '<div class="btns"><button class="btn big green" data-act="fam-load">불러오기</button><button class="btn" data-act="close-modal">닫기</button></div>' +
-    '<p class="small" id="fam-msg"></p>'
-  );
-  const inp = $("#fam-code");
-  inp.addEventListener("input", () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
-  setTimeout(() => inp.focus(), 60);
-}
-
 /* ================================================================
    누르기 처리 (data-act)
 ================================================================ */
@@ -2244,11 +2193,9 @@ const Act = {
     SFX.tap();
   },
   "to-pick": () => {
-    Dex.load();
     Setup.ti = 0;
     Setup.picks = [[], []];
     Setup.picks[0] = validPicks(Store.data.lastPicks[Setup.t0], 0);
-    if (!Setup.picks[0].length && Dex.partner) Setup.picks[0] = [Dex.partner]; // 잉글리시몬 파트너를 첫 칸에
     if (Setup.mode === "family") Setup.picks[1] = validPicks(Store.data.lastPicks[Setup.t1], 1);
     showScreen("pick");
   },
@@ -2272,20 +2219,6 @@ const Act = {
     } else startFromSetup();
   },
   "pick-back": () => { if (Setup.ti === 1) { Setup.ti = 0; showScreen("pick"); } else showScreen("setup"); },
-  "family-code": openFamilyCode,
-  "fam-load": async () => {
-    const inp = $("#fam-code"), msg = $("#fam-msg");
-    const code = (inp.value || "").toUpperCase();
-    if (!/^[A-Z0-9]{6}$/.test(code)) { msg.textContent = "6자리 코드를 넣어 주세요"; return; }
-    msg.textContent = "불러오는 중…";
-    try {
-      const n = await Dex.fetchFamily(code);
-      if (!n) { msg.textContent = "그 코드에는 모은 포켓몬이 없어요. 코드를 다시 확인해 주세요"; return; }
-      closeModal();
-      toast("📕 가족 도감에서 " + n + "마리를 불러왔어요!", 2400);
-      if (current === "pick") showScreen("pick");
-    } catch (e) { msg.textContent = "불러오지 못했어요. 인터넷 연결을 확인해 주세요"; }
-  },
   "throw": () => { if (humanTurn()) doThrow(); },
   "chip": el => onChipTap(Number(el.dataset.piece)),
   "pause": openPause,
@@ -2333,14 +2266,13 @@ async function checkUpdate() {
 Store.load();
 Object.assign(Setup, {
   t0: Store.data.settings.t0, t1: Store.data.settings.t1, cpu: Store.data.settings.cpu,
-  pieces: Store.data.settings.pieces, backdo: Store.data.settings.backdo,
+  pieces: Store.data.settings.pieces, backdo: Store.data.settings.backdo, battle: Store.data.settings.battle !== false,
 });
 if (Setup.t0 === Setup.t1) Setup.t1 = Setup.t0 === "mom" ? "kid" : "mom";
-Dex.load();
 TTS.init();
 Art.load();
 showScreen("home");
-window.__yut = { G, Store, Dex, Art, Setup, Yut, Act }; // 테스트용
+window.__yut = { G, Store, Art, Setup, Yut, Act }; // 테스트용
 </script>
 </body>
 </html>
