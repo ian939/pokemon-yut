@@ -61,6 +61,7 @@
 node tools/test-rules.js          # 규칙 테스트 61개 (기술 27개·말 바꾸기·시계·돈 문제·무작위 3,000판)
 node tools/sim-cpu.js             # 로켓단 난이도 시뮬레이션
 python tools/test-ui.py           # 화면 검사 (Playwright)
+python tools/audit-ui.py          # 전체 화면 점검 (8가지 크기 × 17장면 잘림)
 ```
 
 `index.html`을 그냥 열어도(`file://`) 돌아가요. 개발용 주소 옵션: `?fast=1`(연출 빠르게) · `?seed=12` · `?force=5,4,3`(다음 윷 결과 정하기) · `?spots=3:58,12:133` / `?spots=none`(풀숲) · `?catch=1`/`0`(볼·로켓단 그물 결과) · `?box=master,poke,poke`(상자) · `?pools=nitro,surf|toxic,quake`(말마다 기술) · `?early=1`(모두 처음부터 기술) · `?swappool=rain`(바꿔 들어오는 포켓몬 기술) · `?clock=3:40` · `?money=0,3,2,5`(십만·만·천·백 장 수).

@@ -374,6 +374,9 @@ body.game-land #toast.show { transform: none; }
 .result-pop.r-1 .result-name { color: #9fd3ff; }
 
 .win-screen, .rocket-intro { position: fixed; inset: 0; z-index: 380; display: grid; place-items: center; padding: 16px; animation: fadeIn .4s ease both; }
+/* 우승 화면은 상자·볼·돈 문제까지 붙어서 길다 — 화면보다 길면 스크롤 (가운데 맞춤이면 위아래가 잘려서 flex + margin auto) */
+.win-screen { display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom)); }
+.win-screen .win-inner { margin: auto; flex: none; }
 .win-screen { background: linear-gradient(#7cc8ff, #d9f1ff 70%, #a6e08a); }
 .art-win .win-screen { background: #7cc8ff url(assets/ui/win-bg.webp) center / cover no-repeat; }
 .win-inner { width: min(760px, 100%); text-align: center; background: var(--paper); border: 4px solid var(--ink); border-radius: 20px; padding: 22px; box-shadow: var(--win), 0 8px 0 rgba(38,49,71,.35); }
@@ -388,7 +391,7 @@ body.game-land #toast.show { transform: none; }
 
 .rocket-intro { background: radial-gradient(circle at 50% 40%, #6b2a8f, #1d0b2e 70%); color: #fff; text-align: center; align-content: center; gap: 18px; }
 .ri-crew { display: flex; justify-content: center; align-items: flex-end; gap: 8px; }
-.ri-crew img { height: min(30vh, 220px); image-rendering: pixelated; animation: popIn .5s cubic-bezier(.2,1.5,.4,1) both; }
+.ri-crew img { height: min(30vh, 220px); max-width: 31vw; object-fit: contain; image-rendering: pixelated; animation: popIn .5s cubic-bezier(.2,1.5,.4,1) both; }
 .ri-crew img:nth-child(2) { height: min(22vh, 160px); animation-delay: .15s; }
 .ri-crew img:nth-child(3) { animation-delay: .3s; }
 .ri-talk p { font-family: var(--pixel); font-weight: 700; font-size: var(--t2); line-height: 1.4; text-shadow: 3px 0 0 #1d0b2e, -3px 0 0 #1d0b2e, 0 3px 0 #1d0b2e, 0 -3px 0 #1d0b2e, 0 6px 0 rgba(0,0,0,.5); animation: fadeIn .5s ease both; }
@@ -400,7 +403,7 @@ body.game-land #toast.show { transform: none; }
 .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 390; pointer-events: none; border-radius: 3px; animation: fall linear forwards; }
 
 /* ===== 배틀 — 내 포켓몬 뒷모습 · 상대 앞모습 · 이름판 · 대화창 ===== */
-.battle { position: fixed; inset: 0; z-index: 360; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: rgba(12,18,30,.86); animation: fadeIn calc(.2s * var(--spd)) ease both; }
+.battle { position: fixed; inset: 0; z-index: 360; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow-y: auto; gap: 12px; padding: 12px; background: rgba(12,18,30,.86); animation: fadeIn calc(.2s * var(--spd)) ease both; }
 .battle.out { opacity: 0; transition: opacity calc(.25s * var(--spd)); }
 .bt-stage {
   position: relative; width: min(100%, 1000px, calc((100vh - 200px) * 16 / 9)); aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden;
@@ -639,6 +642,29 @@ body.game-land #toast.show { transform: none; }
 .pi-note { font-size: 16px; font-weight: 700; line-height: 1.5; }
 .pi-pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 8px 0 4px; }
 .pi-pool span { font-size: 14px; font-weight: 900; background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 4px 10px; box-shadow: inset 5px 0 0 var(--tc); }
+/* ===== 낮은 화면·폰 다듬기 (전체 점검 2026-09-26) ===== */
+.win-btns .btn { white-space: nowrap; }
+@media (max-height: 760px) {
+  .win-inner { padding: 14px 18px; }
+  .win-inner h1 { font-size: var(--t2); }
+  .win-inner p { margin: 4px 0 6px; }
+  .win-team { margin: 2px 0 8px; gap: 8px; }
+  .win-team .w { width: clamp(70px, 15vh, 110px); }
+  .chest { width: clamp(84px, 16vh, 130px); }
+  .box-zone { margin: 0 0 8px; gap: 4px; }
+  .bonus-zone { margin: 0 0 8px; }
+  .win-btns .btn.big { min-height: 56px; }
+  /* 배틀·조우: 무대를 조금 줄여 대화창 메뉴(볼 고르기)가 화면 안에 들어오게 */
+  .bt-stage, .bt-dialog { width: min(100%, 1000px, calc((100vh - 250px) * 16 / 9)); }
+  .bt-dialog { width: min(100%, 1000px); max-width: 900px; padding: 10px 40px 10px 18px; font-size: var(--t1); min-height: 70px; }
+  .bt-menu { gap: 8px; margin-top: 6px; }
+  .bt-menu .btn { min-height: 46px; padding: 4px 12px; }
+}
+@media (max-width: 520px) {
+  .win-inner { padding: 14px 12px; }
+  .win-btns { gap: 8px; }
+  .win-btns .btn.big { font-size: 20px; padding: 6px 8px; }
+}
 @keyframes grassShake { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
 @keyframes quake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-8px, 3px); } 40% { transform: translate(7px, -3px); } 60% { transform: translate(-5px, 2px); } 80% { transform: translate(4px, 0); } }
 @keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
@@ -684,7 +710,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-26c";
+const APP_VERSION = "2026-09-26d";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1394,7 +1420,7 @@ function renderTop() {
   const t = G.s.teams[G.s.turn];
   const pill = $("#turn-pill");
   if (pill) pill.innerHTML = G.s.phase === "over"
-    ? '<span style="--tc:' + G.s.teams[G.s.winner].color + '">🎉 ' + esc(G.s.teams[G.s.winner].name) + " 승리!</span>"
+    ? '<span style="--tc:' + G.s.teams[G.s.winner].color + '">🎉 ' + esc(window.innerWidth < 520 ? plain(G.s.teams[G.s.winner].name) : G.s.teams[G.s.winner].name + " 승리!") + "</span>" // 폰: "🎉 지온이" (잘리지 않게)
     : '<span style="--tc:' + t.color + '">' + esc(t.name) + (window.innerWidth < 520 ? "" : " 차례") + "</span>"; // 폰: 이름만 (잘리지 않게)
   const btn = $("#btn-throw");
   if (!btn) return;
