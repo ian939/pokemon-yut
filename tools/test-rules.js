@@ -320,8 +320,8 @@ function sk(o) {
   return Y.newGame({
     pieces: o.n || 2, backdo: o.backdo !== false, seed: 5, skills: o.skills !== false,
     teams: [
-      { name: "A", picks: [6, 25, 1, 7], pools: o.p0 || [["nitro"], ["nitro"], ["nitro"], ["nitro"]], early: o.e0 || [true, true, true, true] },
-      { name: "B", picks: [9, 26, 3, 133], pools: o.p1 || [["iron"], ["iron"], ["iron"], ["iron"]], early: o.e1 || [false, false, false, false] },
+      { name: "A", picks: [6, 25, 1, 7], pools: o.p0 || [["nitro"], ["nitro"], ["nitro"], ["nitro"]], now: o.e0 || [true, true, true, true] },
+      { name: "B", picks: [9, 26, 3, 133], pools: o.p1 || [["iron"], ["iron"], ["iron"], ["iron"]], now: o.e1 || [false, false, false, false] },
     ],
   }, D.evoFrom);
 }
@@ -329,7 +329,7 @@ function sk(o) {
 const at = (st, no, team, rs) => { const c = clone(st); c.turnNo = no; return choose(c, rs || [2], team); };
 const atThrow = (st, no, team) => { const c = clone(st); c.turn = team; c.turnNo = no; c.phase = "throw"; c.throwsLeft = 1; c.pending = []; return c; };
 
-t("34. 마지막 모습이 되면 기술을 배운다 · 전설(early)·진화 없는 포켓몬은 처음부터 · 기술을 끄면 안 배움", () => {
+t("34. 마지막 모습이 되면 기술을 배운다 · 시험용(now)은 처음부터 · 기술을 끄면 안 배움", () => {
   let s = sk();
   eq([s.pieces[0].skill, s.pieces[1].skill, s.pieces[2].skill], ["nitro", "nitro", null]);
   s = sk({ p1: [["surf", "rain"], ["surf"]] });
@@ -338,7 +338,7 @@ t("34. 마지막 모습이 되면 기술을 배운다 · 전설(early)·진화 �
   eq(evTypes(r).filter(x => x === "evolve" || x === "learn"), ["evolve", "learn"]);
   eq(Y.formOf(r.state, 2), 9); ok(["surf", "rain"].includes(r.state.pieces[2].skill));
   const s1 = Y.newGame({ pieces: 1, seed: 3, teams: [{ name: "A", picks: [128], pools: [["wish"]] }, { name: "B", picks: [4], paths: [[4, 5, 6]], pools: [["nitro"]] }] }, D.evoFrom);
-  eq([s1.pieces[0].skill, s1.pieces[1].skill], ["wish", null], "진화하지 않는 켄타로스는 처음부터");
+  eq([s1.pieces[0].skill, s1.pieces[1].skill], [null, null], "진화하지 않는 켄타로스도 처음부터는 아님 (v4: 15칸)");
   eq(sk({ skills: false }).pieces[0].skill, null, "기술 끄기");
 });
 t("35. 기술은 판 위의 말만 · 말마다 한 판에 한 번 · 한 차례에 하나", () => {
@@ -370,14 +370,18 @@ t("37. 말 바꾸기 — 그 자리·업힌 채로, 간 칸 수를 이어받아 
   const r = Y.applySwap(s, 0, { id: 133, path: [133, 134], base: 0, pool: ["surf"], early: false });
   const s2 = r.state;
   eq(node(s2, 0), 12); eq(Y.unitsOf(s2, 0).length, 1, "업힌 채로");
-  eq([Y.formOf(s2, 0), s2.pieces[0].skill, s2.pieces[0].used, s2.teams[0].picks[0]], [134, "surf", false, 133]);
-  eq(evTypes(r), ["swap", "evolve", "learn"]);
+  eq([Y.formOf(s2, 0), s2.pieces[0].skill, s2.pieces[0].used, s2.teams[0].picks[0]], [134, null, false, 133], "2단계 이브이: 12칸이면 아직 기술 없음 (15칸)");
+  eq(evTypes(r), ["swap", "evolve"]);
+  const s4 = clone(s); s4.pieces[0].walk = 15;
+  const r4 = Y.applySwap(s4, 0, { id: 133, path: [133, 134], base: 0, pool: ["surf"], early: false });
+  eq([Y.formOf(r4.state, 0), r4.state.pieces[0].skill], [134, "surf"], "15칸 간 자리에 들어오면 곧바로 진화 + 기술");
+  eq(evTypes(r4), ["swap", "evolve", "learn"]);
   ok(!Y.swapOk(s, 1, 7), "상대 팀 꼬부기 가족인데 바꿈");
   ok(Y.swapOk(s, 0, 4), "자기 가족(파이리 말 → 리자몽)은 됨");
   const s3 = sk({ e0: [false, false] });
   const r3 = Y.applySwap(s3, 0, { id: 5, path: [4, 5, 6], base: 1, pool: ["nitro"], early: false });
   eq([Y.formOf(r3.state, 0), r3.state.pieces[0].skill], [5, null], "집에 있는 말: 잡은 모습 그대로");
-  eq(Y.applySwap(s3, 1, { id: 150, path: [150], base: 0, pool: ["future"], early: true }).state.pieces[1].skill, "future", "전설은 바로");
+  eq(Y.applySwap(s3, 1, { id: 150, path: [150], base: 0, pool: ["future"], early: true }).state.pieces[1].skill, null, "전설도 바로는 아님 (15칸)");
   let threw = false;
   try { Y.applySwap(s, 1, { id: 8, path: [7, 8, 9], base: 1, pool: [] }); } catch (e) { threw = true; }
   ok(threw, "같은 가족 바꾸기를 막지 않음");
@@ -632,7 +636,7 @@ t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 �
   let longest = 0;
   for (let g = 0; g < 3000; g++) {
     const n = 2 + (g % 3);
-    const mk = (name, picks) => ({ name, picks, pools: picks.map((id, k) => g % 3 === 0 ? [allKeys[(Math.floor(g / 3) + k * 9) % allKeys.length]] : poolOf(id)), early: picks.map((_, k) => (g + k) % 3 === 0) });
+    const mk = (name, picks) => ({ name, picks, pools: picks.map((id, k) => g % 3 === 0 ? [allKeys[(Math.floor(g / 3) + k * 9 + (name === "B" ? 4 : 0)) % allKeys.length]] : poolOf(id)), now: picks.map((_, k) => g % 3 === 0 || (g + k) % 3 === 0) }); // 기술을 정해 준 판(g%3==0)은 모두 처음부터
     const spotRnd = Y.rng(g + 100);
     let s = Y.newGame({
       pieces: n, backdo: g % 4 !== 0, seed: g + 1, first: g % 2, skills: true,
@@ -681,6 +685,77 @@ t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 �
   eq(allKeys.filter(k => Y.SKILLS[k].kind === "active" && !usedKeys[k]), [], "한 번도 안 쓰인 기술");
   eq(Object.keys(reacted).sort(), ["block", "bond", "moon", "reflect"], "저절로 기술이 다 나와야 함");
   console.log("     (가장 긴 판: 동작 " + longest + "번)");
+});
+
+// ---------- v4: ✨ 15칸 규칙 · 🎓 시계·돈 문제 ----------
+t("57. 기술 쓰는 때 — 3단계는 마지막 모습(10칸) · 진화 없음·2단계·전설은 15칸", () => {
+  const s = Y.newGame({ pieces: 4, seed: 9, skills: true, teams: [
+    { name: "A", picks: [6, 25, 128, 150], paths: [[4, 5, 6], [172, 25], [128], [150]], pools: [["nitro"], ["surf"], ["wish"], ["future"]], early: [false, false, false, true] },
+    { name: "B", picks: [9, 26, 3, 133], pools: [["iron"], ["iron"], ["iron"], ["iron"]] },
+  ] }, D.evoFrom);
+  eq(s.pieces.slice(0, 4).map(p => p.skill), [null, null, null, null], "처음엔 아무도 없음");
+  const walkTo = (st, i, n) => { Object.assign(st.pieces[i], { state: "board", atGoal: false, walk: n - 1 }, Y.settle("OUT", 9)); return Y.applyMove(choose(st, [1]), "n9/1").state; };
+  let a = walkTo(clone(s), 0, 10); eq([Y.formOf(a, 0), a.pieces[0].skill], [6, "nitro"], "3단계: 10칸");
+  a = walkTo(clone(s), 1, 10); eq([Y.formOf(a, 1), a.pieces[1].skill], [25, null], "2단계: 10칸은 아직");
+  a = walkTo(clone(s), 1, 15); eq(a.pieces[1].skill, "surf", "2단계: 15칸");
+  a = walkTo(clone(s), 2, 14); eq(a.pieces[2].skill, null, "진화 없음: 14칸은 아직");
+  a = walkTo(clone(s), 2, 15); eq(a.pieces[2].skill, "wish", "진화 없음: 15칸");
+  a = walkTo(clone(s), 3, 15); eq(a.pieces[3].skill, "future", "전설: 15칸");
+  eq([Y.needsWalk(s, 0), Y.needsWalk(s, 1), Y.needsWalk(s, 2), Y.needsWalk(s, 3)], [false, true, true, true]);
+});
+t("58. 시계 문제 — 보기 4개, 정답 하나, 단계별 시각 (정각·30분 / 5분 / 1분), 아이가 하는 실수가 오답에", () => {
+  const S = Y.Study, rnd = Y.rng(11);
+  for (let k = 0; k < 3000; k++) {
+    const lv = 1 + (k % 3), q = S.clock(lv, rnd);
+    eq(q.choices.length, 4, "보기 수");
+    ok(new Set(q.choices.map(S.clockText)).size === 4, "보기가 겹침 " + q.choices.map(S.clockText));
+    ok(q.choices[q.answer].h === q.h && q.choices[q.answer].m === q.m, "정답 위치");
+    ok(q.choices.every(c => c.h >= 1 && c.h <= 12 && c.m >= 0 && c.m < 60), "이상한 시각");
+    if (lv === 1) ok(q.m === 0 || q.m === 30, "1단계 " + q.m);
+    if (lv === 2) ok(q.m % 5 === 0, "2단계 " + q.m);
+    if (lv === 3) ok(q.m % 5 !== 0, "3단계 " + q.m);
+  }
+  const q = S.clock(2, rnd, { h: 3, m: 40 });
+  eq(q.choices.map(S.clockText).sort(), ["3시 40분", "3시 8분", "4시 40분", "8시 15분"], "3시 40분의 오답 = 다음 시 · 바늘 바꿔 읽기 · 숫자 그대로");
+  eq(S.clockText({ h: 7, m: 0 }), "7시");
+});
+t("59. 돈 문제 — 합이 정확, 보기 4개, 단계별 단위 (천·백 / +만 / +십만), 자릿값 실수가 오답에", () => {
+  const S = Y.Study, rnd = Y.rng(12);
+  for (let k = 0; k < 3000; k++) {
+    const lv = 1 + (k % 3), q = S.money(lv, rnd);
+    eq(q.total, 100000 * q.counts[100000] + 10000 * q.counts[10000] + 1000 * q.counts[1000] + 100 * q.counts[100], "합");
+    eq(q.choices.length, 4); ok(new Set(q.choices).size === 4, "보기가 겹침"); eq(q.choices[q.answer], q.total);
+    ok(S.UNITS.every(u => q.counts[u] >= 0 && q.counts[u] <= 9), "한 단위 0~9장");
+    const top = { 1: 1000, 2: 10000, 3: 100000 }[lv];
+    ok(q.counts[top] >= 1 && S.UNITS.filter(u => u > top).every(u => q.counts[u] === 0), lv + "단계 가장 큰 단위 " + JSON.stringify(q.counts));
+  }
+  const q = S.money(2, rnd, { 10000: 3, 1000: 2, 100: 5 });
+  eq(q.total, 32500);
+  ok(q.choices.includes(3250) && q.choices.includes(325000) && q.choices.includes(23500), "자릿값 오답 " + q.choices);
+  eq([32500, 10000, 1000, 110000, 999900, 2100, 15000, 700400].map(S.koNum),
+    ["삼만 이천오백", "만", "천", "십일만", "구십구만 구천구백", "이천백", "만 오천", "칠십만 사백"]);
+  eq([S.won(32500), S.won(100), S.won(999900)], ["32,500원", "100원", "999,900원"]);
+});
+t("60. 어려움 자동 오르내림 — 3번 연속 맞히면 위, 2번 연속 틀리면 아래 (1~3단계)", () => {
+  const S = Y.Study;
+  let st = S.record(null, true); st = S.record(st, true); eq(st.level, 1); st = S.record(st, true); eq(st.level, 2);
+  st = S.record(st, false); eq(st.level, 2); st = S.record(st, false); eq(st.level, 1);
+  st = S.record(st, false); st = S.record(st, false); eq(st.level, 1, "1단계 아래로는 안 감");
+  for (let k = 0; k < 12; k++) st = S.record(st, true);
+  eq(st.level, 3, "3단계 위로는 안 감"); eq([st.right, st.total], [15, 19]);
+});
+t("61. 시계를 맞히면 풀숲 희귀도 30·30·20·20 (±1%p) · 풀숲 포켓몬을 나중에 뽑는 판(id 없음)도 저장·검사 통과", () => {
+  eq(Y.Rewards.WILD_ODDS_BOOST, { c: 30, r: 30, u: 20, l: 20 });
+  const pools = { c: [], r: [], u: [], l: [] };
+  for (let id = 1; id <= 1025; id++) pools[D.rarity[id] || "c"].push(id);
+  const rnd = Y.rng(21), N = 50000, cnt = { c: 0, r: 0, u: 0, l: 0 };
+  for (let i = 0; i < N; i++) cnt[D.rarity[Y.Rewards.rollWild(pools, [], rnd, Y.Rewards.WILD_ODDS_BOOST)] || "c"]++;
+  Object.keys(cnt).forEach(k => ok(Math.abs(cnt[k] / N - Y.Rewards.WILD_ODDS_BOOST[k] / 100) < 0.01, k + " " + (cnt[k] / N * 100).toFixed(1) + "%"));
+  const s = withSpots([{ node: 3, id: null }, { node: 12, id: null }]);
+  ok(Y.validate(s), "id 없는 풀숲");
+  const r = Y.applyMove(choose(s, [3]), "new/3");
+  const w = r.events.find(e => e.type === "wild");
+  ok(w && w.id == null && Y.validate(r.state), "id 없이 wild 이벤트 → 화면이 문제를 낸 뒤 뽑는다");
 });
 
 // ---------- 무작위 대국 (불변 조건 확인) ----------

@@ -572,6 +572,57 @@ body.game-land #toast.show { transform: none; }
 @keyframes rainOut { 0% { opacity: 0; background-position: 0 0; } 20% { opacity: 1; } 100% { opacity: 0; background-position: -60px 120px; } }
 @keyframes ciIn { 0% { transform: translateX(-110%) skewX(-12deg); } 100% { transform: none; } }
 @keyframes ciMon { 0% { transform: scale(.4) translateX(-40%); opacity: 0; } 100% { transform: none; opacity: 1; } }
+/* ===== v4: 🎓 공부 문제 — 🕐 시계 · 💰 돈 ===== */
+.quiz { position: fixed; inset: 0; z-index: 395; display: grid; place-items: center; padding: 12px; background: rgba(12,18,30,.62); animation: fadeIn calc(.2s * var(--spd)) ease both; }
+.quiz.out { opacity: 0; transition: opacity calc(.2s * var(--spd)); }
+.qz-card { width: min(620px, 100%); max-height: calc(100vh - 24px); overflow-y: auto; background: var(--paper); border: 5px solid var(--ink); border-radius: 20px; box-shadow: var(--win), 0 8px 0 rgba(0,0,0,.3);
+  padding: 16px 18px; display: grid; gap: 10px; justify-items: center; text-align: center; animation: popIn calc(.3s * var(--spd)) cubic-bezier(.2,1.4,.4,1) both; }
+.qz-title { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); line-height: 1.4; }
+.qz-title b { color: var(--violet); }
+.qz-lv { display: inline-block; font-family: var(--font); font-size: 13px; font-weight: 900; color: var(--ink-soft); background: var(--paper-2); border-radius: 8px; padding: 1px 8px; vertical-align: middle; }
+.qz-body { width: 100%; display: grid; place-items: center; }
+.qz-side { width: 100%; display: grid; gap: 10px; justify-items: center; }
+.qz-q { font-family: var(--pixel); font-weight: 700; font-size: var(--t2); line-height: 1.2; }
+.qz-choices { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qz-choice { position: relative; min-height: 64px; font-size: var(--t1); }
+.qz-choice.right { background: #d9f7e3; box-shadow: inset 0 -4px 0 rgba(38,49,71,.14), 0 4px 0 var(--ink), 0 0 0 4px var(--green); opacity: 1 !important; }
+.qz-choice.wrong { background: #ffe1e1; animation: bump .4s ease-in-out; opacity: 1 !important; }
+.qz-choice[disabled] { pointer-events: none; opacity: .55; }
+.qz-star { position: absolute; top: -12px; right: -8px; font-size: 26px; animation: popIn .35s cubic-bezier(.2,1.6,.4,1) both; }
+.qz-explain { width: 100%; display: grid; gap: 4px; text-align: left; font-size: 17px; font-weight: 700; line-height: 1.5; }
+.qz-explain:empty { display: none; }
+.qz-explain p, .qz-explain > b { background: var(--paper-2); border-radius: 10px; padding: 6px 12px; animation: fadeIn .3s ease both; }
+.qz-explain b.hr { color: #e5484d; } .qz-explain b.mn { color: #2f6fd6; }
+.qz-next { width: 100%; }
+.qz-next[hidden] { display: none; }
+.clock { width: clamp(170px, min(44vh, 66vw), 300px); height: auto; display: block; filter: drop-shadow(0 6px 0 rgba(38,49,71,.18)); }
+.clock .ck-hr { font-family: var(--pixel); font-weight: 700; font-size: 25px; text-anchor: middle; dominant-baseline: central; }
+.clock .ck-min { font-family: var(--font); font-weight: 900; font-size: 9.5px; text-anchor: middle; dominant-baseline: central; }
+.clock .pulse line { animation: handGlow .8s ease-in-out 3; }
+@keyframes handGlow { 50% { stroke: #ffd23f; stroke-width: 14; } }
+/* 놀이 돈 (진짜 지폐 그림이 아님) */
+.money { width: 100%; display: grid; gap: 10px; padding: 12px; border-radius: 14px; background: #f3efe2 repeating-linear-gradient(45deg, rgba(255,255,255,.5) 0 8px, rgba(255,255,255,0) 8px 16px); border: 3px solid var(--ink); }
+.mrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.cash { position: relative; display: inline-grid; place-items: center; font-family: var(--pixel); font-weight: 700; line-height: 1; border: 2px solid var(--ink); box-shadow: 0 3px 0 rgba(38,49,71,.3); }
+.cash b { font-size: 15px; } .cash i { position: absolute; right: 4px; bottom: 2px; font-style: normal; font-family: var(--font); font-size: 9px; font-weight: 900; }
+.cash.chk { width: 92px; height: 42px; border-radius: 6px; background: #e8dcff; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px #9a6be0, 0 3px 0 rgba(38,49,71,.3); color: #4b2c86; }
+.cash.b10k { width: 78px; height: 38px; border-radius: 6px; background: #cdeecf; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px #2fa35a, 0 3px 0 rgba(38,49,71,.3); color: #1d6b3a; }
+.cash.b1k { width: 70px; height: 36px; border-radius: 6px; background: #d3e4fb; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px #2f6fd6, 0 3px 0 rgba(38,49,71,.3); color: #1f4a95; }
+.cash.coin { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #cfd6de 60%, #9aa4b1); color: #3b4452; }
+.cash.coin i { display: none; }
+.bonus-zone { margin: 0 0 14px; display: grid; justify-items: center; gap: 8px; }
+.bonus-zone .btn { width: min(420px, 100%); }
+.pchip .pips.skp i.on { background: var(--violet); }
+@media (min-aspect-ratio: 5/4) and (max-height: 820px) {
+  .qz-card { width: min(940px, 100%); grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: center; column-gap: 20px; }
+  .qz-title { grid-column: 1 / -1; grid-row: 1; }
+  .qz-body { grid-column: 1; grid-row: 2; width: auto; }
+  .qz-side { grid-column: 2; grid-row: 2; align-self: center; }
+  .qz-card.qz-money .qz-body { width: min(420px, 46vw); }
+  .clock { width: clamp(170px, min(62vh, 40vw), 320px); }
+}
+@media (max-width: 520px) { .qz-choice { font-size: 18px; font-family: var(--font); font-weight: 900; } .qz-q { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { .clock .pulse line, .qz-choice.wrong { animation: none; } }
 @keyframes grassShake { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
 @keyframes quake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-8px, 3px); } 40% { transform: translate(7px, -3px); } 60% { transform: translate(-5px, 2px); } 80% { transform: translate(4px, 0); } }
 @keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
@@ -617,7 +668,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-26a";
+const APP_VERSION = "2026-09-26b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -744,12 +795,13 @@ const Store = {
     return {
       version: 1,
       sound: true,
-      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true, skills: true },
+      settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true, skills: true, study: true },
       stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 },
       lastPicks: {},      // { kid: [ids], mom: [ids] } — 다음 판에 미리 채워 둠
       bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }, // 윷놀이 볼 (잉글리시몬 볼과 따로) — 처음 선물 몬스터볼 3개
       collection: [],     // 윷놀이 보관함 [{ id, t, from }] — ❓ 풀숲에서 잡은 포켓몬, 다음 판부터 말로
       seenSkills: [],     // 기술 도감: 판에서 본 기술
+      study: {},          // 🎓 공부 기록 { clock: { level, up, down, right, total }, money: {…} } — 어려움 자동 오르내림
       game: null,         // 진행 중인 판
       lastGame: null,     // 끝난 판 (한 판 더)
     };
@@ -769,6 +821,7 @@ const Store = {
         const seen = {};
         d.collection = (Array.isArray(raw.collection) ? raw.collection : []).filter(x => x && x.id >= 1 && x.id <= 1025 && !seen[x.id] && (seen[x.id] = 1));
         d.seenSkills = (Array.isArray(raw.seenSkills) ? raw.seenSkills : []).filter(k => Yut.SKILLS[k]);
+        d.study = raw.study && typeof raw.study === "object" ? raw.study : {};
       }
     } catch (e) { /* 망가진 저장은 새로 시작 */ }
     d.game = Yut.upgrade(d.game); d.lastGame = Yut.upgrade(d.lastGame); // 기술 전(v1) 판은 기술 없이 이어서
@@ -1059,7 +1112,7 @@ Screens.home = sec => {
 };
 
 /* ---------- 준비 ---------- */
-const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, ti: 0, picks: [[], []] };
+const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, study: true, ti: 0, picks: [[], []] };
 const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
 const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
 function chipHtml(field, value, label, color, disabled) {
@@ -1084,7 +1137,9 @@ Screens.setup = sec => {
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
       '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
-      '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 마지막 모습이 되면 기술을 하나 배워요. 말마다 한 판에 한 번 써요!" : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
+      '<p class="note">' + (Setup.skills ? "5칸마다 진화해요. 3단계 포켓몬은 마지막 모습(10칸)에서, 진화가 짧거나 없는 포켓몬·전설은 15칸에서 기술을 하나 배워요. 말마다 한 판에 한 번!" : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
+      '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
+      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단을 이기면 💰 돈 문제로 볼 하나 더! (맞힐수록 문제가 어려워져요)" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
     "</div>" +
     '<div class="card-actions"><button class="btn big green cursor" data-act="to-pick">포켓몬 고르러 가기</button></div></div>';
@@ -1135,7 +1190,7 @@ Screens.pick = sec => {
     '<div class="slots" id="slots"></div>' +
     '<div class="pick-actions"><button class="btn" data-act="pick-auto">🎲 알아서 골라 줘</button><button class="btn green" data-act="pick-next" id="pick-next">' + (last ? "시작!" : "다음 팀") + "</button></div>" +
     '<div class="scroll" id="pick-scroll"><div class="grid-wrap">' +
-      '<h3 class="sec-title lead">📕 내 포켓몬 <small>' + (STARTERS.length + caught.length) + "마리 — " + (Setup.skills ? "5칸마다 진화하고, 마지막 모습이 되면 기술을 배워요! " : "5칸마다 진화해요! ") + "한 가족에서 한 마리씩</small></h3>" +
+      '<h3 class="sec-title lead">📕 내 포켓몬 <small>' + (STARTERS.length + caught.length) + "마리 — " + (Setup.skills ? "5칸마다 진화하고, 기술도 배워요! " : "5칸마다 진화해요! ") + "한 가족에서 한 마리씩</small></h3>" +
       '<h3 class="sec-title">🌱 스타팅 포켓몬 <small>' + STARTERS.length + "마리</small></h3>" +
       '<div class="grid">' + STARTERS.map(cardHtml).join("") + "</div>" +
       '<h3 class="sec-title">🎯 잡은 포켓몬 <small>' + caught.length + "마리 · 잡은 순서대로</small></h3>" +
@@ -1957,9 +2012,11 @@ const FORCE_CATCH = Q.get("catch"); // 테스트용: ?catch=1 늘 성공 / ?catc
 async function animWild(e) {
   const spotEl = $('#spots .spot[data-node="' + e.node + '"]');
   if (spotEl) spotEl.classList.add("shake");
-  if (G.s.teams[e.team].cpu) await rocketNet(e);
+  if (G.s.teams[e.team].cpu) { rollSpot(e, false); await rocketNet(e); }
   else {
     await sleep(450);
+    const boosted = studyOn() ? await clockQuiz() : false; // 🕐 맞히면 이번 조우만 30·30·20·20
+    rollSpot(e, boosted);
     await encounter(e);
   }
   if (spotEl) spotEl.remove();
@@ -2171,8 +2228,8 @@ async function showWin(ti) {
   o.innerHTML = '<div class="win-inner"><h1>' + esc(title) + "</h1><p>" + esc(sub) + "</p>" +
     '<div class="win-team">' + finals.map((id, k) =>
       '<div class="w" style="--i:' + k + '"><img src="' + artUrl(id) + '" alt="" onerror="artFail(this,' + id + ')"><b>' + esc(nameOf(id)) + "</b></div>").join("") + "</div>" +
-    boxHtml(s.reward) +
-    '<div class="win-btns' + (s.reward && !s.reward.opened ? " hidden" : "") + '"><button class="btn big gold" data-act="rematch">🔁 한 판 더</button><button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
+    boxHtml(s.reward) + bonusHtml(s.reward) +
+    '<div class="win-btns' + (s.reward && (!s.reward.opened || (s.settings.study !== false && !s.reward.bonus)) ? " hidden" : "") + '"><button class="btn big gold" data-act="rematch">🔁 한 판 더</button><button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
   document.body.appendChild(o);
 }
 /* ---------- 🎁 보물상자 — 볼은 이긴 순간 이미 가방에 들어갔다. 여기서는 열어서 보여 주기만 ---------- */
@@ -2214,6 +2271,12 @@ async function openBox() {
   zone.classList.add("opened");
   Store.data.lastGame = G.s;
   Store.save();
+  if (G.s.settings.study !== false) { // 💰 상자 바닥에 하나 더 — 돈 문제
+    zone.insertAdjacentHTML("afterend", bonusHtml(rw));
+    await sleep(700);
+    await moneyBonus();
+    return;
+  }
   const btns = $(".win-btns");
   if (btns) btns.classList.remove("hidden");
 }
@@ -2242,32 +2305,27 @@ function makeSpots(seed) {
   if (Q.get("spots") === "none") return []; // 테스트용: 풀숲 없이
   const forced = (Q.get("spots") || "").split(",").map(x => x.split(":").map(Number)).filter(x => x.length === 2 && Yut.NODES[x[0]] && x[1] >= 1 && x[1] <= 1025);
   if (forced.length) return forced.map(([node, id]) => ({ node, id }));
-  const rnd = Yut.rng((seed ^ 0x5eed) >>> 0);
-  const owned = ownedSet(), ids = [];
-  return Yut.pickSpotNodes(rnd, 2).map(node => {
-    let id, tries = 0;
-    do { id = Yut.Rewards.rollWild(WILD_POOLS, owned, rnd); } while (ids.indexOf(id) >= 0 && ++tries < 10);
-    ids.push(id);
-    return { node, id };
-  });
+  // v4: 칸만 정해 두고 포켓몬은 멈춘 뒤에 뽑는다 (🕐 시계 문제를 맞히면 희귀도가 올라가서)
+  return Yut.pickSpotNodes(Yut.rng((seed ^ 0x5eed) >>> 0), 2).map(node => ({ node, id: null }));
 }
 function startGame(teams, opts) {
   const seed = Q.get("seed") ? Number(Q.get("seed")) : (Math.floor(Math.random() * 2147483646) + 1);
   const lineRnd = Yut.rng((seed ^ 0xe7011) >>> 0);
   // 말의 진화 경로: 모두 마지막 모습까지 (로켓단도 — 또가스→또도가스, 나옹→페르시온. 처음부터 기술을 쓰면 불공평해서)
   teams = teams.map(t => Object.assign({}, t, { paths: t.picks.slice(0, opts.pieces).map(id => linePath(id, lineRnd)) }));
-  // 기술 후보: 마지막 모습의 타입 기술 (전설은 처음부터 — 처음 모습의 타입). 시험용 ?pools=nitro,surf|toxic,quake · ?early=1
+  // 기술 후보: 마지막 모습의 타입 기술. 전설(early)·진화 없음·2단계는 15칸에 배운다 (v4). 시험용 ?pools=nitro,surf|toxic,quake · ?early=1(모두 처음부터)
   const forcedPools = (Q.get("pools") || "").split("|").map(x => x.split(",").filter(k => Yut.SKILLS[k]));
   teams = teams.map((t, ti) => Object.assign({}, t, {
-    early: t.paths.map(p => Q.get("early") === "1" || p.some(x => rarityOf(x) === "l")),
-    pools: t.paths.map((p, k) => (forcedPools[ti] && forcedPools[ti][k]) ? [forcedPools[ti][k]]
-      : poolFor(Q.get("early") === "1" || p.some(x => rarityOf(x) === "l") ? p[0] : p[p.length - 1])),
+    early: t.paths.map(p => p.some(x => rarityOf(x) === "l")),
+    now: t.paths.map(() => Q.get("early") === "1"),
+    pools: t.paths.map((p, k) => (forcedPools[ti] && forcedPools[ti][k]) ? [forcedPools[ti][k]] : poolFor(p[p.length - 1])),
   }));
   const s = Yut.newGame({
     pieces: opts.pieces, backdo: opts.backdo, seed, first: opts.first || 0, skills: opts.skills !== false,
     mode: opts.mode, cpuLevel: opts.cpuLevel, battle: opts.battle, teams, spots: makeSpots(seed),
   }, D.evoFrom);
   s.intro = true;
+  s.settings.study = opts.study !== false; // 🎓 공부 문제 (화면 쪽 설정)
   G.s = s;
   persist();
   showScreen("game");
@@ -2277,18 +2335,18 @@ function startFromSetup() {
   const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
   if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
   else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: CAST.rocket.slice(0, Setup.pieces) });
-  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle, skills: Setup.skills };
+  Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle, skills: Setup.skills, study: Setup.study };
   Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
   if (fam) Store.data.lastPicks[Setup.t1] = Setup.picks[1].slice();
   const first = fam ? (Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2)) : 0; // 로켓단 대결은 아이 먼저
-  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, battle: Setup.battle, skills: Setup.skills, first });
+  startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, battle: Setup.battle, skills: Setup.skills, study: Setup.study, first });
 }
 function rematch() {
   const last = G.s && G.s.phase === "over" ? G.s : Store.data.lastGame;
   if (!last) { showScreen("home"); return; }
   const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.picks.slice() }));
   startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false,
-    skills: last.settings.skills !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
+    skills: last.settings.skills !== false, study: last.settings.study !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
 }
 
 /* ================================================================
@@ -2313,6 +2371,9 @@ function chipBadges(i) {
     if (p.stage < s.teams[p.team].paths[p.slot].length - 1) {
       const k = (p.walk || 0) % Yut.EVO_STEP;
       h += '<span class="pips" aria-hidden="true">' + [0, 1, 2, 3, 4].map(j => "<i" + (j < k ? ' class="on"' : "") + "></i>").join("") + "</span>";
+    } else if (s.settings.skills !== false && !p.skill && Yut.needsWalk(s, i) && !Yut.isFinal(s, i)) {
+      const k = Math.floor(Math.min(p.walk || 0, Yut.SKILL_WALK) / 3); // 진화가 짧거나 없는 포켓몬·전설: 15칸까지 (점 하나 = 3칸)
+      h += '<span class="pips skp" title="기술까지 ' + (Yut.SKILL_WALK - (p.walk || 0)) + '칸" aria-hidden="true">' + [0, 1, 2, 3, 4].map(j => "<i" + (j < k ? ' class="on"' : "") + "></i>").join("") + "</span>";
     }
   }
   return h;
@@ -2674,12 +2735,12 @@ const EVENT_ANIM = {
 };
 
 /* ---------- 🔄 말 바꾸기 — 잡은 포켓몬을 그 자리에 ---------- */
-// 잡은 포켓몬의 말 정보: 1단계부터 마지막 모습까지(갈래는 무작위), 잡은 모습의 단계, 기술 후보, 전설이면 처음부터
+// 잡은 포켓몬의 말 정보: 1단계부터 마지막 모습까지(갈래는 무작위), 잡은 모습의 단계, 기술 후보, 전설이면 15칸 규칙
 function swapInfo(id) {
   const path = linePath(id, Math.random);
   const early = path.some(x => rarityOf(x) === "l");
   const forced = Q.get("swappool"); // 시험용
-  return { id, path, base: Math.max(0, path.indexOf(id)), early, pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(early ? id : path[path.length - 1]) };
+  return { id, path, base: Math.max(0, path.indexOf(id)), early, pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(path[path.length - 1]) };
 }
 // 조우 무대 안: "지금 말로 쓸까요?" → 바꿀 말 고르기 → "돌아와! 가라!"
 async function offerSwap(c, e, id) {
@@ -2773,12 +2834,192 @@ async function announceStartSkills() {
 function openSkillDex() {
   const seen = new Set(Store.data.seenSkills || []);
   const keys = Object.keys(Yut.SKILLS);
-  showModal("<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 5칸마다 진화하고, 마지막 모습이 되면 타입에 맞는 기술을 하나 배워요</p>" +
+  showModal("<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 5칸마다 진화하고, 마지막 모습이 되면 타입에 맞는 기술을 하나 배워요 (진화가 짧거나 없는 포켓몬·전설은 15칸)</p>" +
     '<div class="dex-types">' + TYPE_ORDER.map(t => '<div class="dex-row" style="--tc:' + (D.typeColors[t] || "#999") + '"><span>' + esc(t) + '</span><div class="dex-cards">' +
       (Yut.TYPE_SKILLS[t] || []).map(k => '<div class="dex-card' + (seen.has(k) ? "" : " unseen") + '"><b>' + SKILL_UI[k].emoji + " " + esc(skillName(k)) + "</b>" +
         (Yut.SKILLS[k].kind === "react" ? "<i>저절로</i>" : "") + "<br>" + esc(SKILL_UI[k].desc) + "</div>").join("") +
     "</div></div>").join("") + "</div>" +
     '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button></div>');
+}
+
+/* ================================================================
+   v4: 🎓 공부 문제 — 🕐 시계 보기 · 💰 돈 세기
+================================================================ */
+const STUDY_COLORS = ["#e5484d", "#f28c28", "#2fa35a", "#2f6fd6"]; // 사진 속 시계처럼 빨·주·초·파 돌아가며 (12=빨강, 1=주황, 2=초록, 3=파랑 …)
+const studyOn = () => (G.s && G.s.settings.study === false) ? false : (G.s ? true : Setup.study !== false);
+function studyRecord(kind, ok) {
+  const st = Store.data.study || (Store.data.study = {});
+  st[kind] = Yut.Study.record(st[kind], ok);
+  Store.save();
+}
+const studyLevel = kind => ((Store.data.study || {})[kind] || {}).level || 1;
+// 🕐 시계 — 알록달록 숫자 1~12, 바깥 분 숫자 0·5·…·55, 1분 눈금 60개. 시침 = 짧은 빨강, 분침 = 긴 파랑
+function clockSvg(h, m) {
+  const pt = (deg, r) => { const a = (deg - 90) * Math.PI / 180; return [(Math.cos(a) * r).toFixed(2), (Math.sin(a) * r).toFixed(2)]; };
+  let g = '<circle r="104" fill="#fff" stroke="#263147" stroke-width="6"/><circle r="97" fill="none" stroke="#dfeaf7" stroke-width="3"/>';
+  for (let i = 0; i < 60; i++) {
+    const big = i % 5 === 0, [x1, y1] = pt(i * 6, big ? 92 : 94), [x2, y2] = pt(i * 6, big ? 84 : 89);
+    g += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (big ? STUDY_COLORS[(i / 5) % 4] : "#9fb0c6") + '" stroke-width="' + (big ? 3 : 1.6) + '" stroke-linecap="round"/>';
+  }
+  for (let i = 0; i < 12; i++) {
+    const [x, y] = pt(i * 30, 76);
+    g += '<text x="' + x + '" y="' + y + '" class="ck-min" fill="' + STUDY_COLORS[i % 4] + '">' + (i * 5) + "</text>";
+    const n = i === 0 ? 12 : i, [X, Y] = pt(i * 30, 54);
+    g += '<text x="' + X + '" y="' + Y + '" class="ck-hr" fill="' + STUDY_COLORS[n % 4] + '">' + n + "</text>";
+  }
+  const hd = (h % 12) * 30 + m * 0.5, md = m * 6;
+  g += '<g class="hand-m" transform="rotate(' + md + ')"><line x1="0" y1="10" x2="0" y2="-80" stroke="#2f6fd6" stroke-width="6" stroke-linecap="round"/></g>';
+  g += '<g class="hand-h" transform="rotate(' + hd + ')"><line x1="0" y1="8" x2="0" y2="-44" stroke="#e5484d" stroke-width="11" stroke-linecap="round"/></g>';
+  g += '<circle r="8" fill="#263147"/><circle r="3" fill="#fff"/>';
+  return '<svg class="clock" viewBox="-110 -110 220 220" role="img" aria-label="시계">' + g + "</svg>";
+}
+// 💰 놀이 돈 — 진짜 지폐를 베끼지 않는다. 단위마다 색·모양이 다른 지폐/수표/동전 + 큰 숫자
+const MONEY_UI = {
+  100000: { name: "십만 원", cls: "chk", n: "장" }, 10000: { name: "만 원", cls: "b10k", n: "장" },
+  1000: { name: "천 원", cls: "b1k", n: "장" }, 100: { name: "백 원", cls: "coin", n: "개" },
+};
+function moneyHtml(counts) {
+  return '<div class="money">' + Yut.Study.UNITS.filter(u => counts[u] > 0).map(u =>
+    '<div class="mrow">' + Array.from({ length: counts[u] }, () => '<span class="cash ' + MONEY_UI[u].cls + '"><b>' + u + "</b><i>원</i></span>").join("") + "</div>").join("") + "</div>";
+}
+/* 문제 창 — kind: "clock" | "money". 누르면 { ok }. 틀리면 풀이를 보여 주고 "알겠어요!"를 눌러야 닫힌다 */
+function quizWindow(o) {
+  return new Promise(res => {
+    const el = document.createElement("div");
+    el.className = "quiz";
+    el.innerHTML = '<div class="qz-card qz-' + o.kind + '">' +
+      '<p class="qz-title">' + o.title + ' <span class="qz-lv">' + "⭐".repeat(o.level) + " " + o.level + "단계</span></p>" +
+      '<div class="qz-body">' + o.body + "</div>" +
+      '<div class="qz-side"><p class="qz-q">' + o.question + "</p>" +
+        '<div class="qz-choices">' + o.choices.map((c, k) => '<button class="btn qz-choice" data-k="' + k + '"' + (k === o.answer ? ' data-ok="1"' : "") + ">" + esc(c) + "</button>").join("") + "</div>" +
+        '<div class="qz-explain" aria-live="polite"></div>' +
+        '<button class="btn big green qz-next" hidden>알겠어요!</button></div>' +
+      "</div>";
+    document.body.appendChild(el);
+    TTS.say(plain(o.say || o.question));
+    const btns = $$(".qz-choice", el), ex = $(".qz-explain", el), next = $(".qz-next", el);
+    let done = false;
+    const close = ok => { el.classList.add("out"); setTimeout(() => { el.remove(); res({ ok }); }, 220 * SPEED); };
+    btns.forEach(b => b.addEventListener("click", async () => {
+      if (done) return;
+      done = true;
+      const k = Number(b.dataset.k), ok = k === o.answer;
+      btns.forEach(x => x.disabled = true);
+      btns[o.answer].classList.add("right");
+      if (ok) {
+        SFX.catchOk();
+        b.insertAdjacentHTML("beforeend", '<span class="qz-star">⭐</span>');
+        ex.innerHTML = "<b>" + (o.okText || "정답!") + "</b>";
+        TTS.say(plain(o.okText || "정답!"));
+        await sleep(1500);
+        close(true);
+        return;
+      }
+      b.classList.add("wrong");
+      SFX.pop();
+      TTS.say("아쉽다! 같이 볼까요?");
+      await sleep(500);
+      const steps = o.explain();
+      for (const st of steps) {
+        if (st.hl) $$(st.hl, el).forEach(x => x.classList.add("pulse"));
+        ex.insertAdjacentHTML("beforeend", "<p>" + st.text + "</p>");
+        await sleep(1100);
+      }
+      next.hidden = false;
+      next.focus();
+      next.addEventListener("click", () => { SFX.tap(); close(false); }, { once: true });
+    }));
+  });
+}
+// 숫자 뒤 조사: 3을·2를, 3과·4와 (숫자를 읽은 소리의 받침으로)
+const nj = (n, pair) => { const d = n % 10, jong = [0, 1, 3, 6, 7, 8].indexOf(d) >= 0; const [a, b] = pair.split("/"); return n + (jong ? a : b); };
+function clockExplain(h, m) {
+  const next = h === 12 ? 1 : h + 1, k = Math.floor(m / 5), extra = m % 5, num = k === 0 ? 12 : k;
+  const hourText = m === 0 ? "짧은 <b class='hr'>빨간 바늘</b>이 <b>" + nj(h, "을/를") + "</b> 가리켜요 → <b>" + h + "시</b>"
+    : "짧은 <b class='hr'>빨간 바늘</b>이 <b>" + nj(h, "과/와") + "</b> <b>" + next + "</b> 사이 → 아직 <b>" + h + "시</b>예요";
+  const minText = m === 0 ? "긴 <b class='mn'>파란 바늘</b>이 <b>12</b>(0분)에 있으면 → <b>정각</b>"
+    : extra === 0 ? "긴 <b class='mn'>파란 바늘</b>이 <b>" + nj(num, "을/를") + "</b> 가리켜요 → " + num + " × 5 = <b>" + m + "분</b>"
+    : "긴 <b class='mn'>파란 바늘</b>이 <b>" + (k * 5) + "분</b>에서 작은 눈금 <b>" + extra + "칸</b> 더 → <b>" + m + "분</b>";
+  return [{ hl: ".hand-h", text: hourText }, { hl: ".hand-m", text: minText }, { text: "정답은 <b>" + Yut.Study.clockText({ h, m }) + "</b>!" }];
+}
+// ❓ 풀숲: 시계를 맞히면 이번 조우만 희귀도 30·30·20·20 → true
+async function clockQuiz() {
+  const f = (Q.get("clock") || "").split(":").map(Number);
+  const q = Yut.Study.clock(studyLevel("clock"), Math.random, f.length === 2 && f[0] >= 1 && f[0] <= 12 && f[1] >= 0 && f[1] < 60 ? { h: f[0], m: f[1] } : null);
+  const r = await quizWindow({
+    kind: "clock", level: studyLevel("clock"),
+    title: "🕐 풀숲이 흔들흔들! 시계를 맞히면 <b>희귀한 포켓몬</b>이 나올지도?",
+    body: clockSvg(q.h, q.m), question: "지금 몇 시" + (studyLevel("clock") === 1 ? "일까요?" : " 몇 분일까요?"),
+    say: "시계를 맞히면 희귀한 포켓몬이 나올지도! 지금 몇 시일까요?",
+    choices: q.choices.map(Yut.Study.clockText), answer: q.answer,
+    okText: "정답! " + Yut.Study.clockText(q) + " ⭐ 유니크·전설이 나올 확률이 올라갔어요!",
+    explain: () => clockExplain(q.h, q.m),
+  });
+  studyRecord("clock", r.ok);
+  return r.ok;
+}
+// 🌿 풀숲 포켓몬을 이제 뽑는다 (시계를 맞혔으면 30·30·20·20). 뽑은 즉시 저장 — 새로고침으로 다시 뽑기 불가
+function rollSpot(e, boosted) {
+  const sp = (G.s.spots || []).find(x => x.node === e.node);
+  if (sp && sp.id) { e.id = sp.id; return e.id; }
+  const other = (G.s.spots || []).map(x => x.id).filter(Boolean), owned = ownedSet();
+  let id, tries = 0;
+  do { id = Yut.Rewards.rollWild(WILD_POOLS, owned, Math.random, boosted ? Yut.Rewards.WILD_ODDS_BOOST : null); } while (other.indexOf(id) >= 0 && ++tries < 10);
+  if (sp) sp.id = id;
+  e.id = id;
+  persist();
+  return id;
+}
+// 💰 보물상자 바닥: 돈 문제 → 볼 하나 더 (틀리면 풀이 보고 새 문제로 한 번 더, 두 번째에 맞히면 몬스터볼)
+function moneyExplain(q) {
+  const rows = Yut.Study.UNITS.filter(u => q.counts[u] > 0).map(u =>
+    ({ text: MONEY_UI[u].name + " " + q.counts[u] + MONEY_UI[u].n + " → <b>" + Yut.Study.won(u * q.counts[u]) + "</b>" }));
+  return rows.concat([{ text: "모두 <b>" + Yut.Study.won(q.total) + "</b> (" + Yut.Study.koNum(q.total) + " 원)" }]);
+}
+async function moneyQuizOnce(retry) {
+  const f = (Q.get("money") || "").split(",").map(Number);
+  const forced = !retry && f.length === 4 && f.every(x => x >= 0 && x <= 9) ? { 100000: f[0], 10000: f[1], 1000: f[2], 100: f[3] } : null;
+  const q = Yut.Study.money(studyLevel("money"), Math.random, forced);
+  const r = await quizWindow({
+    kind: "money", level: studyLevel("money"),
+    title: retry ? "💰 한 번 더! 이번엔 맞힐 수 있어요" : "🎁 상자 바닥에 뭔가 더 있다! 💰 돈 문제를 풀면 <b>볼 하나 더</b>!",
+    body: moneyHtml(q.counts), question: "모두 얼마일까요?",
+    say: retry ? "한 번 더! 모두 얼마일까요?" : "돈 문제를 풀면 볼 하나 더! 모두 얼마일까요?",
+    choices: q.choices.map(Yut.Study.won), answer: q.answer,
+    okText: "정답! " + Yut.Study.won(q.total) + " (" + Yut.Study.koNum(q.total) + " 원)",
+    explain: () => moneyExplain(q),
+  });
+  studyRecord("money", r.ok);
+  return r.ok;
+}
+function bonusHtml(rw) {
+  if (!rw || !rw.opened || !G.s || G.s.settings.study === false) return "";
+  if (rw.bonus) return '<div class="bonus-zone" id="bonus-zone"><p class="box-hint">' + (rw.bonus.ball ? "💰 돈 문제 보너스!" : "💰 돈 문제 — 다음엔 꼭!") + "</p></div>";
+  return '<div class="bonus-zone" id="bonus-zone"><button class="btn big gold cursor" data-act="money-quiz">💰 돈 문제 풀고 볼 하나 더!</button></div>';
+}
+async function moneyBonus() {
+  const rw = G.s && G.s.reward;
+  if (!rw || !rw.opened || rw.bonus || G.moneyBusy) return;
+  G.moneyBusy = true;
+  let ball = null;
+  if (await moneyQuizOnce(false)) ball = Yut.Rewards.rollBox(1, Math.random)[0];
+  else if (await moneyQuizOnce(true)) ball = "poke";
+  // 결과를 먼저 저장 (새로고침해도 두 번 안 받게)
+  rw.bonus = { ball };
+  if (ball) Store.data.bag[ball] = (Store.data.bag[ball] || 0) + 1;
+  Store.data.lastGame = G.s;
+  Store.save();
+  G.moneyBusy = false;
+  const zone = $("#bonus-zone");
+  if (zone) zone.outerHTML = bonusHtml(rw);
+  if (ball) {
+    const list = $("#box-balls");
+    if (list) list.insertAdjacentHTML("beforeend", ballChip(ball, true));
+    SFX.catchOk(); confetti(30);
+    TTS.say(Yut.Rewards.BALL_INFO[ball].name + " 하나 더! 가방에 넣었어요");
+  }
+  const btns = $(".win-btns");
+  if (btns) btns.classList.remove("hidden");
 }
 
 /* ---------- 쉬기·그만두기 ---------- */
@@ -2825,7 +3066,8 @@ function openRules() {
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
       "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
       "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 지면 처음 모습으로 돌아가요.</li>" +
-      "<li>📖 마지막 모습이 되면 <b>기술</b>을 하나 배워요 (전설은 처음부터). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
+      "<li>📖 마지막 모습이 되면 <b>기술</b>을 하나 배워요 — 진화가 짧거나 없는 포켓몬·전설은 <b>15칸</b>을 가야 해요. 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
+      "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요. 💰 로켓단을 이기면 <b>돈 문제</b>로 볼 하나 더!</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
       "<li>😼 로켓단도 풀숲에서 그물로 포켓몬을 잡아 가요. 먼저 가서 잡아요!</li>" +
       "<li>🎁 로켓단을 이기면 <b>보물상자</b>에서 볼 3개!</li>" +
@@ -2842,6 +3084,10 @@ function openStats() {
     "<p>가족 대결</p>" + '<div class="stats-list">' + (fam || "<div><span>아직 기록이 없어요</span><span></span></div>") + "</div>" +
     "<p>로켓단 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.rocket.win + '번</span></div><div><span>😼 로켓단이 이겼어요</span><span>' + st.rocket.lose + "번</span></div></div>" +
     "<p>모두 " + (st.games || 0) + "판</p>" +
+    "<p>🎓 공부</p>" + '<div class="stats-list">' + [["clock", "🕐 시계"], ["money", "💰 돈"]].map(([k, n]) => {
+      const x = (Store.data.study || {})[k] || {};
+      return "<div><span>" + n + " · " + (x.level || 1) + "단계</span><span>" + (x.right || 0) + "/" + (x.total || 0) + "</span></div>";
+    }).join("") + "</div>" +
     '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button><button class="btn" data-act="stats-clear">🗑️ 전적 지우기</button></div>'
   );
 }
@@ -2856,6 +3102,7 @@ const Act = {
   "rules": openRules,
   "bag": openBag,
   "open-box": openBox,
+  "money-quiz": moneyBonus,
   "stats": openStats,
   "sound": () => { Store.data.sound = Store.data.sound === false; Store.save(); const b = $("#sound-btn"); if (b) b.textContent = soundLabel(); if (Store.data.sound) SFX.tap(); else TTS.stop(); },
   "sound-game": () => { Act.sound(); const b = $("#sound-icon"); if (b) b.textContent = Store.data.sound === false ? "🔇" : "🔊"; },
@@ -2947,7 +3194,7 @@ Store.load();
 Object.assign(Setup, {
   t0: Store.data.settings.t0, t1: Store.data.settings.t1, cpu: Store.data.settings.cpu,
   pieces: Store.data.settings.pieces, backdo: Store.data.settings.backdo, battle: Store.data.settings.battle !== false,
-  skills: Store.data.settings.skills !== false,
+  skills: Store.data.settings.skills !== false, study: Store.data.settings.study !== false,
 });
 if (Setup.t0 === Setup.t1) Setup.t1 = Setup.t0 === "mom" ? "kid" : "mom";
 TTS.init();

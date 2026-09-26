@@ -291,10 +291,20 @@
     return path[Math.min(p.stage, path.length - 1)];
   };
   const lastStage = (s, i) => s.teams[s.pieces[i].team].paths[s.pieces[i].slot].length - 1;
-  // 기술을 쓸 수 있는 모습인가: 마지막 모습(진화하지 않는 포켓몬 포함) 또는 전설(처음부터)
+  // 기술을 쓸 수 있는가 (v4, 사용자 확정 2026-09-26)
+  //  - 3단계 진화 포켓몬: 마지막 모습이 되면 (10칸)
+  //  - 진화 없음 · 2단계 · 전설(early): 15칸을 가야 (처음부터·5칸에 쓰면 불공평해서)
+  //  - now[slot]: 시험용 — 처음부터 쓸 수 있음
+  const SKILL_WALK = 15;
+  const needsWalk = (s, i) => {
+    const p = s.pieces[i], t = s.teams[p.team];
+    return lastStage(s, i) < 2 || !!(t.early && t.early[p.slot]);
+  };
   function isFinal(s, i) {
     const p = s.pieces[i], t = s.teams[p.team];
-    return p.stage >= lastStage(s, i) || !!(t.early && t.early[p.slot]);
+    if (t.now && t.now[p.slot]) return true;
+    if (p.stage < lastStage(s, i)) return false;
+    return !needsWalk(s, i) || (p.walk || 0) >= SKILL_WALK;
   }
   function srand(s) { const r = rand(s.srng || 1); s.srng = r[1]; return r[0]; }
   // 기술 배우기 — 마지막 모습이 되는 순간 후보(그 모습의 타입 기술) 중에서 무작위로 하나. 한 번 배우면 그대로
@@ -822,6 +832,7 @@
     t.paths[p.slot] = o.path.slice();
     (t.pools = t.pools || [])[p.slot] = (o.pool || []).slice();
     (t.early = t.early || [])[p.slot] = !!o.early;
+    if (t.now) t.now[p.slot] = false;
     const base = o.base != null ? o.base : o.path.indexOf(o.id);
     Object.assign(p, { base, stage: base, skill: null, used: false, fx: {} });
     if (p.state !== "board") p.walk = 0;
@@ -857,7 +868,8 @@
         paths: Array.isArray(t.paths) && t.paths.length >= n ? t.paths.slice(0, n) : t.picks.slice(0, n).map(id => evoPath(id, evoFrom)),
         // 기술 후보(말마다) — 화면 쪽이 타입을 보고 정해 넘긴다 (엔진은 포켓몬 데이터를 모른다)
         pools: Array.from({ length: n }, (_, k) => (Array.isArray(t.pools) && Array.isArray(t.pools[k]) ? t.pools[k].filter(x => SKILLS[x]) : [])),
-        early: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.early) && t.early[k])), // 전설: 처음부터 기술
+        early: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.early) && t.early[k])), // 전설: 15칸 가야 기술 (v4)
+        now: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.now) && t.now[k])),       // 시험용: 처음부터 기술
         fx: {},
       })),
       pieces: [],
@@ -877,7 +889,7 @@
     s.teams.forEach((t, ti) => {
       for (let k = 0; k < n; k++) s.pieces.push({ team: ti, slot: k, state: "wait", route: "OUT", step: 0, atGoal: false, stage: 0, walk: 0, base: 0, skill: null, used: false, fx: {} });
     });
-    s.pieces.forEach((_, i) => learn(s, null, i)); // 전설·진화하지 않는 포켓몬은 처음부터
+    s.pieces.forEach((_, i) => learn(s, null, i)); // 시험용(now)만 처음부터
     return s;
   }
 
@@ -1101,7 +1113,7 @@
       if (s.teams.some(t => !Array.isArray(t.paths) || t.paths.length !== s.settings.pieces || t.paths.some(p => !p.length))) return false;
       if (s.teams.some(t => !Array.isArray(t.pools) || !Array.isArray(t.early) || t.pools.some(p => !Array.isArray(p) || p.some(k => !SKILLS[k])))) return false;
       if (s.spots != null && (!Array.isArray(s.spots) || s.spots.some(sp =>
-        !sp || !NODES[sp.node] || !(sp.id >= 1 && sp.id <= 1025) || typeof sp.used !== "boolean"))) return false;
+        !sp || !NODES[sp.node] || !(sp.id == null || (sp.id >= 1 && sp.id <= 1025)) || typeof sp.used !== "boolean"))) return false;
       if (!Array.isArray(s.traps) || s.traps.some(t => !t || !(t.node >= 1 && t.node < NODES.length) || (t.kind !== "rock" && t.kind !== "web") || !s.teams[t.team])) return false;
       return s.pieces.every(p =>
         ["wait", "board", "done"].indexOf(p.state) >= 0 && ROUTES[p.route] &&
@@ -1165,8 +1177,9 @@
     master: { name: "마스터볼", img: "master-ball", odds: 5 },
   };
   const WILD_ODDS = { c: 50, r: 30, u: 10, l: 10 }; // ❓ 풀숲에서 나오는 희귀도 (사용자 확정 2026-09-25)
+  const WILD_ODDS_BOOST = { c: 30, r: 30, u: 20, l: 20 }; // 🕐 시계 문제를 맞히면 그 조우만 (사용자 확정 2026-09-26: 유니크·전설 +10, 일반 −20)
   const Rewards = {
-    BALLS, BALL_INFO, WILD_ODDS, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
+    BALLS, BALL_INFO, WILD_ODDS, WILD_ODDS_BOOST, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
     catchRate(ball) { return ball === "master" ? 1 : 0.6 + 0.05 * Math.max(0, BALLS.indexOf(ball)); },
     // 상자 하나 = 볼 n개, 한 개씩 따로 뽑는다
     rollBox(n, rnd) {
@@ -1185,12 +1198,13 @@
       return { ok, shakes: ok ? 3 : 1 + Math.floor(rnd() * 3) };
     },
     // 야생 포켓몬: 희귀도 50·30·10·10 → 절반은 아직 없는 포켓몬 먼저. pools = { c:[ids], r:[...], u:[...], l:[...] }
-    rollWild(pools, owned, rnd) {
+    rollWild(pools, owned, rnd, odds) {
+      const W = odds || WILD_ODDS;
       const has = owned instanceof Set ? owned : new Set(owned || []);
-      const keys = Object.keys(WILD_ODDS).filter(k => pools[k] && pools[k].length);
-      const total = keys.reduce((t, k) => t + WILD_ODDS[k], 0);
+      const keys = Object.keys(W).filter(k => pools[k] && pools[k].length);
+      const total = keys.reduce((t, k) => t + W[k], 0);
       let x = rnd() * total;
-      const k = keys.find(q => (x -= WILD_ODDS[q]) < 0) || keys[0];
+      const k = keys.find(q => (x -= W[q]) < 0) || keys[0];
       let pool = pools[k];
       const fresh = pool.filter(id => !has.has(id));
       if (fresh.length && rnd() < Rewards.UNOWNED_FIRST) pool = fresh;
@@ -1198,11 +1212,90 @@
     },
   };
 
+  /* ---------- v4: 🎓 공부 문제 — 🕐 시계 보기 · 💰 돈 세기 (순수 함수) ----------
+   * 보기 4개 중 오답은 아이가 실제로 하는 실수로 만든다 */
+  const Study = {
+    LEVELS: 3,
+    // 어려움 자동 오르내림: 3번 연속 맞히면 위, 2번 연속 틀리면 아래
+    record(st, ok) {
+      const o = Object.assign({ level: 1, up: 0, down: 0, right: 0, total: 0 }, st || {});
+      o.total++;
+      if (ok) { o.right++; o.up++; o.down = 0; if (o.up >= 3 && o.level < Study.LEVELS) { o.level++; o.up = 0; } }
+      else { o.down++; o.up = 0; if (o.down >= 2 && o.level > 1) { o.level--; o.down = 0; } }
+      return o;
+    },
+    /* 시계: level 1 = 정각·30분 · 2 = 5분 단위 · 3 = 1분 단위 → { h, m, choices: [{h, m}], answer } */
+    clock(level, rnd, forced) {
+      const pick = a => a[Math.floor(rnd() * a.length)];
+      let h = 1 + Math.floor(rnd() * 12), m;
+      if (level <= 1) m = pick([0, 30]);
+      else if (level === 2) m = 5 * Math.floor(rnd() * 12);
+      else { do { m = Math.floor(rnd() * 60); } while (m % 5 === 0); }
+      if (forced) { h = forced.h; m = forced.m; }
+      const H = x => ((x - 1 + 1200) % 12) + 1;
+      const key = c => c.h + ":" + c.m;
+      const out = [{ h, m }], seen = {};
+      seen[key({ h, m })] = 1;
+      const add = c => { if (c && c.m >= 0 && c.m < 60 && !seen[key(c)] && out.length < 4) { seen[key(c)] = 1; out.push(c); } };
+      const k = Math.round(m / 5) % 12;                    // 분침이 가리키는(가까운) 숫자
+      add(m > 0 ? { h: H(h + 1), m } : { h: H(h - 1), m }); // 시침이 숫자 사이에 있으면 다음 숫자로 읽는 실수
+      add({ h: k === 0 ? 12 : k, m: (h % 12) * 5 });        // 두 바늘을 바꿔 읽는 실수
+      if (m % 5 === 0 && m > 0) add({ h, m: m / 5 });       // 분침 숫자를 그대로 "분"으로 읽는 실수
+      [{ h, m: (m + 5) % 60 }, { h, m: (m + 55) % 60 }, { h: H(h + 1), m: (m + 30) % 60 }, { h: H(h - 1), m }, { h: H(h + 2), m }].forEach(add);
+      for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const x = out[i]; out[i] = out[j]; out[j] = x; }
+      return { h, m, choices: out, answer: out.findIndex(c => c.h === h && c.m === m) };
+    },
+    /* 돈: level 1 = 천·백 · 2 = 만·천·백 · 3 = 십만·만·천·백. 한 단위는 0~9장(자릿값 그대로), 가장 큰 단위는 1장 이상
+     * → { counts: { 100000: n, … }, total, choices: [원], answer } */
+    UNITS: [100000, 10000, 1000, 100],
+    money(level, rnd, forced) {
+      const lv = Math.max(1, Math.min(3, level || 1));
+      const units = Study.UNITS.slice(3 - lv);
+      let counts;
+      if (forced) counts = Object.assign({}, forced);
+      else {
+        do {
+          counts = {};
+          units.forEach((u, i) => { counts[u] = i === 0 ? 1 + Math.floor(rnd() * 9) : Math.floor(rnd() * 10); });
+        } while (units.filter(u => counts[u] > 0).length < 2);
+      }
+      Study.UNITS.forEach(u => { counts[u] = counts[u] || 0; });
+      const total = Study.UNITS.reduce((t, u) => t + u * counts[u], 0);
+      const out = [total], seen = {};
+      seen[total] = 1;
+      const add = v => { if (v > 0 && v < 10000000 && v % 10 === 0 && !seen[v] && out.length < 4) { seen[v] = 1; out.push(v); } }; // 3,250원처럼 자리를 덜 센 값도 보기로
+      const present = Study.UNITS.filter(u => counts[u] > 0);
+      if (present.length >= 2) { // 두 단위의 장 수를 바꿔 읽는 실수 (32,500 ↔ 23,500)
+        const a = present[0], b = present[1];
+        add(total - a * counts[a] - b * counts[b] + a * counts[b] + b * counts[a]);
+      }
+      add(total / 10);   // 자리를 하나 덜 셈 (3,250)
+      add(total * 10);   // 자리를 하나 더 셈 (325,000)
+      present.forEach(u => { add(total + u); add(total - u); }); // 한 장 더·덜
+      [1000, 10000, 100].forEach(u => { add(total + u); add(total + 2 * u); });
+      for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const x = out[i]; out[i] = out[j]; out[j] = x; }
+      return { counts, total, choices: out, answer: out.indexOf(total) };
+    },
+    // 32500 → "삼만 이천오백" (앞자리 일은 빼고 읽는다: 10000 → "만", 1000 → "천")
+    koNum(n) {
+      const D = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
+      const four = x => [[1000, "천"], [100, "백"], [10, "십"], [1, ""]].map(([u, w]) => {
+        const d = Math.floor(x / u) % 10;
+        return d ? (d === 1 && w ? "" : D[d]) + w : "";
+      }).join("");
+      if (!n) return "영";
+      const man = Math.floor(n / 10000), rest = n % 10000;
+      return [man ? (man === 1 ? "" : four(man)) + "만" : "", rest ? four(rest) : ""].filter(Boolean).join(" ");
+    },
+    won: n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원",
+    clockText: c => c.h + "시" + (c.m ? " " + c.m + "분" : ""),
+  };
+
   const Yut = {
     NODES, NODE_KIND, NODE_NAME, LINES, ROUTES, RESULTS, BACKDO, FLAT_P,
     rand, rng, throwSticks, sticksFor, resultProbs, settle, stepMove, posOf, unitsOf, waitingOf,
     legalMoves, applyThrow, applyMove, newGame, teamDone,
-    evoPath, progressOf, stageFor, formOf, EVO_STEP, isFinal,
+    evoPath, progressOf, stageFor, formOf, EVO_STEP, isFinal, SKILL_WALK, needsWalk, Study,
     remainingOf, threat, cpuScore, cpuChoose, validate, upgrade, clone,
     SPOT_NODES, pickSpotNodes, Rewards,
     // v3: 기술 · 말 바꾸기

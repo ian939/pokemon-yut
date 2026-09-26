@@ -10,6 +10,7 @@
   5. 새 버전 감지: 서버 파일의 APP_VERSION 이 다르면 알림
   6. 누르는 것 44×44px 이상, 가로 스크롤 없음 (폰 390×844 포함)
   7. 콘솔 오류 0개
+  9. v4: 🕐 시계 문제(맞힘 → 희귀도 30·30·20·20 · 틀림 → 풀이) · 💰 돈 문제(볼 하나 더 · 한 번 더) · 공부 끄기 · 15칸 기술 · 공부 기록
   8. v3: ✨ 기술 켜기/끄기 · 배우기 · 쓰기(바로·상대 말·결과·빈 칸) · 저절로 기술 · 잡은 포켓몬으로 말 바꾸기 · 로켓단 그물 · 기술 도감
 """
 import functools
@@ -87,8 +88,19 @@ def wait_idle(page, timeout=20000):
 
 
 def wait_idle_or_popup(page, timeout=20000):
-    """계산이 끝나거나, 배틀·야생 조우 창(건너뛰기 버튼)이 뜰 때까지."""
-    page.wait_for_function("() => window.__yut && (!window.__yut.G.busy || document.querySelector('.bt-skip'))", timeout=timeout)
+    """계산이 끝나거나, 배틀·야생 조우 창(건너뛰기 버튼)·문제 창이 뜰 때까지."""
+    page.wait_for_function("() => window.__yut && (!window.__yut.G.busy || document.querySelector('.bt-skip') || document.querySelector('.quiz'))", timeout=timeout)
+
+
+def answer_quiz(page, right=True, timeout=15000):
+    """🎓 시계·돈 문제 창이 뜨면 답한다 (right=False 면 틀린 답 → 풀이 → 알겠어요!)."""
+    page.wait_for_selector(".quiz .qz-choice:not([disabled])", timeout=timeout)
+    box = page.query_selector(".quiz")
+    page.click(".quiz .qz-choice[data-ok]" if right else ".quiz .qz-choice:not([data-ok])")
+    if not right:
+        page.wait_for_selector(".quiz .qz-next:not([hidden])", timeout=timeout)
+        page.click(".quiz .qz-next")
+    page.wait_for_function("e => !e.isConnected", arg=box, timeout=timeout)  # 이 문제 창이 닫힐 때까지 (다음 문제 창이 바로 뜰 수 있다)
 
 
 def play_to_end(page, shots_prefix, max_steps=900):
@@ -96,6 +108,14 @@ def play_to_end(page, shots_prefix, max_steps=900):
     shot_at = {3, 12, 30}
     n = 0
     for step in range(max_steps):
+        if page.query_selector(".quiz .qz-choice:not([disabled])"):
+            page.click(".quiz .qz-choice")          # 🎓 문제: 아무거나 (맞든 틀리든 판이 이어져야 함)
+            page.wait_for_timeout(80)
+            continue
+        if page.query_selector(".quiz .qz-next:not([hidden])"):
+            page.click(".quiz .qz-next")
+            page.wait_for_timeout(80)
+            continue
         sk = page.query_selector(".bt-skip")
         if sk:
             # 잡기 배틀이 뜨면 건너뛰기를 눌러 본다 (건너뛰어도 판이 이어져야 함)
@@ -265,6 +285,7 @@ def scenario_v2(browser, base, errors):
     page.wait_for_selector(".dest[data-move='new/3']")
     check("🌿" in page.inner_text(".dest[data-move='new/3'] b"), "풀숲 칸으로 가는 말풍선에 🌿")
     page.click(".dest[data-move='new/3']", force=True)
+    answer_quiz(page)                                    # v4: 🕐 시계 문제 먼저
     page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
     page.screenshot(path=str(OUT / "71-wild-menu.png"))
     check("NEW!" in page.inner_text(".bt-plate.foe"), "처음 보는 포켓몬이면 NEW!")
@@ -295,6 +316,7 @@ def scenario_v2(browser, base, errors):
     start_family(page, "?seed=2&force=3&spots=3:25&catch=0&fast=1")
     page.click("#btn-throw", force=True); wait_idle(page)
     page.click(".dest[data-move='new/3']", force=True)
+    answer_quiz(page, right=False)                       # v4: 🕐 틀려도 조우는 그대로
     for k in range(3):
         page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
         page.click(".bt-menu .bt-ballbtn")
@@ -308,6 +330,7 @@ def scenario_v2(browser, base, errors):
     start_family(page, "?seed=2&force=3&spots=3:25&fast=1")
     page.click("#btn-throw", force=True); wait_idle(page)
     page.click(".dest[data-move='new/3']", force=True)
+    answer_quiz(page)
     page.wait_for_function("() => document.querySelector('.bt-text') && document.querySelector('.bt-text').textContent.includes('볼이 없어요')", timeout=15000)
     check(page.query_selector(".bt-menu .bt-ballbtn") is None, "볼이 없으면 안내만 하고 볼 메뉴 없음")
     page.wait_for_selector(".battle", state="detached", timeout=15000)
@@ -346,10 +369,13 @@ def scenario_v2(browser, base, errors):
     page.screenshot(path=str(OUT / "75-box-closed.png"))
     page.click(".win-screen .chest", force=True)  # 통통 튀는 중이라 강제로
     page.wait_for_function("() => document.querySelectorAll('#box-balls .ballchip').length === 3", timeout=15000)
+    check(page.query_selector(".win-btns.hidden") is not None, "상자 뒤 💰 돈 문제를 풀기 전에는 버튼이 숨어 있음")
+    answer_quiz(page, timeout=20000)
+    page.wait_for_function("() => document.querySelectorAll('#box-balls .ballchip').length === 4", timeout=15000)
     page.wait_for_selector(".win-btns:not(.hidden)", timeout=5000)
     page.screenshot(path=str(OUT / "76-box-open.png"))
     page.reload(); page.wait_for_timeout(400)
-    check(store(page, "[d.bag.master, d.bag.luxury, d.bag.poke]") == [1, 1, 4], "새로고침해도 상자 볼이 두 번 안 들어감")
+    check(sum(store(page, "Object.values(d.bag)")) == 7, "새로고침해도 상자·돈 문제 볼이 두 번 안 들어감 (3 + 3 + 1)")
     ctx.close()
 
     # ⑥ 설정에서 "배틀 장면 건너뛰기" — 배틀 화면 없이 물리치고, 진 말은 집으로, 이긴 팀은 한 번 더
@@ -542,6 +568,7 @@ def scenario_v3(browser, base, errors):
     start(page, "?seed=2&force=3&spots=3:133&catch=1&fast=1&swappool=rain")
     page.click("#btn-throw", force=True); wait_idle(page)
     page.click(".dest[data-move='new/3']", force=True)
+    answer_quiz(page)                                    # v4: 🕐 시계 문제 먼저
     page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
     page.click(".bt-menu .bt-ballbtn")
     page.wait_for_selector(".bt-menu .bt-swapbtn", timeout=15000)
@@ -561,6 +588,7 @@ def scenario_v3(browser, base, errors):
     start(page, "?seed=2&force=3&spots=3:133&catch=1&fast=1")
     page.click("#btn-throw", force=True); wait_idle(page)
     page.click(".dest[data-move='new/3']", force=True)
+    answer_quiz(page)                                    # v4: 🕐 시계 문제 먼저
     page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
     page.click(".bt-menu .bt-ballbtn")
     page.wait_for_selector(".bt-menu [data-key='later']", timeout=15000)
@@ -596,6 +624,161 @@ def scenario_v3(browser, base, errors):
     ctx.close()
 
 
+def scenario_v4(browser, base, errors):
+    """v4: 🕐 시계 문제 · 💰 돈 문제 · 🎓 공부 끄기 · ✨ 15칸 기술."""
+    def ctx_page(vw=1180, vh=820):
+        ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True)
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
+        # 풀숲 포켓몬을 뽑을 때 쓴 확률을 적어 둔다
+        page.add_init_script("""window.__odds = []; window.addEventListener('load', () => {
+          const R = Yut.Rewards, o = R.rollWild; R.rollWild = function (p, own, rnd, odds) { window.__odds.push(odds ? odds.l : 10); return o.apply(this, arguments); }; });""")
+        return ctx, page
+
+    def start(page, query, mode="family", study=True):
+        page.goto(base + query)
+        page.wait_for_timeout(300)
+        page.click("text=" + ("가족 대결" if mode == "family" else "로켓단 대결"))
+        page.click("[data-act=set][data-field=pieces][data-value='2']")
+        if not study:
+            page.click("[data-act=set][data-field=study][data-value='false']")
+        page.click("[data-act=to-pick]")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        if mode == "family":
+            page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        else:
+            page.wait_for_selector("#ri-go"); page.click("#ri-go")
+        wait_idle(page)
+
+    ev = lambda page, js: page.evaluate("() => { const Y = window.__yut, G = Y.G, s = G.s, d = Y.Store.data; return " + js + "; }")
+
+    def to_spot(page):
+        page.evaluate("() => { window.__yut.G.s.spots = [{ node: 3, id: null, used: false }]; }")  # 포켓몬은 아직 안 뽑힌 풀숲
+        page.click("#btn-throw", force=True); wait_idle(page)
+        page.click(".dest[data-move='new/3']", force=True)
+
+    # ① 준비 화면: 두 대결 모두 🎓 공부 문제 켜기/끄기 (처음엔 켜짐)
+    ctx, page = ctx_page()
+    for mode in ("가족 대결", "로켓단 대결"):
+        page.goto(base + "?fast=1"); page.wait_for_timeout(250)
+        page.click("text=" + mode)
+        check(page.query_selector("[data-act=set][data-field=study][data-value='true'].on") is not None, f"{mode} 준비 화면에 🎓 공부 문제 켜기/끄기 (처음엔 켜짐)")
+    ctx.close()
+
+    # ② 🕐 시계 맞힘 → 이번 조우는 30·30·20·20 (전설 20) · 공부 기록
+    ctx, page = ctx_page()
+    start(page, "?seed=2&force=3&fast=1&catch=0&clock=3:40")
+    to_spot(page)
+    page.wait_for_selector(".quiz .clock", timeout=15000)
+    page.wait_for_timeout(500)  # 튀어나오는 연출이 끝난 뒤에 잰다
+    labels = page.eval_on_selector_all(".qz-choice", "e => e.map(x => x.textContent).sort()")
+    check(labels == ["3시 40분", "3시 8분", "4시 40분", "8시 15분"], f"시계 보기 4개 = 정답 + 아이가 하는 실수 ({labels})")
+    measure(page, "🕐 시계 문제")
+    page.screenshot(path=str(OUT / "93-clock.png"))
+    answer_quiz(page)
+    page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+    check(ev(page, "window.__odds.slice(-1)[0]") == 20 and ev(page, "s.spots[0].id > 0"), "시계를 맞히면 전설 20%로 뽑고, 뽑은 포켓몬은 판에 저장")
+    check(ev(page, "[d.study.clock.right, d.study.clock.total]") == [1, 1], "공부 기록: 시계 1/1")
+    ctx.close()
+
+    # ③ 🕐 시계 틀림 → 풀이(시침·분침) → 원래 확률 (전설 10)
+    ctx, page = ctx_page(960, 600)
+    start(page, "?seed=2&force=3&fast=1&catch=0&clock=7:25")
+    to_spot(page)
+    page.wait_for_selector(".quiz .qz-choice", timeout=15000)
+    page.click(".quiz .qz-choice:not([data-ok])")
+    page.wait_for_selector(".quiz .qz-next:not([hidden])", timeout=15000)
+    exp = page.inner_text(".qz-explain")
+    check("7" in exp and "25분" in exp and "정답은 7시 25분" in exp, "틀리면 풀이: 짧은 바늘 → 몇 시, 긴 바늘 → 몇 분")
+    measure(page, "🕐 시계 풀이 (낮은 가로 화면)")
+    page.screenshot(path=str(OUT / "94-clock-explain.png"))
+    page.click(".quiz .qz-next")
+    page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+    check(ev(page, "window.__odds.slice(-1)[0]") == 10, "시계를 틀리면 원래 확률 (전설 10%)")
+    ctx.close()
+
+    # ④ 🎓 공부 끄기 → 문제 없이 조우 · 돈 문제 없음
+    ctx, page = ctx_page()
+    start(page, "?seed=2&force=3&fast=1&catch=0", study=False)
+    check(ev(page, "[s.settings.study, d.settings.study]") == [False, False], "공부 끄기가 판·저장에 들어감")
+    to_spot(page)
+    page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
+    check(page.query_selector(".quiz") is None, "공부 끄기: 시계 문제 없이 바로 조우")
+    ctx.close()
+
+    # ⑤ 💰 돈 문제: 틀림 → 풀이 → 한 번 더 → 맞힘 → 몬스터볼 1개 · 돈 그림·보기·한글 읽기
+    def win_rocket(page, q):
+        start(page, q, mode="rocket")
+        page.evaluate("""() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'done' });
+          Object.assign(s.pieces[1], { state: 'board', route: 'OUT', step: 19, atGoal: false }); s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; s.turn = 0; Y.Act['skill-cancel'](); }""")
+        wait_idle(page)
+        page.click(".dest.goal", force=True)
+        page.wait_for_selector(".win-screen .chest", timeout=20000)
+        page.click(".win-screen .chest", force=True)
+        page.wait_for_selector(".quiz .qz-choice", timeout=20000)
+    ctx, page = ctx_page(390, 844)
+    win_rocket(page, "?seed=2&fast=1&box=poke,poke,poke&money=0,3,2,5")
+    cash = ev(page, "['chk', 'b10k', 'b1k', 'coin'].map(c => document.querySelectorAll('.quiz .cash.' + c).length)")
+    check(cash == [0, 3, 2, 5], f"돈 그림: 만 원 3장 · 천 원 2장 · 백 원 5개 ({cash})")
+    page.wait_for_timeout(500)
+    labels = page.eval_on_selector_all(".qz-choice", "e => e.map(x => x.textContent).sort()")
+    check("32,500원" in labels and "3,250원" in labels and "325,000원" in labels, f"돈 보기에 자릿값 실수 ({labels})")
+    measure(page, "💰 돈 문제 (폰)")
+    page.screenshot(path=str(OUT / "95-money.png"))
+    bag0 = sum(ev(page, "Object.values(d.bag)"))
+    page.click(".quiz .qz-choice:not([data-ok])")
+    page.wait_for_selector(".quiz .qz-next:not([hidden])", timeout=15000)
+    exp = page.inner_text(".qz-explain")
+    check("만 원 3장" in exp and "30,000원" in exp and "삼만 이천오백" in exp, "돈 풀이: 단위별로 묶어 세기 + 한글 읽기")
+    page.screenshot(path=str(OUT / "96-money-explain.png"))
+    page.click(".quiz .qz-next")
+    page.wait_for_selector(".quiz .qz-choice:not([disabled])", timeout=15000)
+    check("한 번 더" in page.inner_text(".qz-title"), "틀리면 새 문제로 한 번 더")
+    answer_quiz(page)
+    page.wait_for_selector(".win-btns:not(.hidden)", timeout=15000)
+    check(sum(ev(page, "Object.values(d.bag)")) == bag0 + 1 and ev(page, "d.lastGame.reward.bonus.ball") == "poke", "두 번째에 맞히면 몬스터볼 1개 더")
+    check(ev(page, "[d.study.money.right, d.study.money.total]") == [1, 2], "공부 기록: 돈 1/2")
+    page.screenshot(path=str(OUT / "97-money-done.png"))
+    page.reload(); page.wait_for_timeout(400)
+    check(sum(ev(page, "Object.values(d.bag)")) == bag0 + 1, "새로고침해도 돈 문제 볼이 두 번 안 들어감")
+    page.click("[data-act=stats]"); page.wait_for_timeout(200)
+    check("시계" in page.inner_text(".modal") and "1/2" in page.inner_text(".modal"), "🏆 전적 창에 공부 기록")
+    ctx.close()
+    # 두 번 다 틀리면 볼 없음 (그래도 판은 끝나고 버튼이 나옴)
+    ctx, page = ctx_page()
+    win_rocket(page, "?seed=2&fast=1&box=poke,poke,poke")
+    bag0 = sum(ev(page, "Object.values(d.bag)"))
+    answer_quiz(page, right=False)
+    answer_quiz(page, right=False)
+    page.wait_for_selector(".win-btns:not(.hidden)", timeout=15000)
+    check(sum(ev(page, "Object.values(d.bag)")) == bag0 and ev(page, "d.lastGame.reward.bonus.ball") is None, "두 번 다 틀리면 볼은 없고, 한 판 더·처음으로 버튼은 나옴")
+    ctx.close()
+
+    # ⑥ 어려움 자동 오르내림: 시계 3번 연속 맞히면 2단계 (5분 단위)
+    ctx, page = ctx_page()
+    start(page, "?seed=2&force=3&fast=1&catch=0")
+    page.evaluate("() => { window.__yut.Store.data.study = { clock: { level: 1, up: 2 } }; }")
+    to_spot(page)
+    answer_quiz(page)
+    check(ev(page, "d.study.clock.level") == 2, "시계를 3번 연속 맞히면 2단계로")
+    ctx.close()
+
+    # ⑦ ✨ 15칸 규칙: 진화 없음·2단계·전설은 15칸에 기술 (보라 점으로 남은 칸 표시)
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&fast=1&pools=wish,nitro")
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s, t = s.teams[0];
+      t.picks[0] = 128; t.paths[0] = [128]; t.pools[0] = ['wish']; s.pieces[0].stage = 0;
+      Object.assign(s.pieces[0], { state: 'board', atGoal: false, walk: 12 }, Y.Yut.settle('OUT', 12)); s.turn = 0; s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
+    wait_idle(page)
+    check(page.query_selector(".pchip[data-piece='0'] .pips.skp") is not None and ev(page, "s.pieces[0].skill") is None, "진화 없는 켄타로스 12칸: 아직 기술 없음, 칩에 보라 점")
+    page.click(".unit.can[data-node='12']", force=True)
+    page.click(".dest[data-move='n12/3']", force=True)
+    wait_idle(page)
+    check(ev(page, "s.pieces[0].skill") == "wish", "15칸이 되면 기술을 배움")
+    ctx.close()
+
+
 def main():
     httpd = serve()
     base = f"http://127.0.0.1:{httpd.server_port}/index.html"
@@ -603,12 +786,14 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        if "--v2-only" not in sys.argv and "--v3-only" not in sys.argv:
+        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only")):
             scenario(browser, base, errors)
-        if "--v3-only" not in sys.argv:
+        if "--v3-only" not in sys.argv and "--v4-only" not in sys.argv:
             scenario_v2(browser, base, errors)
-        scenario_v3(browser, base, errors)
-        if "--scenario-only" in sys.argv or "--v2-only" in sys.argv or "--v3-only" in sys.argv:
+        if "--v4-only" not in sys.argv:
+            scenario_v3(browser, base, errors)
+        scenario_v4(browser, base, errors)
+        if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only")):
             browser.close()
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
             httpd.shutdown()
