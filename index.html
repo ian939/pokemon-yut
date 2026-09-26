@@ -623,6 +623,22 @@ body.game-land #toast.show { transform: none; }
 }
 @media (max-width: 520px) { .qz-choice { font-size: 18px; font-family: var(--font); font-weight: 900; } .qz-q { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .clock .pulse line, .qz-choice.wrong { animation: none; } }
+/* ===== 🔍 포켓몬·기술 보기 ===== */
+.pi-head { display: flex; align-items: center; gap: 14px; text-align: left; margin-bottom: 8px; }
+.pi-head h2 { margin: 0; }
+.pi-head p { font-size: 15px; }
+.pi-pic { position: relative; flex: none; width: 84px; height: 84px; border-radius: 14px; background: var(--paper-2); box-shadow: inset 0 0 0 3px var(--tc); }
+.pi-evo { display: flex; justify-content: center; align-items: center; gap: 4px; margin: 6px 0 12px; color: var(--ink-soft); font-weight: 900; }
+.pi-mini { display: grid; justify-items: center; gap: 2px; padding: 4px; border-radius: 10px; opacity: .55; }
+.pi-mini .spr { position: relative; display: block; width: 52px; height: 52px; }
+.pi-mini b { font-size: 12px; }
+.pi-mini.now { opacity: 1; background: #fff6d9; box-shadow: inset 0 0 0 2px var(--gold); }
+.pi-skill { min-height: 0; }
+.pi-skill em { font-style: normal; font-size: 14px; font-weight: 900; color: var(--ink-soft); }
+.pi-skill em.ready { color: var(--green); } .pi-skill em.used { color: var(--ink-soft); }
+.pi-note { font-size: 16px; font-weight: 700; line-height: 1.5; }
+.pi-pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 8px 0 4px; }
+.pi-pool span { font-size: 14px; font-weight: 900; background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 4px 10px; box-shadow: inset 5px 0 0 var(--tc); }
 @keyframes grassShake { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
 @keyframes quake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-8px, 3px); } 40% { transform: translate(7px, -3px); } 60% { transform: translate(-5px, 2px); } 80% { transform: translate(4px, 0); } }
 @keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
@@ -668,7 +684,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-26b";
+const APP_VERSION = "2026-09-26c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1451,6 +1467,12 @@ function persist() {
         balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
         s.reward = { balls, opened: false };
         st.boxes = (st.boxes || 0) + 1;
+      } else if (s.settings.mode === "rocket" && w.cpu) {
+        // 로켓단이 이겨도 위로 상자: 몬스터볼 1개 (+ 돈 문제로 하나 더) — 져도 속상하지 않게 (사용자 요청 2026-09-26)
+        const balls = ["poke"];
+        balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
+        s.reward = { balls, opened: false, lose: true };
+        st.boxes = (st.boxes || 0) + 1;
       }
     }
     Store.data.game = null;
@@ -1577,12 +1599,16 @@ function onChipTap(i) {
     else toast("반짝이는 곳을 눌러요 (취소하려면 ✖ 취소)");
     return;
   }
-  if (G.busy || !G.s || G.s.phase !== "choose" || !humanTurn()) return;
+  if (!G.s) return;
   const p = G.s.pieces[i];
-  if (p.team !== G.s.turn) { toast("그건 상대 팀 말이에요"); return; }
+  if (G.busy) { toast(pieceLine(i), 2400); return; }           // 연출 중: 한 줄로만
+  // 말을 고를 차례가 아니거나(던지기 전·상대 차례·골인) 상대 팀 말이면 → 🔍 포켓몬·기술 보기
+  const canPick = G.s.phase === "choose" && humanTurn() && p.team === G.s.turn &&
+    (p.state === "board" || (p.state === "wait" && G.moves.some(m => m.unit === "new")));
+  if (!canPick) { openPieceInfo(i); return; }
+  if (G.s.settings.skills !== false) toast(pieceLine(i), 2400);  // 고르면서도 기술을 한 줄로 보여 준다
   if (p.state === "wait") {
     const ms = G.moves.filter(m => m.unit === "new");
-    if (!ms.length) { toast(G.s.pending.every(r => r < 0) ? "빽도로는 새 말을 낼 수 없어요" : "지금은 새 말을 낼 수 없어요"); return; }
     const ds = distinctDests(ms);
     if (G.sel === "new" && G.newPick === i && ds.length === 1) { doMove(ds[0].id); return; }
     SFX.tap();
@@ -2216,7 +2242,7 @@ async function showWin(ti) {
   const finals = t.paths.map(p => p[p.length - 1]);
   const rocket = s.settings.mode === "rocket";
   const title = rocket && t.cpu ? "😼 로켓단이 이겼다옹~!" : "🎉 " + t.name + " 팀 승리!";
-  const sub = rocket ? (t.cpu ? "아깝다! 다음엔 꼭 이길 수 있어요. 한 판 더 해 볼까요?" : "로켓단은 또 지는 거냐옹~! 😵") : "포켓몬이 모두 골인했어요!";
+  const sub = rocket ? (t.cpu ? "아깝다! 다음엔 꼭 이길 수 있어요. 위로 상자를 열어 봐요!" : "로켓단은 또 지는 거냐옹~! 😵") : "포켓몬이 모두 골인했어요!";
   hint("");
   SFX.win();
   confetti(80);
@@ -2242,7 +2268,7 @@ function boxHtml(rw) {
   if (!rw) return "";
   return '<div class="box-zone' + (rw.opened ? " opened" : "") + '" id="box-zone">' +
     '<button class="chest" data-act="open-box" aria-label="보물상자 열기"><img id="chest-img" src="assets/ui/' + (rw.opened ? "chest-open" : "chest-closed") + '.png" alt="" onerror="chestFail(this)"></button>' +
-    '<p class="box-hint" id="box-hint">' + (rw.opened ? "가방에 넣었어요! 🎒" : "🎁 로켓단이 두고 간 상자예요! 눌러서 열어 봐요") + "</p>" +
+    '<p class="box-hint" id="box-hint">' + (rw.opened ? "가방에 넣었어요! 🎒" : rw.lose ? "🎁 아깝다! 그래도 위로 상자가 있어요. 눌러서 열어 봐요" : "🎁 로켓단이 두고 간 상자예요! 눌러서 열어 봐요") + "</p>" +
     '<div class="box-balls" id="box-balls">' + (rw.opened ? rw.balls.map(b => ballChip(b)).join("") : "") + "</div></div>";
 }
 async function openBox() {
@@ -3020,6 +3046,47 @@ async function moneyBonus() {
   }
   const btns = $(".win-btns");
   if (btns) btns.classList.remove("hidden");
+}
+
+
+/* ---------- 🔍 포켓몬·기술 보기 — 오른쪽 팀 카드의 포켓몬을 누르면 ---------- */
+// 기술을 배우기까지 남은 칸 (3단계: 마지막 모습까지 · 진화 없음·2단계·전설: 15칸)
+function skillLeft(i) {
+  const s = G.s, p = s.pieces[i], last = s.teams[p.team].paths[p.slot].length - 1;
+  const need = Math.max((last - (p.base || 0)) * Yut.EVO_STEP, Yut.needsWalk(s, i) ? Yut.SKILL_WALK : 0);
+  return Math.max(0, need - (p.walk || 0));
+}
+function pieceLine(i) {
+  const s = G.s, p = s.pieces[i], name = nameOf(Yut.formOf(s, i));
+  if (s.settings.skills === false) return "🔍 " + name;
+  if (!p.skill) return "🔍 " + name + " — 아직 기술이 없어요 (" + skillLeft(i) + "칸 더 가면 배워요)";
+  const U = SKILL_UI[p.skill] || {};
+  return "🔍 " + name + "의 " + (U.emoji || "") + " " + skillName(p.skill) + ": " + (U.desc || "") + (p.used ? " (다 썼어요)" : !Yut.isFinal(s, i) ? " (마지막 모습이 되면 써요)" : "");
+}
+function openPieceInfo(i) {
+  const s = G.s, p = s.pieces[i], t = s.teams[p.team], id = Yut.formOf(s, i);
+  const path = t.paths[p.slot], inGame = current === "game";
+  if (inGame) { G.paused = true; clearTimeout(G.cpuTimer); }
+  SFX.tap();
+  const evo = path.length > 1 ? '<div class="pi-evo">' + path.map((x, k) =>
+    '<span class="pi-mini' + (k === p.stage ? " now" : "") + '">' + spr(x) + "<b>" + esc(nameOf(x)) + "</b></span>").join("<i>›</i>") + "</div>" : "";
+  const where = p.state === "done" ? "🏁 골인했어요" : p.state === "wait" ? "🏠 집에서 기다려요" : "🎲 " + (p.walk || 0) + "칸 왔어요";
+  const st = p.state === "board" ? statusIcon(s, [i]) : "";
+  let sk = "";
+  if (s.settings.skills === false) sk = '<p class="pi-note">이 판은 기술 없이 해요</p>';
+  else if (p.skill) {
+    const U = SKILL_UI[p.skill] || {}, K = Yut.SKILLS[p.skill];
+    const state = p.used ? '<em class="used">✓ 다 썼어요</em>' : Yut.isFinal(s, i) ? '<em class="ready">✨ 쓸 수 있어요</em>' : '<em>' + skillLeft(i) + "칸 더 가면 써요</em>";
+    sk = '<div class="skill-item info pi-skill" style="--tc:' + skillColor(p.skill) + '"><span class="si-body"><b>' + (U.emoji || "") + " " + esc(K.name) + "<i>" + esc(K.type) + "</i></b>" +
+      "<small>" + esc(U.desc || "") + (K.kind === "react" ? " (때가 되면 저절로 나가요)" : "") + "</small>" + state + "</span></div>";
+  } else {
+    const pool = ((t.pools || [])[p.slot] || []);
+    sk = '<p class="pi-note">📖 아직 기술이 없어요. <b>' + skillLeft(i) + "칸</b> 더 가면 이 중 하나를 배워요!</p>" +
+      '<div class="pi-pool">' + pool.map(k => '<span style="--tc:' + skillColor(k) + '">' + ((SKILL_UI[k] || {}).emoji || "") + " " + esc(skillName(k)) + "</span>").join("") + "</div>";
+  }
+  showModal('<div class="pi-head" style="--tc:' + t.color + '"><span class="pi-pic">' + spr(id) + "</span><div><h2>" + esc(nameOf(id)) + "</h2><p>" + esc(t.name) + " · " + where + (st ? " · " + st : "") + "</p></div></div>" +
+    evo + sk + '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button></div>',
+    () => { if (inGame) { G.paused = false; if (current === "game" && !G.busy) afterAction(); } });
 }
 
 /* ---------- 쉬기·그만두기 ---------- */
