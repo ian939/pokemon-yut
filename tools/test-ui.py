@@ -840,7 +840,7 @@ def scenario_v4(browser, base, errors):
     # ⑬ v6: 🎰 슬롯머신 · 😈 로켓단 무작위 · 진화형부터 · 💡 잡기 힌트 · 🎲 확률 막대 · 💧🔥 상성 · 🔤 영어
     ctx, page = ctx_page()
     page.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', JSON.stringify({ collection: [{ id: 5, t: 1 }], bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 } }));")
-    page.goto(base + "?seed=2&spots=none&fast=1&force=2&slotball=great"); page.wait_for_timeout(300)
+    page.goto(base + "?seed=2&spots=none&fast=1&force=2"); page.wait_for_timeout(300)
     page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
     page.click("[data-act=set][data-field=study][data-value='false']")
     page.click("[data-act=to-pick]")
@@ -849,13 +849,11 @@ def scenario_v4(browser, base, errors):
     minis = len(page.query_selector_all(".slot.filled .evo .mini"))
     check(minis == 2, f"리자드를 고르면 진화 미리보기가 리자드 › 리자몽 ({minis}칸)")
     page.click(".pcard[data-id='1']"); page.click("#pick-next"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
-    page.wait_for_selector(".slot-ov .reel", timeout=15000)
-    page.screenshot(path=str(OUT / "99g-slot.png"))
     wait_idle(page)
-    check(ev(page, "[d.bag.great, s.startBall]") == [1, "great"], "🎰 판을 시작하면 슬롯머신으로 볼 하나 (가방에 슈퍼볼 +1)")
+    check(page.query_selector(".gacha-ov") is None and ev(page, "d.bag.great") == 0, "가족 대결에는 캡슐 뽑기 없음, 지온이 가방도 그대로")
     check(ev(page, "[window.__yut.Yut.formOf(s, 0), s.pieces[0].base]") == [5, 1], "잡은 리자드는 리자드부터 출발")
     page.reload(); page.wait_for_timeout(400); page.click("[data-act=resume]"); wait_idle(page)
-    check(ev(page, "d.bag.great") == 1 and page.query_selector(".slot-ov") is None, "이어하기에서는 슬롯머신이 다시 안 나옴 (볼 두 번 안 받음)")
+    check(page.query_selector(".gacha-ov") is None, "이어하기에서는 캡슐 뽑기가 다시 안 나옴")
     # 🔤 영어: 개 = Two
     page.click("#btn-throw", force=True)
     page.wait_for_selector(".result-pop .result-en", timeout=10000)
@@ -877,10 +875,16 @@ def scenario_v4(browser, base, errors):
     ctx, page = ctx_page()
     seen = []
     for k in range(2):
-        page.goto(base + "?fast=1&spots=none&noslot=1"); page.wait_for_timeout(250)
+        page.goto(base + "?fast=1&spots=none"); page.wait_for_timeout(250)
         page.click("text=로켓단 대결"); page.click("[data-act=set][data-field=study][data-value='false']")
         page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
-        page.wait_for_selector("#ri-go"); page.click("#ri-go"); wait_idle(page)
+        page.wait_for_selector("#ri-go"); page.click("#ri-go")
+        bag0 = sum(ev(page, "Object.values(d.bag)"))
+        page.wait_for_selector(".gacha-ov .gacha-mon", timeout=15000)
+        if k == 0: page.screenshot(path=str(OUT / "99g-gacha.png"))
+        wait_idle(page)
+        shown = page.evaluate("() => window.__gachaShown || null")
+        check(sum(ev(page, "Object.values(d.bag)")) == bag0, "😼 로켓단 캡슐 뽑기: 보여 주기만 (지온이 가방은 그대로)")
         r = page.evaluate("""() => { const s = window.__yut.G.s, D = window.YUT_DATA, R = s.teams[1].picks, root = id => window.__yut.Yut.evoPath(id, D.evoFrom)[0];
           return { picks: R, roots: R.every(id => !D.evoFrom[id]), legend: R.some(id => D.rarity[id] === 'l'), clash: R.some(id => s.teams[0].paths.some(p => p[0] === root(id))) }; }""")
         seen.append(r["picks"])
@@ -948,6 +952,8 @@ def scenario_v4(browser, base, errors):
     # ⑩ 희귀도로 기술까지 필요한 칸 (일반 15 · 레어 10 · 유니크 5 · 전설 0) + 👑 전설 연출
     ctx, page = ctx_page()
     page.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', JSON.stringify({ collection: [{ id: 150, t: 1 }] }));")
+    # 빠르게 모드에서는 배너가 0.2초만 떠서 기다리기로는 놓친다 — 뜨는 배너를 모두 적어 둔다
+    page.add_init_script("window.__banners = []; new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('banner') && n.classList.contains('legend')) window.__banners.push(n.textContent); }))).observe(document, { childList: true, subtree: true });")
     page.goto(base + "?seed=2&spots=none&fast=1&pools=nitro,nitro")
     page.wait_for_timeout(300)
     page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
@@ -955,9 +961,8 @@ def scenario_v4(browser, base, errors):
     page.evaluate("() => { window.__yut.Setup.picks[0] = []; }")
     page.click(".pcard[data-id='150']"); page.click(".pcard[data-id='4']"); page.click("#pick-next")
     page.click("[data-act=pick-auto]"); page.click("#pick-next")
-    page.wait_for_selector(".banner.legend", timeout=15000)
-    page.screenshot(path=str(OUT / "99b-legend-banner.png"))
     wait_idle(page)
+    check(page.evaluate("() => window.__banners.some(t => t.includes('전설의'))"), "👑 전설: 판을 시작할 때 금빛 배너")
     check(ev(page, "JSON.stringify(s.teams[0].need)") == "[0,10]" and ev(page, "s.pieces[0].skill") == "nitro" and ev(page, "s.pieces[1].skill") is None,
           "뮤츠(전설)는 처음부터 기술 · 파이리(레어)는 10칸")
     page.evaluate("() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', 3)); s.turn = 0; s.phase = 'throw'; s.throwsLeft = 1; s.pending = []; Y.Act['skill-cancel'](); }")
@@ -1010,7 +1015,8 @@ def scenario_v4(browser, base, errors):
     page.wait_for_selector(".modal .pi-pool", timeout=5000)
     txt = page.inner_text(".modal")
     need = ev(page, "window.__yut.Yut.skillNeed(s, 0)")
-    check(f"{need}칸" in txt and "배워요" in txt and need in (5, 10), f"아직 기술이 없으면 남은 칸({need}칸 — 스타팅은 레어 10·유니크 5)과 배울 수 있는 기술 후보")
+    check(f"{need}칸" in txt and "배워요" in txt and need == 10, f"아직 기술이 없으면 남은 칸({need}칸 — 스타팅은 모두 10칸)과 배울 수 있는 기술 후보")
+    check(ev(page, "JSON.stringify(s.teams.map(t => t.need))") == "[[10,10],[10,10]]", "스타팅 포켓몬은 세대와 상관없이 모두 10칸")
     page.wait_for_timeout(400)
     page.screenshot(path=str(OUT / "99-piece-info-phone.png"))
     measure(page, "🔍 포켓몬·기술 보기 (폰)")

@@ -661,19 +661,30 @@ body.game-land #toast.show { transform: none; }
 @keyframes rainbow { to { background-position: 300% 0; } }
 @media (prefers-reduced-motion: reduce) { .unit.legend .base, .cutin.legend .ci-band, .ci-rays { animation: none; } }
 
-/* ===== v6: 🎰 슬롯머신 · 🎲 확률 막대 · 효과 굉장 · 영어 ===== */
-.slot-ov { position: fixed; inset: 0; z-index: 385; display: grid; place-items: center; padding: 16px; background: rgba(12,18,30,.7); animation: fadeIn .2s ease both; }
-.slot-ov.out { opacity: 0; transition: opacity calc(.25s * var(--spd)); }
-.slot-box { width: min(460px, 100%); background: linear-gradient(#ff6b6b, #e5484d); border: 5px solid var(--ink); border-radius: 22px; box-shadow: inset 0 0 0 4px #ffd23f, 0 10px 0 rgba(0,0,0,.35); padding: 16px 18px 18px; text-align: center; display: grid; gap: 12px; justify-items: center; }
-.slot-box h2 { font-family: var(--pixel); font-weight: 700; font-size: var(--t2); color: #fff; line-height: 1.2; text-shadow: 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink); }
-.reels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; background: var(--ink); border-radius: 14px; padding: 10px; }
-.reel { aspect-ratio: 1; background: #fff; border-radius: 10px; display: grid; place-items: center; overflow: hidden; box-shadow: inset 0 6px 8px rgba(0,0,0,.25), inset 0 -6px 8px rgba(0,0,0,.25); }
-.reel img { width: 70%; image-rendering: pixelated; }
-.reel.spin img { animation: reelSpin .12s linear infinite; }
-.reel.stop img { animation: popIn .3s cubic-bezier(.2,1.6,.4,1); }
-.slot-box .btn { width: 100%; }
-.slot-win { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); color: var(--ink); background: #fff6d9; border: 3px solid var(--ink); border-radius: 12px; padding: 6px 14px; }
-@keyframes reelSpin { 0% { transform: translateY(-60%); filter: blur(1px); } 100% { transform: translateY(60%); filter: blur(1px); } }
+/* ===== v6: 😼 로켓단 캡슐 뽑기 · 🎲 확률 막대 · 효과 굉장 · 영어 ===== */
+.gacha-ov { position: fixed; inset: 0; z-index: 385; display: grid; place-items: center; padding: 16px; background: radial-gradient(circle at 50% 40%, #6b2a8f, #1d0b2e 75%); animation: fadeIn .2s ease both; overflow-y: auto; }
+.gacha-ov.out { opacity: 0; transition: opacity calc(.3s * var(--spd)); }
+.gacha { width: min(560px, 100%); display: grid; gap: 12px; justify-items: center; text-align: center; color: #fff; }
+.gacha h2 { font-family: var(--pixel); font-weight: 700; font-size: var(--t2); line-height: 1.2; text-shadow: 3px 0 0 #1d0b2e, -3px 0 0 #1d0b2e, 0 3px 0 #1d0b2e, 0 -3px 0 #1d0b2e; }
+.gacha p { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); min-height: 1.4em; }
+/* 캡슐 뽑기 기계 — 둥근 유리통 + 빨간 몸통 + 손잡이 + 나오는 구멍 */
+.machine { position: relative; width: clamp(150px, 34vmin, 220px); }
+.machine .dome { position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; border: 5px solid var(--ink); overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.9) 0 8%, rgba(255,255,255,0) 9%), rgba(210,235,255,.35); box-shadow: inset 0 -10px 20px rgba(0,0,0,.25); }
+.machine .dome i { position: absolute; width: 26%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--ink); background: linear-gradient(var(--c) 0 48%, var(--ink) 48% 54%, #fff 54%); }
+.machine.shake .dome { animation: gachaShake .12s linear infinite; }
+.machine .body { position: relative; margin: -14% 8% 0; height: clamp(70px, 16vmin, 100px); background: linear-gradient(#ff6b6b, #c7383d); border: 5px solid var(--ink); border-radius: 12px 12px 18px 18px; box-shadow: inset 0 0 0 4px #ffd23f; }
+.machine .crank { position: absolute; left: 50%; top: 22%; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: #ffd23f; border: 4px solid var(--ink); }
+.machine .crank::after { content: ""; position: absolute; left: 50%; top: -4px; width: 8px; height: 36px; margin-left: -4px; background: var(--ink); border-radius: 4px; }
+.machine.shake .crank { animation: spin .5s linear infinite; }
+.machine .hole { position: absolute; left: 50%; bottom: 10%; width: 40%; height: 26%; transform: translateX(-50%); background: #1d0b2e; border-radius: 8px; border: 3px solid var(--ink); }
+.gacha-ball { position: absolute; left: 50%; bottom: 8%; width: 34px; transform: translateX(-50%); image-rendering: pixelated; z-index: 2; }
+.gacha-out { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 104px; }
+.gacha-mon { width: 92px; display: grid; justify-items: center; gap: 2px; background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; padding: 6px 4px; box-shadow: 0 4px 0 rgba(0,0,0,.35); animation: popIn .35s cubic-bezier(.2,1.6,.4,1) both; }
+.gacha-mon .pic { position: relative; width: 64px; height: 64px; }
+.gacha-mon b { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.gacha-skip { font-size: 13px; opacity: .75; font-family: var(--font); }
+@keyframes gachaShake { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 .prob-bars { display: grid; gap: 6px; margin: 8px 0 12px; text-align: left; }
 .prob-bars div { display: grid; grid-template-columns: 58px 1fr 54px; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; }
 .prob-bars b { font-family: var(--pixel); font-size: var(--t1); }
@@ -778,7 +789,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-28b";
+const APP_VERSION = "2026-09-28d";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1274,7 +1285,7 @@ Screens.setup = sec => {
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
       '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
-      '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 기술을 하나 배워요 — 일반 15칸 · 레어 10칸 · 유니크 5칸 · 👑 전설은 처음부터! 말마다 한 판에 한 번." : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
+      '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 기술을 하나 배워요 — 스타팅 포켓몬 10칸 · 잡은 포켓몬은 일반 15칸 · 레어 10칸 · 유니크 5칸 · 👑 전설은 처음부터! 말마다 한 판에 한 번." : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
       '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
       '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단을 이기면 💰 돈 문제로 볼 하나 더! (맞힐수록 문제가 어려워져요)" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
@@ -1627,8 +1638,7 @@ function mountGame() {
     G.busy = true;
     renderTop();
     (async () => {
-      if (G.s.settings.mode === "rocket") await rocketIntro();
-      await slotMachine();
+      if (G.s.settings.mode === "rocket") { await rocketIntro(); await rocketGacha(); }
       await announceStartSkills();
       await announceTurn(G.s.turn, true);
       G.busy = false;
@@ -1944,6 +1954,9 @@ const RARITY_STAR = { c: "", r: "⭐", u: "⭐⭐", l: "👑" };
 // 기술을 쓸 수 있는 때 = 고른(잡은) 포켓몬의 희귀도 (사용자 확정 2026-09-27): 일반 15칸 · 레어 10칸 · 유니크 5칸 · 전설 처음부터
 const RARITY_NEED = { c: 15, r: 10, u: 5, l: 0 };
 const isLegend = id => rarityOf(id) === "l" || rarityOf(rootOf(id)) === "l";
+// 스타팅 포켓몬 가족은 희귀도와 상관없이 모두 10칸 (사용자 확정 2026-09-28 — 데이터로는 1~3세대 레어 · 4~9세대 유니크라 들쭉날쭉)
+const STARTER_NEED = 10;
+const skillNeedOf = id => STARTERS.indexOf(rootOf(id)) >= 0 ? STARTER_NEED : RARITY_NEED[rarityOf(id)];
 const SHAKE_FRAMES = [
   { transform: "translateX(0)", filter: "none" }, { transform: "translateX(-7%)", filter: "brightness(2.4)", offset: 0.15 },
   { transform: "translateX(6%)", offset: 0.35 }, { transform: "translateX(-5%)", filter: "brightness(1.8)", offset: 0.55 },
@@ -2185,7 +2198,7 @@ function battle(e, prev) {
     // ④ 집으로 — 쓰러지지 않는다 (영영 지는 게 아니라 처음부터 다시)
     if (c.live()) SFX.runHome();
     stageRunOff(c);
-    await c.say(josa(foeNames, "은/는") + " 집으로 돌아갔어요. 처음부터 다시 출발해요!");
+    await c.say(josa(foeNames, "은/는") + " 집으로 돌아갔어요. 진화한 모습 그대로 다시 출발해요!");
     await c.wait(900);
     c.close();
   })().catch(err => { console.error(err); c.close(); });
@@ -2512,7 +2525,7 @@ function startGame(teams, opts) {
   teams = teams.map((t, ti) => Object.assign({}, t, {
     early: t.paths.map(p => p.some(x => rarityOf(x) === "l")),
     now: t.paths.map(() => Q.get("early") === "1"),
-    need: t.picks.slice(0, opts.pieces).map(id => RARITY_NEED[rarityOf(id)]),
+    need: t.picks.slice(0, opts.pieces).map(id => skillNeedOf(id)),
     bases: t.paths.map((p, k) => Math.max(0, p.indexOf(t.picks[k]))), // 진화형을 골랐으면 그 모습부터 (사용자 요청 2026-09-28)
     pools: t.paths.map((p, k) => (forcedPools[ti] && forcedPools[ti][k]) ? [forcedPools[ti][k]] : poolFor(p[p.length - 1])),
   }));
@@ -2947,7 +2960,7 @@ function swapInfo(id) {
   const path = linePath(id, Math.random);
   const early = path.some(x => rarityOf(x) === "l");
   const forced = Q.get("swappool"); // 시험용
-  return { id, path, base: Math.max(0, path.indexOf(id)), early, need: RARITY_NEED[rarityOf(id)], pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(path[path.length - 1]) };
+  return { id, path, base: Math.max(0, path.indexOf(id)), early, need: skillNeedOf(id), pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(path[path.length - 1]) };
 }
 // 조우 무대 안: "지금 말로 쓸까요?" → 바꿀 말 고르기 → "돌아와! 가라!"
 async function offerSwap(c, e, id) {
@@ -3250,46 +3263,48 @@ async function moneyBonus() {
 }
 
 
-/* ---------- 🎰 슬롯머신 — 새 판을 시작할 때 볼 하나 (결과를 먼저 가방에 넣고 저장 → 새로고침해도 두 번 안 받음) ---------- */
-function slotMachine() {
-  if (Q.get("noslot") === "1") return Promise.resolve(); // 시험용: 가방 개수를 정확히 볼 때
+/* ---------- 😼 로켓단 캡슐 뽑기 — 로켓단이 기계에서 몬스터볼 캡슐을 뽑아 이번 판 포켓몬을 데려오는 장면 (보여 주기만, 누를 것 없음) ---------- */
+function rocketGacha() {
+  if (!G.s || G.s.settings.mode !== "rocket" || Q.get("noslot") === "1") return Promise.resolve();
   return new Promise(res => {
-    const R = Yut.Rewards;
-    const forced = Q.get("slotball");
-    const ball = R.BALL_INFO[forced] ? forced : R.rollBox(1, Math.random)[0];
-    Store.data.bag[ball] = (Store.data.bag[ball] || 0) + 1;
-    G.s.startBall = ball;
-    persist();
-    renderBagChip();
-    const img = b => "assets/items/" + R.BALL_INFO[b].img + ".png";
+    const t = G.s.teams.find(x => x.cpu), mons = t.picks.slice(0, G.s.settings.pieces);
+    const colors = ["#e5484d", "#2f6fd6", "#f5b82e", "#2fa35a", "#7a4fb5", "#f28c28", "#e0559b"];
+    const balls = Array.from({ length: 9 }, (_, k) => '<i style="--c:' + colors[k % colors.length] + ";left:" + (8 + (k % 3) * 28) + "%;top:" + (22 + Math.floor(k / 3) * 22) + '%"></i>').join("");
     const el = document.createElement("div");
-    el.className = "slot-ov";
-    el.innerHTML = '<div class="slot-box"><h2>🎰 새 판 선물! 볼 뽑기</h2><div class="reels">' + [0, 1, 2].map(() => '<div class="reel spin"><img src="' + img("poke") + '" alt=""></div>').join("") +
-      '</div><button class="btn big gold" id="slot-stop">🎰 멈춰!</button></div>';
+    el.className = "gacha-ov";
+    el.innerHTML = '<div class="gacha"><h2>😼 로켓단의 캡슐 뽑기!</h2>' +
+      '<div class="machine shake"><div class="dome">' + balls + '</div><div class="body"><span class="crank"></span><span class="hole"></span></div></div>' +
+      '<p id="gacha-say">어떤 포켓몬이 나올까옹~?</p><div class="gacha-out" id="gacha-out"></div><span class="gacha-skip">누르면 넘어가요</span></div>';
     document.body.appendChild(el);
-    const reels = $$(".reel", el), btn = $("#slot-stop", el);
-    let k = 0;
-    const iv = setInterval(() => { k++; reels.forEach((r, j) => { if (r.classList.contains("spin")) r.querySelector("img").src = img(R.BALLS[(k + j) % R.BALLS.length]); }); SFX.tap(); }, Math.max(40, 110 * SPEED));
-    let stopped = false;
-    const stop = async () => {
-      if (stopped) return; stopped = true;
-      btn.disabled = true;
-      for (const r of reels) {
-        await sleep(380);
-        r.classList.remove("spin"); r.classList.add("stop");
-        r.querySelector("img").src = img(ball);
-        SFX.land();
+    TTS.say("로켓단의 캡슐 뽑기! 어떤 포켓몬이 나올까옹?");
+    let done = false;
+    const close = () => { if (done) return; done = true; el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 300 * SPEED); };
+    el.addEventListener("click", close);
+    (async () => {
+      const machine = $(".machine", el), body = $(".body", el), out = $("#gacha-out", el);
+      for (const id of mons) {
+        if (done) return;
+        machine.classList.add("shake"); SFX.rattle();
+        await sleep(650);
+        machine.classList.remove("shake");
+        const b = document.createElement("img");
+        b.className = "gacha-ball"; b.src = "assets/items/poke-ball.png"; b.alt = "";
+        body.appendChild(b);
+        if (b.animate) b.animate([{ transform: "translate(-50%, 0) scale(.6)" }, { transform: "translate(-50%, 70px) scale(1.2)", offset: 0.6 }, { transform: "translate(-50%, 60px) scale(1.4)", opacity: 0 }], { duration: 600 * SPEED, fill: "forwards" });
+        SFX.pop();
+        await sleep(600);
+        b.remove();
+        out.insertAdjacentHTML("beforeend", '<div class="gacha-mon"><span class="pic">' + spr(id) + "</span><b>" + esc(nameOf(id)) + "</b></div>");
+        $("#gacha-say", el).textContent = josa(nameOf(id), "이/가") + " 나왔다옹! 😼";
+        SFX.catchOk(); Cry.play(id);
+        await sleep(500);
       }
-      clearInterval(iv);
-      SFX.catchOk(); if (ball === "luxury" || ball === "master") { SFX.win(); confetti(50); }
-      btn.outerHTML = '<p class="slot-win">🎉 ' + R.BALL_INFO[ball].name + "을(를) 받았어요! 가방에 쏙 🎒</p>";
-      TTS.say(R.BALL_INFO[ball].name + "를 받았어요!");
-      await sleep(1300);
-      el.classList.add("out");
-      setTimeout(() => { el.remove(); res(); }, 260 * SPEED);
-    };
-    btn.addEventListener("click", stop);
-    setTimeout(stop, 2600 * SPEED); // 안 눌러도 저절로 멈춘다
+      if (done) return;
+      $("#gacha-say", el).textContent = "이번 판은 이 포켓몬들로 간다옹~!";
+      TTS.say("이번 판은 이 포켓몬들로 간다옹!");
+      await sleep(1500);
+      close();
+    })();
   });
 }
 /* ---------- 🎲 윷 확률 막대 — 윷가락 4개가 떨어지는 확률 (평평한 면 60%) ---------- */
@@ -3451,8 +3466,8 @@ function openRules() {
       "<li>↗️ <b>위쪽 두 모서리</b>나 가운데 <b>방</b>에 딱 멈추면 지름길(대각선)로 가요.</li>" +
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
       "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
-      "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 지면 처음 모습으로 돌아가요.</li>" +
-      "<li>📖 <b>기술</b>은 희귀도에 따라 배워요 — 일반 <b>15칸</b> · 레어 <b>10칸</b> · 유니크 <b>5칸</b> · 👑 전설은 <b>처음부터</b>. 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
+      "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 져서 집으로 가도 <b>진화한 모습은 그대로</b>예요.</li>" +
+      "<li>📖 <b>기술</b>은 스타팅 포켓몬 <b>10칸</b>, 잡은 포켓몬은 희귀도에 따라 — 일반 <b>15칸</b> · 레어 <b>10칸</b> · 유니크 <b>5칸</b> · 👑 전설은 <b>처음부터</b>. 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
       "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 💰 로켓단 대결이 끝나면 <b>돈 문제</b>로 볼 하나 더!</li>" +
       "<li>🎯 잡을 확률(몬스터볼): 일반 60 · 레어 50 · 유니크 40 · 전설 30% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +

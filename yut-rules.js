@@ -340,9 +340,10 @@
     });
   }
   // 집으로 — 처음 모습(바꿔 들어온 말은 잡은 모습)으로, 센 칸은 0부터, 효과는 풀린다. 안 쓴 기술은 남는다
+  // 집으로 — 자리만 출발 칸으로. 진화한 모습·온 칸 수는 지킨다 (사용자 확정 2026-09-28: 잡혀도 진화한 모습 그대로), 효과는 풀린다
   function sendHome(s, i) {
     const p = s.pieces[i];
-    Object.assign(p, { state: "wait", route: "OUT", step: 0, atGoal: false, stage: p.base || 0, walk: 0, fx: {} });
+    Object.assign(p, { state: "wait", route: "OUT", step: 0, atGoal: false, fx: {} });
   }
 
   /* ---------- v3: 기술 27개 ----------

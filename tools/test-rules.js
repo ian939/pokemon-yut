@@ -138,7 +138,7 @@ t("13. 던지기 10만 번 — 결과 확률이 표와 ±0.5%p 안", () => {
   st = 1;
   for (let i = 0; i < 20000; i++) { const r = Y.throwSticks(st, false); st = r.rng; ok(r.result !== -1, "빽도 꺼짐인데 빽도"); }
 });
-t("14. 진화 [4,5,6]: 5칸마다 (5칸 리자드 · 10칸 리자몽, 지름길이어도 칸 수대로), 빽도로 퇴화 안 함, 잡히면 처음 모습·0칸", () => {
+t("14. 진화 [4,5,6]: 5칸마다 (5칸 리자드 · 10칸 리자몽, 지름길이어도 칸 수대로), 빽도로 퇴화 안 함, 잡혀도 진화한 모습·칸 수 그대로", () => {
   let s = game();
   eq(s.teams[0].paths[0], [4, 5, 6]); eq(s.teams[0].paths[1], [172, 25]); eq(Y.evoPath(1, D.evoFrom), [1]);
   s = move(choose(s, [4]), "new/4");       // 4칸
@@ -153,7 +153,7 @@ t("14. 진화 [4,5,6]: 5칸마다 (5칸 리자드 · 10칸 리자몽, 지름길�
   eq(Y.formOf(s, 0), 6); eq(s.pieces[0].walk, 10, "뒤로 간 칸은 빼지 않음");
   put(s, 2, 21);                           // 상대 말 21 → 개로 23 잡기
   s = move(choose(s, [2], 1), "n21/2");
-  eq(s.pieces[0].state, "wait"); eq(Y.formOf(s, 0), 4, "잡히면 처음 모습"); eq(s.pieces[0].walk, 0);
+  eq(s.pieces[0].state, "wait"); eq(Y.formOf(s, 0), 6, "잡혀도 리자몽 그대로"); eq(s.pieces[0].walk, 10, "온 칸 수도 그대로");
 });
 t("15. 한 팀이 전부 완주 → 판 끝, 이긴 팀 기록", () => {
   let s = put(put(game(), 0, 19), 1, 18);
@@ -352,16 +352,17 @@ t("35. 기술은 판 위의 말만 · 말마다 한 판에 한 번 · 한 차례
   eq(r.state.pieces[0].used, true);
   eq(Y.legalSkills(atThrow(r.state, 3, 0)).map(x => x.piece), [1], "다음 차례: 쓴 말은 못 쓰고 다른 말은 씀");
 });
-t("36. 잡히면 처음 모습 · 안 쓴 기술은 남고, 다시 마지막 모습이 돼야 쓴다", () => {
+t("36. 잡혀도 진화한 모습 그대로 · 안 쓴 기술도 남아서 판 위에 나가면 바로 쓴다", () => {
   let s = sk({ e0: [false, false], p0: [["nitro"], ["nitro"]] });
   put(s, 0, 9); s.pieces[0].walk = 9;
   s = move(choose(s, [1]), "n9/1");        // 10칸 → 리자몽 + 배움
   eq(Y.formOf(s, 0), 6); eq(s.pieces[0].skill, "nitro");
   put(s, 2, 8);
   s = move(choose(s, [2], 1), "n8/2");     // 상대가 잡음
-  eq([s.pieces[0].state, Y.formOf(s, 0), s.pieces[0].skill, s.pieces[0].used, s.pieces[0].walk], ["wait", 4, "nitro", false, 0]);
+  eq([s.pieces[0].state, Y.formOf(s, 0), s.pieces[0].skill, s.pieces[0].used, s.pieces[0].walk], ["wait", 6, "nitro", false, 10]);
+  eq(Y.legalSkills(atThrow(s, 9, 0)), [], "집에 있으면 못 씀");
   put(s, 0, 3);
-  eq(Y.legalSkills(atThrow(s, 9, 0)), [], "처음 모습이면 못 씀");
+  eq(Y.legalSkills(atThrow(s, 9, 0)).map(x => x.piece), [0], "판 위에 나가면 바로 씀");
 });
 t("37. 말 바꾸기 — 그 자리·업힌 채로, 간 칸 수를 이어받아 곧바로 진화, 기술은 새로 · 같은 가족은 막기", () => {
   const s = sk({ e0: [false, false] });
@@ -874,7 +875,7 @@ t("66. 💀 어려움 상자 — 볼 4개, 몬스터 25 · 슈퍼 30 · 하이�
   ok(used === 200 || v < 8, "어려움은 아끼지 않음 " + used);
 });
 
-t("67. 진화형을 골랐으면 그 모습부터 (bases) — 리자드로 출발, 5칸에 리자몽, 잡히면 리자드로", () => {
+t("67. 진화형을 골랐으면 그 모습부터 (bases) — 리자드로 출발, 5칸에 리자몽, 잡혀도 리자몽", () => {
   let s = Y.newGame({ pieces: 2, seed: 4, teams: [
     { name: "A", picks: [5, 1], paths: [[4, 5, 6], [1, 2, 3]], bases: [1, 0] },
     { name: "B", picks: [7, 152], paths: [[7, 8, 9], [152, 153, 154]] }] }, D.evoFrom);
@@ -884,7 +885,7 @@ t("67. 진화형을 골랐으면 그 모습부터 (bases) — 리자드로 출�
   eq(Y.formOf(s, 0), 6, "5칸이면 리자몽");
   put(s, 2, 3);
   s = move(choose(s, [2], 1), "n3/2");
-  eq([s.pieces[0].state, Y.formOf(s, 0)], ["wait", 5], "잡히면 리자드로");
+  eq([s.pieces[0].state, Y.formOf(s, 0)], ["wait", 6], "잡혀도 리자몽 그대로");
   ok(Y.validate(s));
 });
 
