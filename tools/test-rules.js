@@ -633,6 +633,7 @@ t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 �
   let rs = 4321;
   const rnd = () => { const r = Y.rand(rs); rs = r[1]; return r[0]; };
   const usedKeys = {}, reacted = {};
+  let gifted = 0;
   let longest = 0;
   for (let g = 0; g < 3000; g++) {
     const n = 2 + (g % 3);
@@ -650,7 +651,7 @@ t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 �
       let r;
       if (sks.length && rnd() < 0.5) {
         const x = sks[Math.floor(rnd() * sks.length)];
-        r = Y.applySkill(s, x.piece, x.targets[Math.floor(rnd() * x.targets.length)]);
+        r = Y.applySkill(s, x.piece, x.targets[Math.floor(rnd() * x.targets.length)], x.slot);
         usedKeys[x.key] = 1;
       } else if (s.phase === "throw") r = Y.applyThrow(s);
       else {
@@ -660,6 +661,10 @@ t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 �
       }
       r.events.forEach(e => { if (["block", "moon", "bond", "reflect"].includes(e.type)) reacted[e.type] = 1; });
       s = r.state;
+      while (s.gifts && s.gifts.length && s.phase !== "over") { // 🎁 받을 팀원을 아무렇게나 고른다
+        const c = Y.giftTargets(s, s.gifts[0].team);
+        s = Y.applyGift(s, c[Math.floor(rnd() * c.length)]).state; gifted++;
+      }
       if (g % 7 === 0 && rnd() < 0.03) {
         const cand = s.pieces.map((p, i) => i).filter(i => Y.swapOk(s, i, 133));
         if (cand.length) s = Y.applySwap(s, cand[Math.floor(rnd() * cand.length)], { id: 133, path: [133, 134], base: 0, pool: ["surf", "rain"], early: false }).state;
@@ -684,6 +689,7 @@ t("56. 기술을 아무렇게나 쓰는 무작위 3,000판 — 한 칸에 두 �
   }
   eq(allKeys.filter(k => Y.SKILLS[k].kind === "active" && !usedKeys[k]), [], "한 번도 안 쓰인 기술");
   eq(Object.keys(reacted).sort(), ["block", "bond", "moon", "reflect"], "저절로 기술이 다 나와야 함");
+  ok(gifted > 100, "받은 기술 넘기기가 판에서 일어남: " + gifted);
   console.log("     (가장 긴 판: 동작 " + longest + "번)");
 });
 
@@ -788,6 +794,67 @@ t("63. 희귀도로 기술까지 필요한 칸 (need) — 일반 15 · 레어 10
   const sw = Y.applySwap(clone(s), 0, { id: 133, path: [133, 134], base: 0, pool: ["surf"], need: 10 }).state;
   eq(Y.skillNeed(sw, 0), 10, "바꿔 들어온 포켓몬은 그 포켓몬의 need");
   ok(Y.validate(s));
+});
+
+t("64. 🎁 못 쓴 기술을 골인하면 고른 팀원에게 — 기술 두 개, 제 기술을 다 썼으면 받은 기술만", () => {
+  const g3 = () => sk({ n: 3, p0: [["nitro"], ["surf"], ["ddance"]] });
+  let s = g3(); put(s, 0, 18); put(s, 1, 3); put(s, 2, 4);
+  let r = Y.applyMove(choose(s, [3]), "n18/3");          // 니트로차지를 안 쓰고 골인
+  ok(evTypes(r).includes("giftask"), "줄 세우기 이벤트");
+  eq(r.state.gifts, [{ team: 0, from: 0, key: "nitro" }]);
+  eq(Y.giftTargets(r.state, 0), [1, 2], "골인하지 않은 팀원");
+  const g = Y.applyGift(r.state, 2);
+  eq([g.state.pieces[2].gift, g.state.gifts], [{ key: "nitro", used: false }, []]);
+  ok(g.events.some(e => e.type === "gift" && e.to === 2));
+  // 기술 두 개: 용의춤(제 것) + 니트로차지(받은 것) 둘 다 쓸 수 있다
+  let s2 = atThrow(g.state, 5, 0);
+  eq(Y.legalSkills(s2).filter(x => x.piece === 2).map(x => x.slot + ":" + x.key), ["own:ddance", "gift:nitro"]);
+  const a = Y.applySkill(s2, 2, null, "gift").state;
+  eq([a.pieces[2].gift.used, a.pieces[2].used, Y.posOf(a.pieces[2])], [true, false, 6], "받은 기술만 씀");
+  eq(Y.legalSkills(atThrow(a, 7, 0)).filter(x => x.piece === 2).map(x => x.slot), ["own"], "다음 차례엔 제 기술");
+  // 제 기술을 이미 썼으면 받은 기술만
+  s = g3(); put(s, 0, 18); put(s, 1, 3); s.pieces[1].used = true;
+  r = Y.applyMove(choose(s, [3]), "n18/3");
+  const b = Y.applyGift(r.state, 1).state;
+  eq(Y.legalSkills(atThrow(b, 5, 0)).filter(x => x.piece === 1).map(x => x.slot + ":" + x.key), ["gift:nitro"]);
+  // 받은 기술은 칸 수와 상관없이 (아직 제 기술을 못 배운 말도)
+  s = sk({ n: 2, p0: [["nitro"], ["surf"]], e0: [true, false] }); put(s, 0, 18); put(s, 1, 3);
+  r = Y.applyMove(choose(s, [3]), "n18/3");
+  const c = Y.applyGift(r.state, 1).state;
+  eq([c.pieces[1].skill, Y.legalSkills(atThrow(c, 5, 0)).map(x => x.slot + ":" + x.key)], [null, ["gift:nitro"]]);
+});
+t("65. 🎁 받은 기술 — 저절로 기술도 나감 · 이미 받은 기술을 든 팀원은 못 받음 · 이기면 안 넘김 · 로켓단은 바로 · 저장 검사", () => {
+  // 받은 철벽이 저절로
+  let s = sk({ n: 2, p1: [["iron"], ["nitro"]], e1: [false, true] });
+  put(s, 3, 7); s.pieces[3].gift = { key: "iron", used: false }; s.pieces[3].used = true; put(s, 0, 4);
+  let r = Y.applyMove(choose(s, [3]), "n4/3");
+  eq([r.state.pieces[3].state, r.state.pieces[3].gift.used], ["board", true], "받은 철벽이 튕겨 냄");
+  // 받은 기술을 이미 든 팀원은 후보에서 빠지고, 받을 팀원이 없으면 버림
+  s = sk({ n: 3, p0: [["nitro"], ["surf"], ["ddance"]] }); put(s, 0, 18); put(s, 1, 3); s.pieces[2].state = "done";
+  s.pieces[1].gift = { key: "rain", used: false };
+  r = Y.applyMove(choose(s, [3]), "n18/3");
+  ok(!evTypes(r).includes("giftask") && !(r.state.gifts || []).length, "받을 팀원이 없음");
+  // 마지막 말이 골인해서 이기면 넘기지 않음
+  s = sk({ n: 2 }); put(s, 0, 18); s.pieces[1].state = "done";
+  r = Y.applyMove(choose(s, [3]), "n18/3");
+  eq([r.state.phase, (r.state.gifts || []).length], ["over", 0]);
+  // 두 기술(제 것 + 받은 것)을 못 쓰고 골인 → 두 개가 줄에
+  s = sk({ n: 3, p0: [["nitro"], ["surf"], ["ddance"]] }); put(s, 0, 18); s.pieces[0].gift = { key: "rain", used: false }; put(s, 1, 3); put(s, 2, 5);
+  r = Y.applyMove(choose(s, [3]), "n18/3");
+  eq(r.state.gifts.map(x => x.key), ["nitro", "rain"]);
+  let g = Y.applyGift(r.state, 1);
+  g = Y.applyGift(g.state, 2);
+  eq([g.state.pieces[1].gift.key, g.state.pieces[2].gift.key], ["nitro", "rain"]);
+  let threw = false; try { Y.applyGift(g.state, 1); } catch (e) { threw = true; } ok(threw, "줄이 비었으면 오류");
+  // 로켓단(cpu)은 알아서 바로
+  s = Y.newGame({ pieces: 2, seed: 3, skills: true, teams: [
+    { name: "A", picks: [6, 25], pools: [["nitro"], ["nitro"]] },
+    { name: "R", cpu: true, picks: [24, 109], pools: [["toxic"], ["quake"]], now: [true, true] }] }, D.evoFrom);
+  put(s, 2, 18); put(s, 3, 5);
+  r = Y.applyMove(choose(s, [3], 1), "n18/3");
+  ok(evTypes(r).includes("gift") && !(r.state.gifts || []).length && r.state.pieces[3].gift.key === "toxic", "로켓단은 줄 없이 바로");
+  ok(Y.validate(r.state) && Y.validate(g.state));
+  const bad = clone(g.state); bad.pieces[1].gift = { key: "없는기술", used: false }; ok(!Y.validate(bad), "이상한 받은 기술");
 });
 
 // ---------- 무작위 대국 (불변 조건 확인) ----------

@@ -112,6 +112,10 @@ def play_to_end(page, shots_prefix, max_steps=900):
             page.click(".quiz .qz-choice")          # 🎓 문제: 아무거나 (맞든 틀리든 판이 이어져야 함)
             page.wait_for_timeout(80)
             continue
+        if page.query_selector(".modal .gift-pick"):
+            page.click(".modal .gift-pick")         # 🎁 못 쓴 기술을 받을 팀원
+            page.wait_for_timeout(80)
+            continue
         if page.query_selector(".quiz .qz-next:not([hidden])"):
             page.click(".quiz .qz-next")
             page.wait_for_timeout(80)
@@ -804,6 +808,38 @@ def scenario_v4(browser, base, errors):
     page.click(".dest[data-move='n12/3']", force=True)
     wait_idle(page)
     check(ev(page, "s.pieces[0].skill") == "wish", "15칸이 되면 기술을 배움")
+    ctx.close()
+
+    # ⑪ 🎁 기술을 못 쓰고 골인 → 받을 팀원 고르기 → 기술 두 개 → 받은 기술 쓰기
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&fast=1&early=1&pools=nitro,ddance,surf|toxic,quake,rain", study=False)
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s, at = (i, n) => Object.assign(s.pieces[i], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', n));
+      at(0, 18); at(1, 3); s.turn = 0; s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
+    wait_idle(page)
+    page.click(".unit.can[data-node='18']", force=True)
+    page.click(".dest.goal", force=True)
+    page.wait_for_selector(".modal .gift-pick", timeout=20000)
+    page.wait_for_timeout(400)
+    txt = page.inner_text(".modal")
+    check("니트로차지" in txt and "누구에게" in txt and len(page.query_selector_all(".modal .gift-pick")) == 1, "기술을 못 쓰고 골인하면 받을 팀원 고르기 (골인 안 한 팀원만)")
+    measure(page, "🎁 받을 팀원 고르기")
+    page.screenshot(path=str(OUT / "99d-gift-choose.png"))
+    page.click(".modal .gift-pick[data-to='1']")
+    wait_idle(page)
+    check(ev(page, "JSON.stringify(s.pieces[1].gift)") == '{"key":"nitro","used":false}' and page.query_selector(".pchip[data-piece='1'] .sk.gift") is not None, "받은 기술이 팀원에게 (칩에 🎁)")
+    page.evaluate("() => { const s = window.__yut.G.s; s.turn = 0; s.turnNo += 2; s.phase = 'throw'; s.throwsLeft = 1; s.pending = []; window.__yut.Act['skill-cancel'](); }")
+    wait_idle(page)
+    page.click("#btn-skill")
+    page.wait_for_selector(".skill-item[data-act=skill-pick]", timeout=5000)
+    slots = page.eval_on_selector_all(".skill-item[data-act=skill-pick]", "e => e.map(x => x.dataset.piece + ':' + x.dataset.slot)")
+    check(slots == ["1:own", "1:gift"], f"기술 두 개 — 제 기술 + 🎁 받은 기술 ({slots})")
+    page.screenshot(path=str(OUT / "99e-two-skills.png"))
+    page.click(".skill-item[data-slot='gift']")
+    wait_idle(page)
+    check(ev(page, "[s.pieces[1].gift.used, s.pieces[1].used, window.__yut.Yut.posOf(s.pieces[1])]") == [True, False, 5], "받은 니트로차지를 쓰면 받은 것만 씀 (3 → 5)")
+    page.click(".pchip[data-piece='1']")
+    page.wait_for_selector(".modal .pi-skill", timeout=5000)
+    check("받은 기술" in page.inner_text(".modal"), "기술 보기 창에 받은 기술")
     ctx.close()
 
     # ⑩ 희귀도로 기술까지 필요한 칸 (일반 15 · 레어 10 · 유니크 5 · 전설 0) + 👑 전설 연출

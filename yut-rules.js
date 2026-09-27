@@ -390,20 +390,38 @@
   const FLY_STOPS = [5, 10, 15, 22]; // 공중날기: 모·뒷모·찌모·방 (참먹이면 골인)
 
   // 저절로 기술이 나갈 수 있는가 (마비·잠이어도 나간다, 봉인이면 쉰다)
+  /* 🎁 받은 기술 (v5, 사용자 확정 2026-09-27): 기술을 못 쓰고 골인한 팀원의 기술을 고른 팀원이 받는다.
+   * 말 하나가 기술을 두 개까지 — 제 기술(skill) + 받은 기술(gift). 받은 기술은 칸 수와 상관없이 판 위에서 바로 쓸 수 있다 */
+  const giftReady = p => !!(p && p.gift && !p.gift.used && SKILLS[p.gift.key]);
+  const ownReady = (s, i) => { const p = s.pieces[i]; return !!(p.skill && !p.used && isFinal(s, i)); };
   function canReact(s, i, key) {
     const p = s.pieces[i];
-    return s.settings.skills !== false && p.state === "board" && p.skill === key && !p.used && isFinal(s, i) && !isSealed(s, p.team);
+    if (s.settings.skills === false || p.state !== "board" || isSealed(s, p.team)) return false;
+    return (p.skill === key && ownReady(s, i)) || (giftReady(p) && p.gift.key === key);
+  }
+  // 저절로 기술을 쓴 것으로 — 제 기술이 그 기술이면 제 것, 아니면 받은 것
+  function spend(s, i, key) {
+    const p = s.pieces[i];
+    if (p.skill === key && ownReady(s, i)) p.used = true;
+    else if (giftReady(p) && p.gift.key === key) p.gift.used = true;
+    else p.used = true;
   }
   function findReact(s, team, key) {
     for (let i = 0; i < s.pieces.length; i++) if (s.pieces[i].team === team && canReact(s, i, key)) return i;
     return null;
   }
   // 누르는 기술을 쓸 수 있는 말인가 (대상은 targetsFor 로 따로 본다)
-  function canUse(s, i) {
+  // slot: "own"(제 기술) | "gift"(받은 기술) → 쓸 수 있으면 그 기술 key, 아니면 null
+  function slotKey(s, i, slot) {
+    const p = s.pieces[i];
+    return slot === "gift" ? (giftReady(p) ? p.gift.key : null) : (ownReady(s, i) ? p.skill : null);
+  }
+  function canUse(s, i, slot) {
     const p = s.pieces[i];
     if (s.settings.skills === false || (s.phase !== "throw" && s.phase !== "choose")) return false;
-    if (p.team !== s.turn || p.state !== "board" || !p.skill || p.used || !isFinal(s, i)) return false;
-    if (!SKILLS[p.skill] || SKILLS[p.skill].kind !== "active") return false;
+    if (p.team !== s.turn || p.state !== "board") return false;
+    const key = slotKey(s, i, slot || "own");
+    if (!key || SKILLS[key].kind !== "active") return false;
     return s.skillTurn !== s.turnNo && !isSealed(s, p.team) && !isBlocked(s, p);
   }
 
@@ -506,11 +524,11 @@
   }
   function legalSkills(state) {
     const out = [];
-    state.pieces.forEach((p, i) => {
-      if (!canUse(state, i)) return;
-      const tg = targetsFor(state, i, p.skill);
-      if (tg.length) out.push({ piece: i, key: p.skill, target: SKILLS[p.skill].target, targets: tg });
-    });
+    state.pieces.forEach((p, i) => ["own", "gift"].forEach(slot => {
+      if (!canUse(state, i, slot)) return;
+      const key = slotKey(state, i, slot), tg = targetsFor(state, i, key);
+      if (tg.length) out.push({ piece: i, key, slot, target: SKILLS[key].target, targets: tg });
+    }));
     return out;
   }
 
@@ -532,12 +550,12 @@
     let bondBy = null;
     victims.forEach(j => {
       if (canReact(s, j, "moon")) {
-        s.pieces[j].used = true;
+        spend(s, j, "moon");
         const pos = moonSpot(s, s.pieces[j]);
         if (pos) saved.push({ piece: j, pos });
       } else if (bondBy == null && canReact(s, j, "bond")) {
         bondBy = j;
-        s.pieces[j].used = true;
+        spend(s, j, "bond");
       }
     });
     victims.forEach(j => {
@@ -563,12 +581,13 @@
     let captured = false;
     if (m.finish) {
       m.pieces.forEach(i => Object.assign(s.pieces[i], { state: "done", atGoal: false, fx: {} }));
+      m.pieces.forEach(i => passSkills(s, ev, i));
     } else {
       // 🛡️ 철벽 — 잡으러 온 말이 온 자리로 튕겨 나간다 (한 번 더도 없음)
       if (m.capture.length) {
         const ir = m.capture.find(j => canReact(s, j, "iron"));
         if (ir != null) {
-          s.pieces[ir].used = true;
+          spend(s, ir, "iron");
           ev.push({ type: "block", piece: ir, node: m.to.node, pieces: m.pieces.slice(), team, back: m.unit === "new" ? null : m.from.node });
           return { blocked: true };
         }
@@ -675,7 +694,7 @@
       const x = foeAt(tg);
       const ir = x.pieces.find(j => canReact(s, j, "iron"));
       if (ir != null) {
-        s.pieces[ir].used = true;
+        spend(s, ir, "iron");
         ev.push({ type: "block", piece: ir, node: tg, pieces: u.pieces.slice(), team, remote: true, back: u.node });
         return;
       }
@@ -685,7 +704,7 @@
       const vt = key === "snatch" ? s.pieces[tg].team : tg != null && foeAt(tg) ? s.pieces[foeAt(tg).pieces[0]].team : others(s, team)[0];
       const c = findReact(s, vt, "counter");
       if (c != null) {
-        s.pieces[c].used = true;
+        spend(s, c, "counter");
         ev.push({ type: "reflect", piece: c, key, team: vt, by: i });
         reflect(s, ev, i, key, vt);
         return;
@@ -742,8 +761,8 @@
       case "snatch": {
         const q = s.pieces[tg], k2 = q.skill;
         q.used = true;
-        p.skill = k2;
-        p.used = false;
+        if (s.__slot === "gift") p.gift = { key: k2, used: false };
+        else { p.skill = k2; p.used = false; }
         ev.push({ type: "steal", piece: i, from: tg, key: k2, team });
         break;
       }
@@ -802,24 +821,26 @@
     return { state: s, events: ev };
   }
   // 기술 쓰기 — 대상은 targetsFor 가 준 값 중 하나 (없는 기술은 null)
-  function applySkill(state, i, target) {
-    const entry = legalSkills(state).find(x => x.piece === i);
+  function applySkill(state, i, target, slot) {
+    const entry = legalSkills(state).find(x => x.piece === i && (!slot || x.slot === slot));
     if (!entry) throw new Error("쓸 수 없는 기술: " + i);
     const tg = target === undefined ? null : target;
     if (!entry.targets.some(x => x === tg)) throw new Error("대상이 맞지 않음: " + JSON.stringify(tg));
     const s = clone(state);
     const ev = [];
-    const p = s.pieces[i];
-    p.used = true;
+    const p = s.pieces[i], key0 = entry.key;
+    if (entry.slot === "gift") p.gift.used = true; else p.used = true;
     s.skillTurn = s.turnNo; // 한 차례에 기술 하나
-    ev.push({ type: "skill", piece: i, key: p.skill, team: p.team, target: tg });
-    if (p.skill === "metronome") {
+    s.__slot = entry.slot;   // 가로챈다: 빼앗은 기술을 같은 칸에 (아래에서 지움)
+    ev.push({ type: "skill", piece: i, key: key0, team: p.team, target: tg, slot: entry.slot });
+    if (key0 === "metronome") {
       const pool = metroPool(s, i);
       const key = pool[Math.floor(srand(s) * pool.length)];
       const t2 = bestTarget(s, i, key);
       ev.push({ type: "metronome", piece: i, key, target: t2, team: p.team });
       effect(s, ev, i, key, t2);
-    } else effect(s, ev, i, p.skill, tg);
+    } else effect(s, ev, i, key0, tg);
+    delete s.__slot;
     return closeAction(s, ev);
   }
 
@@ -964,6 +985,49 @@
   }
 
   // pick: 새 말을 낼 때 대기 중인 말 중 어느 포켓몬을 낼지 (없으면 첫 번째)
+  /* 🎁 골인한 말이 못 쓴 기술(제 기술·받은 기술)을 팀원에게 — 사람 팀은 고르게 줄에 세우고(gifts), 로켓단은 바로 준다 */
+  function giftTargets(s, team) {
+    return s.pieces.map((p, i) => i).filter(i => s.pieces[i].team === team && s.pieces[i].state !== "done" && !giftReady(s.pieces[i]));
+  }
+  function autoGiftTarget(s, team) {
+    const c = giftTargets(s, team);
+    const noSkill = i => !ownReady(s, i) && !(s.pieces[i].skill && !s.pieces[i].used);
+    return c.find(i => s.pieces[i].state === "board" && noSkill(i)) ?? c.find(i => s.pieces[i].state === "board") ?? c.find(noSkill) ?? c[0] ?? null;
+  }
+  function passSkills(s, ev, i) {
+    const p = s.pieces[i], team = p.team;
+    if (s.settings.skills === false) return;
+    const keys = [];
+    if (p.skill && !p.used) { keys.push(p.skill); p.used = true; }
+    if (giftReady(p)) { keys.push(p.gift.key); p.gift.used = true; }
+    keys.forEach(key => {
+      if (!giftTargets(s, team).length) return; // 남은 팀원이 없거나(이김) 모두 받은 기술을 들고 있음
+      if (s.teams[team].cpu) {
+        const to = autoGiftTarget(s, team);
+        s.pieces[to].gift = { key, used: false };
+        ev.push({ type: "gift", team, from: i, to, key });
+      } else {
+        (s.gifts = s.gifts || []).push({ team, from: i, key });
+        ev.push({ type: "giftask", team, from: i, key });
+      }
+    });
+  }
+  // 줄의 맨 앞 기술을 팀원 to 에게 (to 가 없으면 알아서 고른다)
+  function applyGift(state, to) {
+    const s = clone(state), ev = [];
+    const q = (s.gifts || [])[0];
+    if (!q) throw new Error("줄 기술이 없음");
+    const cand = giftTargets(s, q.team);
+    if (to == null) to = autoGiftTarget(s, q.team);
+    if (cand.indexOf(to) < 0) throw new Error("받을 수 없는 말: " + to);
+    s.pieces[to].gift = { key: q.key, used: false };
+    s.gifts.shift();
+    ev.push({ type: "gift", team: q.team, from: q.from, to, key: q.key });
+    // 다음 줄 기술을 받을 팀원이 없으면 버린다
+    while (s.gifts.length && !giftTargets(s, s.gifts[0].team).length) ev.push(Object.assign({ type: "giftlost" }, s.gifts.shift()));
+    return { state: s, events: ev };
+  }
+
   function applyMove(state, moveId, pick) {
     const m = legalMoves(state).find(x => x.id === moveId);
     if (!m) throw new Error("둘 수 없는 수: " + moveId);
@@ -1105,7 +1169,7 @@
     list.forEach(x => {
       const cat = SKILLS[x.key].cat;
       if (level === "easy" && (cat === "attack" || cat === "trap" || cat === "random")) return;
-      x.targets.forEach(tg => cand.push({ piece: x.piece, key: x.key, target: tg, v: scoreSkill(state, x.piece, x.key, tg) }));
+      x.targets.forEach(tg => cand.push({ piece: x.piece, key: x.key, slot: x.slot, target: tg, v: scoreSkill(state, x.piece, x.key, tg) }));
     });
     if (!cand.length) return null;
     cand.sort((a, b) => b.v - a.v);
@@ -1131,7 +1195,9 @@
         ["wait", "board", "done"].indexOf(p.state) >= 0 && ROUTES[p.route] &&
         p.step >= 0 && p.step < ROUTES[p.route].length && p.team >= 0 && p.team < s.teams.length &&
         p.walk >= 0 && p.base >= 0 && p.base < s.teams[p.team].paths[p.slot].length && p.stage >= 0 &&
-        (p.skill == null || !!SKILLS[p.skill]) && typeof p.used === "boolean" && p.fx && typeof p.fx === "object") &&
+        (p.skill == null || !!SKILLS[p.skill]) && typeof p.used === "boolean" && p.fx && typeof p.fx === "object" &&
+        (p.gift == null || (!!SKILLS[p.gift.key] && typeof p.gift.used === "boolean"))) &&
+        (s.gifts == null || (Array.isArray(s.gifts) && s.gifts.every(g => g && s.teams[g.team] && SKILLS[g.key]))) &&
         s.pending.every(r => RESULTS[r]);
     } catch (e) { return false; }
   }
@@ -1319,6 +1385,7 @@
     SPOT_NODES, pickSpotNodes, Rewards,
     // v3: 기술 · 말 바꾸기
     SKILLS, TYPE_SKILLS, REFLECTABLE, legalSkills, targetsFor, applySkill, scoreSkill, cpuSkill,
+    giftReady, giftTargets, applyGift, autoGiftTarget,
     applySwap, swapOk, cpuSwapTarget,
     isBlocked, isVeiled, isSealed, isRaining, unitOfPiece, piecesAt, trapAt, flyPlan, planForward, backPlan, backSteps,
   };
