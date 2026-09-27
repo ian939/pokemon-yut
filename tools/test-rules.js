@@ -758,6 +758,20 @@ t("61. 시계를 맞히면 풀숲 희귀도 30·30·20·20 (±1%p) · 풀숲 포
   ok(w && w.id == null && Y.validate(r.state), "id 없이 wild 이벤트 → 화면이 문제를 낸 뒤 뽑는다");
 });
 
+t("62. 잡을 확률 — 몬스터볼 기준 일반 60 · 레어 50 · 유니크 40 · 전설 30, 볼 단계 +5, 놓칠 때마다 +10, 마스터볼 100", () => {
+  const R = Y.Rewards;
+  eq(["c", "r", "u", "l"].map(k => Math.round(R.catchRate("poke", k) * 100)), [60, 50, 40, 30]);
+  eq(R.BALLS.map(b => Math.round(R.catchRate(b, "l") * 100)), [30, 35, 40, 45, 100], "전설: 볼 단계마다 +5");
+  eq([0, 1, 2].map(f => Math.round(R.catchRate("poke", "u", f) * 100)), [40, 50, 60], "놓칠 때마다 +10");
+  eq(Math.round(R.catchRate("luxury", "c", 5) * 100), 100, "100%를 넘지 않음");
+  const rnd = Y.rng(5), N = 60000;
+  [["poke", "l", 0, 0.3], ["great", "r", 1, 0.65], ["ultra", "u", 2, 0.7]].forEach(([b, k, f, want]) => {
+    let okN = 0;
+    for (let i = 0; i < N; i++) if (R.throwBall(b, rnd, k, f).ok) okN++;
+    ok(Math.abs(okN / N - want) < 0.01, b + " " + k + " 놓친 " + f + ": " + (okN / N * 100).toFixed(1) + "%");
+  });
+});
+
 // ---------- 무작위 대국 (불변 조건 확인) ----------
 t("22. 무작위 3,000판 끝까지 — 멈춤·규칙 위반 없음", () => {
   let rs = 99;

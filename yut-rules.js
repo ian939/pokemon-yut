@@ -1180,7 +1180,14 @@
   const WILD_ODDS_BOOST = { c: 30, r: 30, u: 20, l: 20 }; // 🕐 시계 문제를 맞히면 그 조우만 (사용자 확정 2026-09-26: 유니크·전설 +10, 일반 −20)
   const Rewards = {
     BALLS, BALL_INFO, WILD_ODDS, WILD_ODDS_BOOST, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
-    catchRate(ball) { return ball === "master" ? 1 : 0.6 + 0.05 * Math.max(0, BALLS.indexOf(ball)); },
+    // 잡을 확률 (사용자 확정 2026-09-27): 몬스터볼 기준 일반 60 · 레어 50 · 유니크 40 · 전설 30%,
+    // 볼이 한 단계 좋을 때마다 +5%, 이번 조우에서 놓칠 때마다 +10% (최대 100%). 마스터볼은 늘 100%
+    CATCH_BASE: { c: 0.6, r: 0.5, u: 0.4, l: 0.3 }, FAIL_BONUS: 0.1,
+    catchRate(ball, rarity, fails) {
+      if (ball === "master") return 1;
+      const base = Rewards.CATCH_BASE[rarity] != null ? Rewards.CATCH_BASE[rarity] : Rewards.CATCH_BASE.c;
+      return Math.min(1, Math.round((base + 0.05 * Math.max(0, BALLS.indexOf(ball)) + Rewards.FAIL_BONUS * (fails || 0)) * 100) / 100);
+    },
     // 상자 하나 = 볼 n개, 한 개씩 따로 뽑는다
     rollBox(n, rnd) {
       const total = BALLS.reduce((t, b) => t + BALL_INFO[b].odds, 0);
@@ -1193,8 +1200,8 @@
       return out;
     },
     // 던지기: 결과를 먼저 뽑고 흔드는 횟수를 맞춘다 (성공 3번, 실패 1~3번)
-    throwBall(ball, rnd) {
-      const ok = rnd() < Rewards.catchRate(ball);
+    throwBall(ball, rnd, rarity, fails) {
+      const ok = rnd() < Rewards.catchRate(ball, rarity, fails);
       return { ok, shakes: ok ? 3 : 1 + Math.floor(rnd() * 3) };
     },
     // 야생 포켓몬: 희귀도 50·30·10·10 → 절반은 아직 없는 포켓몬 먼저. pools = { c:[ids], r:[...], u:[...], l:[...] }
