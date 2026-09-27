@@ -300,9 +300,19 @@
     const p = s.pieces[i], t = s.teams[p.team];
     return lastStage(s, i) < 2 || !!(t.early && t.early[p.slot]);
   };
+  // v5 (사용자 확정 2026-09-27): 희귀도로 기술까지 필요한 칸 — 일반 15 · 레어 10 · 유니크 5 · 전설 처음부터.
+  // 화면 쪽이 말마다 need 를 정해 넘긴다 (마지막 모습이 아니어도 된다). need 가 없으면(옛 판·시험) 위의 v4 규칙
+  function skillNeed(s, i) {
+    const p = s.pieces[i], t = s.teams[p.team];
+    if (t.now && t.now[p.slot]) return 0;
+    if (Array.isArray(t.need) && t.need[p.slot] != null) return t.need[p.slot];
+    const evo = (lastStage(s, i) - (p.base || 0)) * EVO_STEP;
+    return needsWalk(s, i) ? Math.max(evo, SKILL_WALK) : evo;
+  }
   function isFinal(s, i) {
     const p = s.pieces[i], t = s.teams[p.team];
     if (t.now && t.now[p.slot]) return true;
+    if (Array.isArray(t.need) && t.need[p.slot] != null) return (p.walk || 0) >= t.need[p.slot];
     if (p.stage < lastStage(s, i)) return false;
     return !needsWalk(s, i) || (p.walk || 0) >= SKILL_WALK;
   }
@@ -833,6 +843,7 @@
     (t.pools = t.pools || [])[p.slot] = (o.pool || []).slice();
     (t.early = t.early || [])[p.slot] = !!o.early;
     if (t.now) t.now[p.slot] = false;
+    if (o.need != null) (t.need = t.need || s.teams[p.team].paths.map(() => 0))[p.slot] = o.need;
     const base = o.base != null ? o.base : o.path.indexOf(o.id);
     Object.assign(p, { base, stage: base, skill: null, used: false, fx: {} });
     if (p.state !== "board") p.walk = 0;
@@ -870,6 +881,7 @@
         pools: Array.from({ length: n }, (_, k) => (Array.isArray(t.pools) && Array.isArray(t.pools[k]) ? t.pools[k].filter(x => SKILLS[x]) : [])),
         early: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.early) && t.early[k])), // 전설: 15칸 가야 기술 (v4)
         now: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.now) && t.now[k])),       // 시험용: 처음부터 기술
+        need: Array.isArray(t.need) ? Array.from({ length: n }, (_, k) => Number(t.need[k]) || 0) : undefined, // v5: 기술까지 필요한 칸
         fx: {},
       })),
       pieces: [],
@@ -1302,7 +1314,7 @@
     NODES, NODE_KIND, NODE_NAME, LINES, ROUTES, RESULTS, BACKDO, FLAT_P,
     rand, rng, throwSticks, sticksFor, resultProbs, settle, stepMove, posOf, unitsOf, waitingOf,
     legalMoves, applyThrow, applyMove, newGame, teamDone,
-    evoPath, progressOf, stageFor, formOf, EVO_STEP, isFinal, SKILL_WALK, needsWalk, Study,
+    evoPath, progressOf, stageFor, formOf, EVO_STEP, isFinal, SKILL_WALK, needsWalk, skillNeed, Study,
     remainingOf, threat, cpuScore, cpuChoose, validate, upgrade, clone,
     SPOT_NODES, pickSpotNodes, Rewards,
     // v3: 기술 · 말 바꾸기

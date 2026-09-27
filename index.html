@@ -462,8 +462,9 @@ body.game-land #toast.show { transform: none; }
 .bp-tag.r-l { background: var(--gold); color: var(--ink); }
 .bp-tag.r-c { background: #7d8a9c; }
 /* 야생 포켓몬 바로 옆의 희귀도 표시 (이름판과 별개로 크게) */
-.bt-rar { position: absolute; transform: translate(-100%, -50%); z-index: 3; pointer-events: none; white-space: nowrap; font-family: var(--pixel); font-weight: 700; font-size: var(--t1); line-height: 1;
+.bt-rar { position: absolute; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; white-space: nowrap; font-family: var(--pixel); font-weight: 700; font-size: var(--t1); line-height: 1;
   padding: 6px 12px 5px; border: 3px solid var(--ink); border-radius: 12px; color: #fff; background: #7d8a9c; box-shadow: 0 4px 0 rgba(38,49,71,.35); animation: popIn calc(.4s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
+.bt-rar .bp-tag { font-family: var(--font); font-size: 12px; vertical-align: middle; }
 .bt-rar.r-r { background: #4a8fe0; } .bt-rar.r-u { background: #9a6be0; }
 .bt-rar.r-l { background: var(--gold); color: var(--ink); box-shadow: 0 4px 0 rgba(38,49,71,.35), 0 0 18px 6px rgba(245,184,46,.8); }
 .bt-ballbtn em.up { color: var(--green); font-weight: 900; }
@@ -636,6 +637,29 @@ body.game-land #toast.show { transform: none; }
 }
 @media (max-width: 520px) { .qz-choice { font-size: 18px; font-family: var(--font); font-weight: 900; } .qz-q { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .clock .pulse line, .qz-choice.wrong { animation: none; } }
+/* 폰: 배틀 무대가 작아서 이름판에는 이름만 (희귀도는 포켓몬 위 큰 표시, 팀은 판 색으로) — 이름이 "피…"로 잘리지 않게 */
+@media (max-width: 520px) {
+  .bt-plate .bp-tag, .bt-plate em { display: none; }
+  .bt-plate { padding: 5px 8px 6px; }
+  .bt-rar { font-size: 13px; padding: 4px 8px 3px; border-width: 2px; left: auto !important; right: 3%; transform: translateY(-50%); } /* 무대 오른쪽 끝에 붙여 잘리지 않게 */
+}
+/* ===== 👑 전설 연출 ===== */
+.unit.legend .base { background: linear-gradient(90deg, #ffd23f, #fff6c2, #ffd23f); animation: legendGlow 1.6s ease-in-out infinite; }
+.unit.legend::after { content: "👑"; position: absolute; top: -18%; left: 50%; transform: translateX(-50%); font-size: max(12px, calc(var(--bs) * .026)); z-index: 4; filter: drop-shadow(0 1px 0 #fff); pointer-events: none; }
+@keyframes legendGlow { 0%, 100% { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink), 0 0 8px 4px rgba(245,184,46,.5); } 50% { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink), 0 0 20px 10px rgba(245,184,46,.95); } }
+.cutin.legend .ci-band { background: linear-gradient(90deg, #ff7a7a, #ffd23f, #7ee081, #6cc3ff, #b98cff, #ff7a7a); background-size: 300% 100%; animation: ciIn calc(.35s * var(--spd)) cubic-bezier(.2,1.2,.4,1) both, rainbow 2.4s linear infinite; border-color: #8a5a00; box-shadow: 0 0 0 4px #fff inset, 0 0 40px 12px rgba(255,210,63,.9); }
+.cutin.legend .ci-mon { width: clamp(120px, 26vmin, 230px); filter: drop-shadow(0 0 14px #fff6c2) drop-shadow(0 6px 0 rgba(38,49,71,.35)); }
+.ci-crown { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-family: var(--pixel); font-weight: 700; font-size: var(--t1); color: var(--ink); background: var(--gold); border: 3px solid var(--ink); border-radius: 12px; padding: 4px 14px 3px; white-space: nowrap; box-shadow: 0 4px 0 rgba(38,49,71,.35); animation: popIn .4s cubic-bezier(.2,1.6,.4,1) both; }
+.ci-flash { position: absolute; inset: 0; background: radial-gradient(circle, #fff, rgba(255,246,194,.6) 40%, rgba(255,210,63,0) 70%); animation: flash calc(.9s * var(--spd)) ease-out both; pointer-events: none; }
+.ci-rays { position: absolute; inset: -30%; background: repeating-conic-gradient(rgba(255,226,120,.5) 0 8deg, rgba(255,255,255,0) 8deg 20deg); animation: spin 6s linear infinite; pointer-events: none; -webkit-mask: radial-gradient(circle, #000 20%, rgba(0,0,0,0) 65%); mask: radial-gradient(circle, #000 20%, rgba(0,0,0,0) 65%); }
+.banner.legend { background: linear-gradient(90deg, #ffd23f, #fff1a8, #ffd23f); color: var(--ink); box-shadow: inset 0 0 0 3px rgba(255,255,255,.7), 0 0 30px 10px rgba(245,184,46,.8), 0 7px 0 rgba(38,49,71,.4); white-space: normal; text-align: center; max-width: calc(100vw - 24px); }
+.bt-stage.legend { box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--gold), 0 0 40px 10px rgba(245,184,46,.7); }
+.bt-stamp.legend { top: 40%; color: #fff1a8; }
+.pi-legend { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); color: #8a5a00; background: #fff6d9; border: 3px solid var(--gold); border-radius: 12px; padding: 6px 12px; margin-bottom: 8px; }
+.pchip .sk.left { background: var(--paper); color: var(--ink-soft); font-family: var(--font); font-size: 11px; font-weight: 900; }
+@keyframes rainbow { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .unit.legend .base, .cutin.legend .ci-band, .ci-rays { animation: none; } }
+
 /* ===== 🔍 포켓몬·기술 보기 ===== */
 .pi-head { display: flex; align-items: center; gap: 14px; text-align: left; margin-bottom: 8px; }
 .pi-head h2 { margin: 0; }
@@ -720,7 +744,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-27a";
+const APP_VERSION = "2026-09-27b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1189,7 +1213,7 @@ Screens.setup = sec => {
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
       '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
-      '<p class="note">' + (Setup.skills ? "5칸마다 진화해요. 3단계 포켓몬은 마지막 모습(10칸)에서, 진화가 짧거나 없는 포켓몬·전설은 15칸에서 기술을 하나 배워요. 말마다 한 판에 한 번!" : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
+      '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 기술을 하나 배워요 — 일반 15칸 · 레어 10칸 · 유니크 5칸 · 👑 전설은 처음부터! 말마다 한 판에 한 번." : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
       '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
       '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단을 이기면 💰 돈 문제로 볼 하나 더! (맞힐수록 문제가 어려워져요)" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
@@ -1387,6 +1411,7 @@ function unitEl(state, ti, node, pieces) {
   el.dataset.node = node;
   el.dataset.pieces = pieces.join(",");
   el.innerHTML = unitInner(state, pieces, t);
+  if (pieces.some(i => isLegend(state.teams[state.pieces[i].team].picks[state.pieces[i].slot]))) el.classList.add("legend");
   placeAt(el, node);
   el.addEventListener("click", ev => { ev.stopPropagation(); onUnitTap(el); });
   return el;
@@ -1833,6 +1858,9 @@ function btPlate(side, name, team, extra) {
 const WILD_TEAM = { name: "🌿 야생", color: "#3a9d4f" };
 const RARITY_KO = { c: "일반", r: "레어", u: "유니크", l: "전설" };
 const RARITY_STAR = { c: "", r: "⭐", u: "⭐⭐", l: "👑" };
+// 기술을 쓸 수 있는 때 = 고른(잡은) 포켓몬의 희귀도 (사용자 확정 2026-09-27): 일반 15칸 · 레어 10칸 · 유니크 5칸 · 전설 처음부터
+const RARITY_NEED = { c: 15, r: 10, u: 5, l: 0 };
+const isLegend = id => rarityOf(id) === "l" || rarityOf(rootOf(id)) === "l";
 const SHAKE_FRAMES = [
   { transform: "translateX(0)", filter: "none" }, { transform: "translateX(-7%)", filter: "brightness(2.4)", offset: 0.15 },
   { transform: "translateX(6%)", offset: 0.35 }, { transform: "translateX(-5%)", filter: "brightness(1.8)", offset: 0.55 },
@@ -2094,7 +2122,7 @@ function encounter(e) {
   const rar = rarityOf(id);
   const extra = (isNew ? '<i class="bp-tag new">NEW!</i>' : "") + '<i class="bp-tag r-' + rar + '">' + RARITY_KO[rar] + "</i>";
   const c = openStage({ foes: [id], foeTeam: WILD_TEAM, foeExtra: extra, ally, allyTeam: aTeam, allyLater: true });
-  const rarTag = () => c.put("bt-rar r-" + rar, (RARITY_STAR[rar] ? RARITY_STAR[rar] + " " : "") + RARITY_KO[rar], c.foeXY[0][0] - 12, c.foeXY[0][1] - 20); // 포켓몬 바로 왼쪽 위
+  const rarTag = () => c.put("bt-rar r-" + rar, (isNew ? '<i class="bp-tag new">NEW!</i> ' : "") + (RARITY_STAR[rar] ? RARITY_STAR[rar] + " " : "") + RARITY_KO[rar], c.foeXY[0][0], c.foeXY[0][1] - 30); // 포켓몬 바로 위 (좁은 폰에서도 무대 안)
   Store.data.stats.wildSeen = (Store.data.stats.wildSeen || 0) + 1;
   Store.save();
   (async () => {
@@ -2106,7 +2134,13 @@ function encounter(e) {
     c.anim(c.foeEls[0], [{ transform: "translateY(25%) scale(.2)", opacity: 0 }, { transform: "translateY(25%) scale(.2)", opacity: 0, offset: 0.55 },
       { transform: "translateY(-12%) scale(1.05)", opacity: 1, offset: 0.8 }, { transform: "none", opacity: 1 }], 900);
     await c.wait(900);
-    if (rar === "l" && c.live()) { c.stage.classList.add("quake"); setTimeout(() => c.stage.classList.remove("quake"), 650 * SPEED); } // 전설: 무대가 흔들린다
+    if (rar === "l" && c.live()) { // 👑 전설: 무대가 흔들리고 금빛으로 번쩍 + 도장
+      c.stage.classList.add("quake", "legend"); setTimeout(() => c.stage.classList.remove("quake"), 650 * SPEED);
+      const fl = $(".bt-flash", c.el); fl.style.background = "radial-gradient(circle, #fff6c2, #f5b82e)"; c.anim(fl, [{ opacity: 0.95 }, { opacity: 0 }], 900, { fill: "none" });
+      SFX.win();
+      c.stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp legend">👑 전설의 포켓몬!</div>');
+      setTimeout(() => { const st = $(".bt-stamp.legend", c.el); if (st) st.remove(); }, 1800 * SPEED);
+    }
     if (c.live()) Cry.play(id);
     rarTag();
     await c.say("앗! 야생의 " + (rar === "c" ? "" : RARITY_KO[rar] + " 포켓몬 ") + josa(name, "이/가") + " 튀어나왔다!", true);
@@ -2384,6 +2418,7 @@ function startGame(teams, opts) {
   teams = teams.map((t, ti) => Object.assign({}, t, {
     early: t.paths.map(p => p.some(x => rarityOf(x) === "l")),
     now: t.paths.map(() => Q.get("early") === "1"),
+    need: t.picks.slice(0, opts.pieces).map(id => RARITY_NEED[rarityOf(id)]),
     pools: t.paths.map((p, k) => (forcedPools[ti] && forcedPools[ti][k]) ? [forcedPools[ti][k]] : poolFor(p[p.length - 1])),
   }));
   const s = Yut.newGame({
@@ -2427,6 +2462,9 @@ function markSeen(key) {
 function chipBadges(i) {
   const s = G.s, p = s.pieces[i];
   let h = "";
+  if (s.settings.skills !== false && !p.skill && p.state !== "done" && !Yut.isFinal(s, i)) {
+    h += '<span class="sk left" title="기술까지 ' + skillLeft(i) + '칸">' + skillLeft(i) + "</span>"; // 기술까지 남은 칸
+  }
   if (s.settings.skills !== false && p.skill && p.state !== "done") {
     h += p.used ? '<span class="sk used" title="기술을 다 썼어요">✓</span>'
       : '<span class="sk' + (Yut.isFinal(s, i) ? "" : " wait") + '" title="' + esc(skillName(p.skill)) + '">' + ((SKILL_UI[p.skill] || {}).emoji || "✨") + "</span>";
@@ -2437,9 +2475,6 @@ function chipBadges(i) {
     if (p.stage < s.teams[p.team].paths[p.slot].length - 1) {
       const k = (p.walk || 0) % Yut.EVO_STEP;
       h += '<span class="pips" aria-hidden="true">' + [0, 1, 2, 3, 4].map(j => "<i" + (j < k ? ' class="on"' : "") + "></i>").join("") + "</span>";
-    } else if (s.settings.skills !== false && !p.skill && Yut.needsWalk(s, i) && !Yut.isFinal(s, i)) {
-      const k = Math.floor(Math.min(p.walk || 0, Yut.SKILL_WALK) / 3); // 진화가 짧거나 없는 포켓몬·전설: 15칸까지 (점 하나 = 3칸)
-      h += '<span class="pips skp" title="기술까지 ' + (Yut.SKILL_WALK - (p.walk || 0)) + '칸" aria-hidden="true">' + [0, 1, 2, 3, 4].map(j => "<i" + (j < k ? ' class="on"' : "") + "></i>").join("") + "</span>";
     }
   }
   return h;
@@ -2608,18 +2643,21 @@ function cutIn(id, key, team, title) {
   return new Promise(res => {
     const K = Yut.SKILLS[key] || {}, U = SKILL_UI[key] || {};
     const el = document.createElement("div");
-    el.className = "cutin";
+    const legend = isLegend(id);
+    el.className = "cutin" + (legend ? " legend" : "");
     el.style.setProperty("--tc", skillColor(key));
     const who = title || ((team && team.cpu ? "로켓단 " : "") + nameOf(id) + "의");
-    el.innerHTML = '<div class="ci-band"><div class="ci-mon">' + spr(id) + '</div><div class="ci-text"><b>' + esc(who) + "</b><strong>" + esc(K.name) + "!</strong><em>" + esc((U.emoji || "") + " " + (U.desc || "")) + "</em></div></div>";
+    el.innerHTML = (legend ? '<div class="ci-flash"></div><div class="ci-rays"></div>' : "") +
+      '<div class="ci-band">' + (legend ? '<span class="ci-crown">👑 전설의 힘!</span>' : "") + '<div class="ci-mon">' + spr(id) + '</div><div class="ci-text"><b>' + esc(who) + "</b><strong>" + esc(K.name) + "!</strong><em>" + esc((U.emoji || "") + " " + (U.desc || "")) + "</em></div></div>";
     document.body.appendChild(el);
     SFX.skill();
+    if (legend) { SFX.win(); const b = $("#board"); if (b) { b.classList.remove("quake"); void b.offsetWidth; b.classList.add("quake"); setTimeout(() => b.classList.remove("quake"), 650 * SPEED); } }
     Cry.play(id);
     TTS.say((title ? plain(title) + " " : nameOf(id) + "의 ") + K.name + "!");
     let done = false;
     const close = () => { if (done) return; done = true; el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 220 * SPEED); };
     el.addEventListener("click", close);
-    setTimeout(close, (G.s && G.s.settings.battle === false ? 900 : 1600) * SPEED);
+    setTimeout(close, (G.s && G.s.settings.battle === false ? 900 : legend ? 2400 : 1600) * SPEED);
   });
 }
 const namesOf = ps => ps.map(i => nameOf(Yut.formOf(G.s, i))).join("·");
@@ -2806,7 +2844,7 @@ function swapInfo(id) {
   const path = linePath(id, Math.random);
   const early = path.some(x => rarityOf(x) === "l");
   const forced = Q.get("swappool"); // 시험용
-  return { id, path, base: Math.max(0, path.indexOf(id)), early, pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(path[path.length - 1]) };
+  return { id, path, base: Math.max(0, path.indexOf(id)), early, need: RARITY_NEED[rarityOf(id)], pool: forced && Yut.SKILLS[forced] ? [forced] : poolFor(path[path.length - 1]) };
 }
 // 조우 무대 안: "지금 말로 쓸까요?" → 바꿀 말 고르기 → "돌아와! 가라!"
 async function offerSwap(c, e, id) {
@@ -2892,6 +2930,14 @@ async function announceStartSkills() {
   const list = G.s.pieces.map((p, i) => i).filter(i => G.s.pieces[i].skill);
   if (!list.length) return;
   list.forEach(i => markSeen(G.s.pieces[i].skill));
+  // 👑 전설: 금빛 배너 + 이름을 크게
+  for (const i of list.filter(i => isLegend(G.s.teams[G.s.pieces[i].team].picks[G.s.pieces[i].slot]))) {
+    const nm = nameOf(Yut.formOf(G.s, i));
+    SFX.win(); confetti(40); Cry.play(Yut.formOf(G.s, i));
+    TTS.say("전설의 포켓몬 " + nm + "! 처음부터 " + skillName(G.s.pieces[i].skill) + "를 쓸 수 있어요");
+    await banner("👑 전설의 " + nm + "! 처음부터 " + skillName(G.s.pieces[i].skill), null, 1900, "gold legend");
+  }
+  if (list.every(i => isLegend(G.s.teams[G.s.pieces[i].team].picks[G.s.pieces[i].slot]))) return;
   const named = list.slice(0, 2).map(i => nameOf(Yut.formOf(G.s, i)) + "(" + skillName(G.s.pieces[i].skill) + ")").join(", ");
   toast("✨ 처음부터 기술을 아는 포켓몬: " + named + (list.length > 2 ? " 외 " + (list.length - 2) + "마리" : ""), 2600);
   await sleep(1700);
@@ -2900,7 +2946,7 @@ async function announceStartSkills() {
 function openSkillDex() {
   const seen = new Set(Store.data.seenSkills || []);
   const keys = Object.keys(Yut.SKILLS);
-  showModal("<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 5칸마다 진화하고, 마지막 모습이 되면 타입에 맞는 기술을 하나 배워요 (진화가 짧거나 없는 포켓몬·전설은 15칸)</p>" +
+  showModal("<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 타입에 맞는 기술을 하나 배워요 — 일반 15칸 · 레어 10칸 · 유니크 5칸 · 👑 전설은 처음부터</p>" +
     '<div class="dex-types">' + TYPE_ORDER.map(t => '<div class="dex-row" style="--tc:' + (D.typeColors[t] || "#999") + '"><span>' + esc(t) + '</span><div class="dex-cards">' +
       (Yut.TYPE_SKILLS[t] || []).map(k => '<div class="dex-card' + (seen.has(k) ? "" : " unseen") + '"><b>' + SKILL_UI[k].emoji + " " + esc(skillName(k)) + "</b>" +
         (Yut.SKILLS[k].kind === "react" ? "<i>저절로</i>" : "") + "<br>" + esc(SKILL_UI[k].desc) + "</div>").join("") +
@@ -3101,9 +3147,8 @@ async function moneyBonus() {
 /* ---------- 🔍 포켓몬·기술 보기 — 오른쪽 팀 카드의 포켓몬을 누르면 ---------- */
 // 기술을 배우기까지 남은 칸 (3단계: 마지막 모습까지 · 진화 없음·2단계·전설: 15칸)
 function skillLeft(i) {
-  const s = G.s, p = s.pieces[i], last = s.teams[p.team].paths[p.slot].length - 1;
-  const need = Math.max((last - (p.base || 0)) * Yut.EVO_STEP, Yut.needsWalk(s, i) ? Yut.SKILL_WALK : 0);
-  return Math.max(0, need - (p.walk || 0));
+  const p = G.s.pieces[i];
+  return Math.max(0, Yut.skillNeed(G.s, i) - (p.walk || 0));
 }
 function pieceLine(i) {
   const s = G.s, p = s.pieces[i], name = nameOf(Yut.formOf(s, i));
@@ -3125,15 +3170,18 @@ function openPieceInfo(i) {
   if (s.settings.skills === false) sk = '<p class="pi-note">이 판은 기술 없이 해요</p>';
   else if (p.skill) {
     const U = SKILL_UI[p.skill] || {}, K = Yut.SKILLS[p.skill];
+    sk = "";
     const state = p.used ? '<em class="used">✓ 다 썼어요</em>' : Yut.isFinal(s, i) ? '<em class="ready">✨ 쓸 수 있어요</em>' : '<em>' + skillLeft(i) + "칸 더 가면 써요</em>";
-    sk = '<div class="skill-item info pi-skill" style="--tc:' + skillColor(p.skill) + '"><span class="si-body"><b>' + (U.emoji || "") + " " + esc(K.name) + "<i>" + esc(K.type) + "</i></b>" +
+    if (isLegend(t.picks[p.slot])) sk = '<p class="pi-legend">👑 전설의 포켓몬 — 처음부터 기술을 써요</p>';
+    sk += '<div class="skill-item info pi-skill" style="--tc:' + skillColor(p.skill) + '"><span class="si-body"><b>' + (U.emoji || "") + " " + esc(K.name) + "<i>" + esc(K.type) + "</i></b>" +
       "<small>" + esc(U.desc || "") + (K.kind === "react" ? " (때가 되면 저절로 나가요)" : "") + "</small>" + state + "</span></div>";
   } else {
     const pool = ((t.pools || [])[p.slot] || []);
     sk = '<p class="pi-note">📖 아직 기술이 없어요. <b>' + skillLeft(i) + "칸</b> 더 가면 이 중 하나를 배워요!</p>" +
       '<div class="pi-pool">' + pool.map(k => '<span style="--tc:' + skillColor(k) + '">' + ((SKILL_UI[k] || {}).emoji || "") + " " + esc(skillName(k)) + "</span>").join("") + "</div>";
   }
-  showModal('<div class="pi-head" style="--tc:' + t.color + '"><span class="pi-pic">' + spr(id) + "</span><div><h2>" + esc(nameOf(id)) + "</h2><p>" + esc(t.name) + " · " + where + (st ? " · " + st : "") + "</p></div></div>" +
+  const r0 = rarityOf(t.picks[p.slot]);
+  showModal('<div class="pi-head" style="--tc:' + t.color + '"><span class="pi-pic">' + spr(id) + "</span><div><h2>" + esc(nameOf(id)) + ' <i class="bp-tag r-' + r0 + '">' + RARITY_KO[r0] + "</i></h2><p>" + esc(t.name) + " · " + where + (st ? " · " + st : "") + "</p></div></div>" +
     evo + sk + '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button></div>',
     () => { if (inGame) { G.paused = false; if (current === "game" && !G.busy) afterAction(); } });
 }
@@ -3182,7 +3230,7 @@ function openRules() {
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
       "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
       "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 지면 처음 모습으로 돌아가요.</li>" +
-      "<li>📖 마지막 모습이 되면 <b>기술</b>을 하나 배워요 — 진화가 짧거나 없는 포켓몬·전설은 <b>15칸</b>을 가야 해요. 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
+      "<li>📖 <b>기술</b>은 희귀도에 따라 배워요 — 일반 <b>15칸</b> · 레어 <b>10칸</b> · 유니크 <b>5칸</b> · 👑 전설은 <b>처음부터</b>. 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
       "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 💰 로켓단 대결이 끝나면 <b>돈 문제</b>로 볼 하나 더!</li>" +
       "<li>🎯 잡을 확률(몬스터볼): 일반 60 · 레어 50 · 유니크 40 · 전설 30% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +

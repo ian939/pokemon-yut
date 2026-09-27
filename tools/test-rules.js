@@ -772,6 +772,24 @@ t("62. 잡을 확률 — 몬스터볼 기준 일반 60 · 레어 50 · 유니크
   });
 });
 
+t("63. 희귀도로 기술까지 필요한 칸 (need) — 일반 15 · 레어 10 · 유니크 5 · 전설 처음부터, 마지막 모습이 아니어도", () => {
+  const s = Y.newGame({ pieces: 4, seed: 9, skills: true, teams: [
+    { name: "A", picks: [4, 1, 7, 150], paths: [[4, 5, 6], [1, 2, 3], [7, 8, 9], [150]], pools: [["nitro"], ["growth"], ["surf"], ["future"]], need: [15, 10, 5, 0] },
+    { name: "B", picks: [24, 109, 52, 202], pools: [["toxic"], ["toxic"], ["toxic"], ["toxic"]], need: [15, 15, 15, 15] },
+  ] }, D.evoFrom);
+  eq(s.pieces.slice(0, 4).map(p => p.skill), [null, null, null, "future"], "전설은 판을 시작할 때 배움");
+  const walkTo = (st, i, n) => { Object.assign(st.pieces[i], { state: "board", atGoal: false, walk: n - 1 }, Y.settle("OUT", 9)); return Y.applyMove(choose(st, [1]), "n9/1").state; };
+  let a = walkTo(clone(s), 2, 5); eq([Y.formOf(a, 2), a.pieces[2].skill], [8, "surf"], "유니크 5칸: 두 번째 모습이어도 배움");
+  a = walkTo(clone(s), 1, 9); eq(a.pieces[1].skill, null, "레어 9칸: 아직");
+  a = walkTo(clone(s), 1, 10); eq(a.pieces[1].skill, "growth", "레어 10칸");
+  a = walkTo(clone(s), 0, 10); eq([Y.formOf(a, 0), a.pieces[0].skill], [6, null], "일반 10칸: 마지막 모습이어도 아직");
+  a = walkTo(clone(s), 0, 15); eq(a.pieces[0].skill, "nitro", "일반 15칸");
+  eq([0, 1, 2, 3].map(i => Y.skillNeed(s, i)), [15, 10, 5, 0]);
+  const sw = Y.applySwap(clone(s), 0, { id: 133, path: [133, 134], base: 0, pool: ["surf"], need: 10 }).state;
+  eq(Y.skillNeed(sw, 0), 10, "바꿔 들어온 포켓몬은 그 포켓몬의 need");
+  ok(Y.validate(s));
+});
+
 // ---------- 무작위 대국 (불변 조건 확인) ----------
 t("22. 무작위 3,000판 끝까지 — 멈춤·규칙 위반 없음", () => {
   let rs = 99;

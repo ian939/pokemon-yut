@@ -796,14 +796,41 @@ def scenario_v4(browser, base, errors):
     ctx, page = ctx_page()
     start(page, "?seed=2&spots=none&fast=1&pools=wish,nitro")
     page.evaluate("""() => { const Y = window.__yut, s = Y.G.s, t = s.teams[0];
-      t.picks[0] = 128; t.paths[0] = [128]; t.pools[0] = ['wish']; s.pieces[0].stage = 0;
+      t.picks[0] = 128; t.paths[0] = [128]; t.pools[0] = ['wish']; t.need[0] = 15; s.pieces[0].stage = 0;
       Object.assign(s.pieces[0], { state: 'board', atGoal: false, walk: 12 }, Y.Yut.settle('OUT', 12)); s.turn = 0; s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
     wait_idle(page)
-    check(page.query_selector(".pchip[data-piece='0'] .pips.skp") is not None and ev(page, "s.pieces[0].skill") is None, "진화 없는 켄타로스 12칸: 아직 기술 없음, 칩에 보라 점")
+    check(page.query_selector(".pchip[data-piece='0'] .sk.left") is not None and ev(page, "s.pieces[0].skill") is None, "진화 없는 켄타로스 12칸: 아직 기술 없음, 칩에 남은 칸")
     page.click(".unit.can[data-node='12']", force=True)
     page.click(".dest[data-move='n12/3']", force=True)
     wait_idle(page)
     check(ev(page, "s.pieces[0].skill") == "wish", "15칸이 되면 기술을 배움")
+    ctx.close()
+
+    # ⑩ 희귀도로 기술까지 필요한 칸 (일반 15 · 레어 10 · 유니크 5 · 전설 0) + 👑 전설 연출
+    ctx, page = ctx_page()
+    page.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', JSON.stringify({ collection: [{ id: 150, t: 1 }] }));")
+    page.goto(base + "?seed=2&spots=none&fast=1&pools=nitro,nitro")
+    page.wait_for_timeout(300)
+    page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
+    page.click("[data-act=to-pick]")
+    page.evaluate("() => { window.__yut.Setup.picks[0] = []; }")
+    page.click(".pcard[data-id='150']"); page.click(".pcard[data-id='4']"); page.click("#pick-next")
+    page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    page.wait_for_selector(".banner.legend", timeout=15000)
+    page.screenshot(path=str(OUT / "99b-legend-banner.png"))
+    wait_idle(page)
+    check(ev(page, "JSON.stringify(s.teams[0].need)") == "[0,10]" and ev(page, "s.pieces[0].skill") == "nitro" and ev(page, "s.pieces[1].skill") is None,
+          "뮤츠(전설)는 처음부터 기술 · 파이리(레어)는 10칸")
+    page.evaluate("() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', 3)); s.turn = 0; s.phase = 'throw'; s.throwsLeft = 1; s.pending = []; Y.Act['skill-cancel'](); }")
+    wait_idle(page)
+    check(page.query_selector("#units .unit.legend") is not None, "윷판 위 전설 말은 금빛 받침 + 👑")
+    page.click("#btn-skill"); page.click(".skill-item[data-act=skill-pick]")
+    crown = page.wait_for_selector(".cutin.legend .ci-crown", timeout=5000).text_content()  # 빠르게 모드라 0.3초 안에 닫힌다 — 바로 읽기
+    check("전설의 힘" in crown, "전설 기술 장면: 무지개 띠 + 👑 전설의 힘!")
+    wait_idle(page)
+    page.click(".pchip[data-piece='1']")
+    page.wait_for_selector(".modal .pi-pool", timeout=5000)
+    check("10칸" in page.inner_text(".modal") and "레어" in page.inner_text(".modal"), "기술 보기 창: 희귀도와 남은 칸 (레어 10칸)")
     ctx.close()
 
     # ⑧ 로켓단이 이겨도 위로 상자: 몬스터볼 1개 + 💰 돈 문제로 하나 더
@@ -843,7 +870,8 @@ def scenario_v4(browser, base, errors):
     page.click(".pchip[data-piece='0']")
     page.wait_for_selector(".modal .pi-pool", timeout=5000)
     txt = page.inner_text(".modal")
-    check("10칸" in txt and "배워요" in txt, "아직 기술이 없으면 남은 칸과 배울 수 있는 기술 후보")
+    need = ev(page, "window.__yut.Yut.skillNeed(s, 0)")
+    check(f"{need}칸" in txt and "배워요" in txt and need in (5, 10), f"아직 기술이 없으면 남은 칸({need}칸 — 스타팅은 레어 10·유니크 5)과 배울 수 있는 기술 후보")
     page.wait_for_timeout(400)
     page.screenshot(path=str(OUT / "99-piece-info-phone.png"))
     measure(page, "🔍 포켓몬·기술 보기 (폰)")
