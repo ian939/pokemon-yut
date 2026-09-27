@@ -661,6 +661,30 @@ body.game-land #toast.show { transform: none; }
 @keyframes rainbow { to { background-position: 300% 0; } }
 @media (prefers-reduced-motion: reduce) { .unit.legend .base, .cutin.legend .ci-band, .ci-rays { animation: none; } }
 
+/* ===== v6: 🎰 슬롯머신 · 🎲 확률 막대 · 효과 굉장 · 영어 ===== */
+.slot-ov { position: fixed; inset: 0; z-index: 385; display: grid; place-items: center; padding: 16px; background: rgba(12,18,30,.7); animation: fadeIn .2s ease both; }
+.slot-ov.out { opacity: 0; transition: opacity calc(.25s * var(--spd)); }
+.slot-box { width: min(460px, 100%); background: linear-gradient(#ff6b6b, #e5484d); border: 5px solid var(--ink); border-radius: 22px; box-shadow: inset 0 0 0 4px #ffd23f, 0 10px 0 rgba(0,0,0,.35); padding: 16px 18px 18px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+.slot-box h2 { font-family: var(--pixel); font-weight: 700; font-size: var(--t2); color: #fff; line-height: 1.2; text-shadow: 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink); }
+.reels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; background: var(--ink); border-radius: 14px; padding: 10px; }
+.reel { aspect-ratio: 1; background: #fff; border-radius: 10px; display: grid; place-items: center; overflow: hidden; box-shadow: inset 0 6px 8px rgba(0,0,0,.25), inset 0 -6px 8px rgba(0,0,0,.25); }
+.reel img { width: 70%; image-rendering: pixelated; }
+.reel.spin img { animation: reelSpin .12s linear infinite; }
+.reel.stop img { animation: popIn .3s cubic-bezier(.2,1.6,.4,1); }
+.slot-box .btn { width: 100%; }
+.slot-win { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); color: var(--ink); background: #fff6d9; border: 3px solid var(--ink); border-radius: 12px; padding: 6px 14px; }
+@keyframes reelSpin { 0% { transform: translateY(-60%); filter: blur(1px); } 100% { transform: translateY(60%); filter: blur(1px); } }
+.prob-bars { display: grid; gap: 6px; margin: 8px 0 12px; text-align: left; }
+.prob-bars div { display: grid; grid-template-columns: 58px 1fr 54px; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; }
+.prob-bars b { font-family: var(--pixel); font-size: var(--t1); }
+.prob-bars i { display: block; height: 18px; border-radius: 99px; background: var(--paper-2); overflow: hidden; }
+.prob-bars i s { display: block; height: 100%; background: var(--gold); border-radius: 99px; }
+.prob-bars div.hot i s { background: var(--green); }
+.prob-bars em { font-style: normal; text-align: right; color: var(--ink-soft); }
+.result-en { display: block; font-size: var(--t2); color: #fff; margin-top: 4px; }
+.rules-res i.en { display: block; font-style: normal; font-weight: 900; color: var(--blue); font-size: 13px; }
+.bt-stamp.super { top: 36%; color: #ff7a3c; font-size: var(--t3); white-space: normal; width: 92%; text-align: center; line-height: 1.1; }
+
 /* ===== 🎁 받은 기술 ===== */
 .pchip .sk.gift { top: auto; bottom: -7px; left: -7px; background: #ffd9ec; }
 .pchip .sk.gift.used { background: #c9d3df; }
@@ -754,7 +778,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-28a";
+const APP_VERSION = "2026-09-28b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -769,12 +793,12 @@ const CAST = {
 };
 const LOCAL_ART = new Set([].concat(Object.values(CAST.yut), CAST.rocket).map(Number));
 const RES = {
-  "-1": { name: "빽도", animal: "", emoji: "↩️", steps: "뒤로 1칸", say: "빽도! 뒤로 한 칸" },
-  1: { name: "도", animal: "돼지", emoji: "🐷", steps: "1칸", say: "도! 한 칸" },
-  2: { name: "개", animal: "개", emoji: "🐶", steps: "2칸", say: "개! 두 칸" },
-  3: { name: "걸", animal: "양", emoji: "🐑", steps: "3칸", say: "걸! 세 칸" },
-  4: { name: "윷", animal: "소", emoji: "🐮", steps: "4칸", say: "윷! 네 칸, 한 번 더!" },
-  5: { name: "모", animal: "말", emoji: "🐴", steps: "5칸", say: "모! 다섯 칸, 한 번 더!" },
+  "-1": { name: "빽도", animal: "", emoji: "↩️", steps: "뒤로 1칸", say: "빽도! 뒤로 한 칸", en: "Back one" },
+  1: { name: "도", animal: "돼지", emoji: "🐷", steps: "1칸", say: "도! 한 칸", en: "One" },
+  2: { name: "개", animal: "개", emoji: "🐶", steps: "2칸", say: "개! 두 칸", en: "Two" },
+  3: { name: "걸", animal: "양", emoji: "🐑", steps: "3칸", say: "걸! 세 칸", en: "Three" },
+  4: { name: "윷", animal: "소", emoji: "🐮", steps: "4칸", say: "윷! 네 칸, 한 번 더!", en: "Four" },
+  5: { name: "모", animal: "말", emoji: "🐴", steps: "5칸", say: "모! 다섯 칸, 한 번 더!", en: "Five" },
 };
 const MEMBERS = [
   { key: "kid", name: "🧒 지온이" }, { key: "mom", name: "👩 엄마" }, { key: "dad", name: "👨 아빠" },
@@ -815,6 +839,19 @@ const SKILL_UI = {
 const TYPE_ORDER = ["노말", "불꽃", "물", "풀", "전기", "얼음", "격투", "독", "땅", "비행", "에스퍼", "벌레", "바위", "고스트", "드래곤", "악", "강철", "페어리"];
 const TARGET_LABEL = { flame: "🔥 물리치기", surf: "🌊 밀기", twave: "⚡ 마비", sleep: "💤 재우기", snatch: "😈 빼앗기", allyswitch: "🔄 바꾸기", rock: "🪨", web: "🕸️" };
 const ROCKET_NET = 0.6; // 로켓단 그물이 잡을 확률 (한 번)
+// 😈 로켓단 말은 판마다 무작위 — 전설이 아닌 진화 1단계 포켓몬 중에서, 지온이가 가진 가족은 빼고 (여러 타입의 기술을 겪어 보게, 사용자 요청 2026-09-28)
+function rocketRoster(n, avoid) {
+  const fam = new Set((avoid || []).map(id => rootOf(id)));
+  const pool = [];
+  for (let id = 1; id <= 1025; id++) {
+    if (D.evoFrom[id] || fam.has(id)) continue;                        // 1단계만, 겹치는 가족 빼고
+    if (finalsOf(id).concat([id]).some(x => rarityOf(x) === "l")) continue; // 전설 가족은 빼고
+    pool.push(id);
+  }
+  const out = [];
+  while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  return out;
+}
 
 /* ================================================================
    작은 도구
@@ -1039,6 +1076,19 @@ const TTS = {
       speechSynthesis.speak(u);
     } catch (e) {}
   },
+  // 영어 한 마디 — 한국어 다음에 이어서 (끊지 않고 줄 세움), 영어 목소리로
+  sayEn(text) {
+    if (Store.data.sound === false || !("speechSynthesis" in window)) return;
+    try {
+      const v = speechSynthesis.getVoices().find(x => /^en(-|_)?(US|GB)?/i.test(x.lang));
+      if (this.voicesLoaded && !v) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      if (v) u.voice = v;
+      u.rate = 0.9;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  },
   stop() { try { speechSynthesis.cancel(); } catch (e) {} },
 };
 const Cry = {
@@ -1198,7 +1248,7 @@ Screens.home = sec => {
 };
 
 /* ---------- 준비 ---------- */
-const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, study: true, ti: 0, picks: [[], []] };
+const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, study: true, ti: 0, picks: [[], []], rocket: [] };
 const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
 const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
 function chipHtml(field, value, label, color, disabled) {
@@ -1239,7 +1289,10 @@ const finalsOf = id => (EVO_TO[id] && EVO_TO[id].length) ? [].concat(...EVO_TO[i
 // 말의 진화 경로: 1단계 → … → 마지막 모습 (스타팅 포켓몬은 1단계라서 끝까지 가야 진화한다). 갈래가 여럿이면 판마다 무작위
 function linePath(id, rnd) { const fs = finalsOf(id); return evoPath(fs[Math.floor(rnd() * fs.length)]); }
 // 보여 주기용: 갈래가 하나면 끝까지, 여럿이면 고른 포켓몬까지 + "?"
-function lineShow(id) { const fs = finalsOf(id); return fs.length > 1 ? { path: evoPath(id), more: true } : { path: evoPath(fs[0]), more: false }; }
+function lineShow(id) { // 고른 모습부터 보여 준다 (리자드를 골랐으면 리자드 › 리자몽)
+  const fs = finalsOf(id), full = fs.length > 1 ? evoPath(id) : evoPath(fs[0]);
+  return { path: full.slice(Math.max(0, full.indexOf(id))), more: fs.length > 1 };
+}
 
 function slotHtml(id, k) {
   if (!id) return '<div class="slot empty"><span>' + (k + 1) + "</span></div>";
@@ -1252,7 +1305,7 @@ function slotHtml(id, k) {
 }
 function takenBy(id) {
   const ti = Setup.ti;
-  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
+  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : Setup.rocket.slice(0, Setup.pieces);
   if (other.indexOf(id) < 0 && !sameFamily(other, id)) return null;
   return Setup.mode === "family" ? memberOf(teamKey(1 - ti)) : ROCKET_TEAM;
 }
@@ -1303,14 +1356,14 @@ function updatePick() {
 }
 function validPicks(list, ti) {
   const avail = ownedSet();
-  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
+  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : Setup.rocket.slice(0, Setup.pieces);
   const out = [];
   (list || []).forEach(id => { if (avail.has(id) && other.indexOf(id) < 0 && !sameFamily(other, id) && out.indexOf(id) < 0 && !sameFamily(out, id)) out.push(id); });
   return out.slice(0, Setup.pieces);
 }
 function autoPick() {
   const ti = Setup.ti, mine = Setup.picks[ti];
-  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : CAST.rocket.slice(0, Setup.pieces);
+  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : Setup.rocket.slice(0, Setup.pieces);
   const free = id => mine.indexOf(id) < 0 && other.indexOf(id) < 0 && !sameFamily(other, id) && !sameFamily(mine, id);
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const pool = shuffle(rosterIds().filter(free));
@@ -1575,6 +1628,7 @@ function mountGame() {
     renderTop();
     (async () => {
       if (G.s.settings.mode === "rocket") await rocketIntro();
+      await slotMachine();
       await announceStartSkills();
       await announceTurn(G.s.turn, true);
       G.busy = false;
@@ -1739,11 +1793,12 @@ function showResult(r) {
     const w = document.createElement("div");
     w.className = "result-pop r" + r;
     w.innerHTML = '<div class="result-card"><div class="rays"></div><img src="' + artUrl(CAST.yut[r]) + '" alt="' + esc(nameOf(CAST.yut[r])) + '">' +
-      '<div class="result-name">' + info.name + "!</div>" +
+      '<div class="result-name">' + info.name + '!<span class="result-en">' + info.en + "</span></div>" +
       '<div class="result-sub">' + info.emoji + " " + (info.animal ? info.animal + " · " : "") + info.steps + (Yut.RESULTS[r].again ? " · 한 번 더!" : "") + "</div></div>";
     document.body.appendChild(w);
     SFX.result(r);
     TTS.say(info.say);
+    TTS.sayEn(info.en + "!");
     let done = false;
     const close = () => {
       if (done) return;
@@ -1766,12 +1821,18 @@ async function doMove(id) {
   $("#dests").innerHTML = "";
   $$(".unit.can, .unit.sel").forEach(e => e.classList.remove("can", "sel"));
   const prev = G.s;
+  const missed = humanTurn() && !m.capture.length ? Yut.legalMoves(prev).find(x => x.capture.length && !x.finish) : null; // 💡 잡을 수 있었는데 다른 수를 둠
   const r = Yut.applyMove(prev, id, m.unit === "new" ? G.newPick : undefined);
   G.s = r.state;
   persist();
   renderTop();
   renderPending(); // 방금 쓴 결과는 바로 칩에서 뺀다
   try { await playEvents(r.events, prev); } catch (e) { console.error(e); }
+  if (missed && current === "game" && G.s.phase !== "over") {
+    fxAt(missed.to.node, "⚔️");
+    toast("💡 앗, 저기 잡을 수 있었어! " + josa(RES[missed.result].name, "으로/로") + " " + nameOf(Yut.formOf(prev, missed.capture[0])) + " 있는 칸에 갈 수 있었어요", 2600);
+    await sleep(900);
+  }
   G.newPick = null;
   G.sel = null;
   G.busy = false;
@@ -2070,6 +2131,8 @@ async function quickBattle(e, prev) {
   SFX.hit();
   fxAt(e.node, "💥");
   const mv = e.skill ? skillName(e.skill) : moveOf(atk);
+  const sup = superEffective(atk, e.victims.map(i => Yut.formOf(prev, i)));
+  if (sup) setTimeout(() => { if (current === "game") toast("💥 효과가 굉장했다! " + sup, 2200); }, 1300 * SPEED);
   toast(aTeam.cpu ? "로켓단이 " + josa(foeNames, "을/를") + " 물리쳤다옹~! 😼"
     : vTeam.cpu ? nameOf(atk) + "의 " + mv + "! 로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다!"
     : nameOf(atk) + "의 " + mv + "! " + josa(foeNames, "을/를") + " 물리쳤다!", 2400);
@@ -2098,6 +2161,15 @@ function battle(e, prev) {
     await c.say(nameOf(atk) + "의 " + (e.skill ? skillName(e.skill) : moveOf(atk)) + "!", true);
     await stageAttack(c, atk);
     await c.wait(750);
+    const sup = superEffective(atk, foes);
+    if (sup && c.live()) {
+      c.stage.classList.remove("quake"); void c.stage.offsetWidth; c.stage.classList.add("quake");
+      c.stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp super">효과가 굉장했다!</div>');
+      SFX.hit();
+      await c.say("효과가 굉장했다! " + sup, true);
+      await c.wait(700);
+      const st = $(".bt-stamp.super", c.el); if (st) st.remove();
+    }
     await c.say(josa(foeNames, "은/는") + " 힘이 쭉 빠졌다!");
     await c.wait(450);
     // ③ 물리쳤다!
@@ -2441,6 +2513,7 @@ function startGame(teams, opts) {
     early: t.paths.map(p => p.some(x => rarityOf(x) === "l")),
     now: t.paths.map(() => Q.get("early") === "1"),
     need: t.picks.slice(0, opts.pieces).map(id => RARITY_NEED[rarityOf(id)]),
+    bases: t.paths.map((p, k) => Math.max(0, p.indexOf(t.picks[k]))), // 진화형을 골랐으면 그 모습부터 (사용자 요청 2026-09-28)
     pools: t.paths.map((p, k) => (forcedPools[ti] && forcedPools[ti][k]) ? [forcedPools[ti][k]] : poolFor(p[p.length - 1])),
   }));
   const s = Yut.newGame({
@@ -2457,7 +2530,7 @@ function startFromSetup() {
   const fam = Setup.mode === "family";
   const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
   if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
-  else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: CAST.rocket.slice(0, Setup.pieces) });
+  else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: Setup.rocket.slice(0, Setup.pieces) });
   Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle, skills: Setup.skills, study: Setup.study };
   Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
   if (fam) Store.data.lastPicks[Setup.t1] = Setup.picks[1].slice();
@@ -2467,7 +2540,7 @@ function startFromSetup() {
 function rematch() {
   const last = G.s && G.s.phase === "over" ? G.s : Store.data.lastGame;
   if (!last) { showScreen("home"); return; }
-  const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.picks.slice() }));
+  const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.cpu ? rocketRoster(last.settings.pieces, rosterIds()) : t.picks.slice() })); // 로켓단은 판마다 새로
   startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false,
     skills: last.settings.skills !== false, study: last.settings.study !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
 }
@@ -2579,6 +2652,7 @@ function beginSkill(i, slot) {
   if (x.target === "result") {
     const fut = x.key === "future";
     showModal("<h2>" + U.emoji + " " + esc(K.name) + "</h2><p>" + (fut ? "어떤 결과가 나올까? 맞혀 봐요! <b>개·걸</b>이 잘 나와요." : "원하는 결과를 골라요! (한 번 더 던지기는 없어요)") + "</p>" +
+      (fut ? probBars(G.s.settings.backdo) : "") +
       '<div class="res-pick">' + x.targets.map(r => '<button class="btn' + (fut && (r === 2 || r === 3) ? " hot" : "") + '" data-act="skill-target" data-v="' + r + '"><img src="' + artUrl(CAST.yut[r]) + '" alt="">' + RES[r].name + "</button>").join("") + "</div>" + cancel);
     return;
   }
@@ -3176,6 +3250,66 @@ async function moneyBonus() {
 }
 
 
+/* ---------- 🎰 슬롯머신 — 새 판을 시작할 때 볼 하나 (결과를 먼저 가방에 넣고 저장 → 새로고침해도 두 번 안 받음) ---------- */
+function slotMachine() {
+  if (Q.get("noslot") === "1") return Promise.resolve(); // 시험용: 가방 개수를 정확히 볼 때
+  return new Promise(res => {
+    const R = Yut.Rewards;
+    const forced = Q.get("slotball");
+    const ball = R.BALL_INFO[forced] ? forced : R.rollBox(1, Math.random)[0];
+    Store.data.bag[ball] = (Store.data.bag[ball] || 0) + 1;
+    G.s.startBall = ball;
+    persist();
+    renderBagChip();
+    const img = b => "assets/items/" + R.BALL_INFO[b].img + ".png";
+    const el = document.createElement("div");
+    el.className = "slot-ov";
+    el.innerHTML = '<div class="slot-box"><h2>🎰 새 판 선물! 볼 뽑기</h2><div class="reels">' + [0, 1, 2].map(() => '<div class="reel spin"><img src="' + img("poke") + '" alt=""></div>').join("") +
+      '</div><button class="btn big gold" id="slot-stop">🎰 멈춰!</button></div>';
+    document.body.appendChild(el);
+    const reels = $$(".reel", el), btn = $("#slot-stop", el);
+    let k = 0;
+    const iv = setInterval(() => { k++; reels.forEach((r, j) => { if (r.classList.contains("spin")) r.querySelector("img").src = img(R.BALLS[(k + j) % R.BALLS.length]); }); SFX.tap(); }, Math.max(40, 110 * SPEED));
+    let stopped = false;
+    const stop = async () => {
+      if (stopped) return; stopped = true;
+      btn.disabled = true;
+      for (const r of reels) {
+        await sleep(380);
+        r.classList.remove("spin"); r.classList.add("stop");
+        r.querySelector("img").src = img(ball);
+        SFX.land();
+      }
+      clearInterval(iv);
+      SFX.catchOk(); if (ball === "luxury" || ball === "master") { SFX.win(); confetti(50); }
+      btn.outerHTML = '<p class="slot-win">🎉 ' + R.BALL_INFO[ball].name + "을(를) 받았어요! 가방에 쏙 🎒</p>";
+      TTS.say(R.BALL_INFO[ball].name + "를 받았어요!");
+      await sleep(1300);
+      el.classList.add("out");
+      setTimeout(() => { el.remove(); res(); }, 260 * SPEED);
+    };
+    btn.addEventListener("click", stop);
+    setTimeout(stop, 2600 * SPEED); // 안 눌러도 저절로 멈춘다
+  });
+}
+/* ---------- 🎲 윷 확률 막대 — 윷가락 4개가 떨어지는 확률 (평평한 면 60%) ---------- */
+function probBars(backdo) {
+  const P = Yut.resultProbs(backdo);
+  const order = [1, 2, 3, 4, 5].concat(backdo ? [-1] : []);
+  const max = Math.max(...order.map(r => P[r]));
+  return '<div class="prob-bars">' + order.map(r => '<div class="' + (r === 2 || r === 3 ? "hot" : "") + '"><b>' + RES[r].name + '</b><i><s style="width:' + (P[r] / max * 100).toFixed(0) + '%"></s></i><em>' + Math.round(P[r] * 100) + "%</em></div>").join("") + "</div>";
+}
+/* ---------- 💧🔥🌿 타입 상성 — 물 > 불꽃 > 풀 > 물 (연출만, 승패는 그대로) ---------- */
+const TYPE_BEATS = { "물": "불꽃", "불꽃": "풀", "풀": "물" };
+const TYPE_EMOJI = { "물": "💧", "불꽃": "🔥", "풀": "🌿" };
+function superEffective(atk, foes) {
+  for (const a of typesOf(atk)) {
+    const d = TYPE_BEATS[a];
+    if (d && foes.some(f => typesOf(f).indexOf(d) >= 0)) return TYPE_EMOJI[a] + " " + a + " 타입은 " + TYPE_EMOJI[d] + " " + d + " 타입에 강해요!";
+  }
+  return "";
+}
+
 /* ---------- 🎁 기술 넘겨주기 — 기술을 못 쓰고 골인하면, 그 기술을 받을 팀원을 고른다 ---------- */
 function openGiftChooser() {
   const s = G.s, q = s.gifts[0], team = s.teams[q.team];
@@ -3309,7 +3443,8 @@ function openRules() {
   showModal(
     "<h2>📖 윷놀이 방법</h2>" +
     '<div class="rules-res">' + [1, 2, 3, 4, 5, -1].map(r =>
-      '<div><img src="' + artUrl(CAST.yut[r]) + '" alt=""><b>' + RES[r].name + "</b>" + (RES[r].animal ? RES[r].emoji + " " + RES[r].animal + " · " : "") + RES[r].steps + "</div>").join("") + "</div>" +
+      '<div><img src="' + artUrl(CAST.yut[r]) + '" alt=""><b>' + RES[r].name + '</b><i class="en">' + RES[r].en + "</i>" + (RES[r].animal ? RES[r].emoji + " " + RES[r].animal + " · " : "") + RES[r].steps + "</div>").join("") + "</div>" +
+    "<h2 class=\"sub\">🎲 무엇이 잘 나올까? <small>윷가락 하나가 평평하게 떨어질 확률 60%</small></h2>" + probBars(true) +
     '<ul class="rules-list">' +
       "<li>🎲 <b>윷</b>이나 <b>모</b>가 나오면 한 번 더 던져요.</li>" +
       "<li>🏁 <b>참먹이</b>(오른쪽 아래)에서 출발해 판을 돌아 다시 참먹이로 오면 <b>골인</b>!</li>" +
@@ -3368,6 +3503,7 @@ const Act = {
   },
   "to-pick": () => {
     Setup.ti = 0;
+    Setup.rocket = rocketRoster(4, rosterIds());
     Setup.picks = [[], []];
     Setup.picks[0] = validPicks(Store.data.lastPicks[Setup.t0], 0);
     if (Setup.mode === "family") Setup.picks[1] = validPicks(Store.data.lastPicks[Setup.t1], 1);

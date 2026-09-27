@@ -282,7 +282,7 @@ def scenario_v2(browser, base, errors):
 
     # ① 잡기 성공 (catch=1) — 가방 몬스터볼 3 → 2, 보관함에 이브이
     ctx, page = ctx_page()
-    start_family(page, "?seed=2&force=3&spots=3:58,12:133&catch=1")  # 가디(58)는 가짜 도감에 없음 → NEW!
+    start_family(page, "?seed=2&force=3&spots=3:58,12:133&catch=1&noslot=1")  # 가디(58)는 가짜 도감에 없음 → NEW!
     check(page.eval_on_selector_all("#spots .spot", "e => e.map(x => +x.dataset.node)") == [3, 12], "윷판에 ❓ 풀숲 2칸 (3번·12번)")
     page.screenshot(path=str(OUT / "70-spots.png"))
     page.click("#btn-throw", force=True); wait_idle(page)
@@ -317,7 +317,7 @@ def scenario_v2(browser, base, errors):
 
     # ② 3번 다 놓침 (catch=0) → 도망, 볼 3개 다 씀
     ctx, page = ctx_page()
-    start_family(page, "?seed=2&force=3&spots=3:25&catch=0&fast=1")
+    start_family(page, "?seed=2&force=3&spots=3:25&catch=0&fast=1&noslot=1")
     page.click("#btn-throw", force=True); wait_idle(page)
     page.click(".dest[data-move='new/3']", force=True)
     for _ in range(3):
@@ -332,7 +332,7 @@ def scenario_v2(browser, base, errors):
 
     # ③ 볼이 하나도 없을 때
     ctx, page = ctx_page(bag={"poke": 0, "great": 0, "ultra": 0, "luxury": 0, "master": 0})
-    start_family(page, "?seed=2&force=3&spots=3:25&fast=1")
+    start_family(page, "?seed=2&force=3&spots=3:25&fast=1&noslot=1")
     page.click("#btn-throw", force=True); wait_idle(page)
     page.click(".dest[data-move='new/3']", force=True)
     answer_quiz(page)
@@ -356,7 +356,7 @@ def scenario_v2(browser, base, errors):
 
     # ⑤ 로켓단을 이기면 보물상자 — 가방에 볼이 들어가고, 새로고침해도 두 번 안 들어감
     ctx, page = ctx_page()
-    page.goto(base + "?seed=2&fast=1&box=master,luxury,poke"); page.wait_for_timeout(300)
+    page.goto(base + "?seed=2&fast=1&box=master,luxury,poke&noslot=1"); page.wait_for_timeout(300)
     page.click("text=로켓단 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
     page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
     page.wait_for_selector("#ri-go"); page.click("#ri-go"); wait_idle(page)
@@ -365,7 +365,7 @@ def scenario_v2(browser, base, errors):
       Object.assign(s.pieces[1], { state: "board", route: "OUT", step: 19, atGoal: false });
       s.phase = "choose"; s.pending = [3]; s.throwsLeft = 0; s.turn = 0;
       Y.Store.data.game = s; Y.Store.save(); }""")
-    page.goto(base + "?fast=1&box=master,luxury,poke"); page.wait_for_timeout(300)
+    page.goto(base + "?fast=1&box=master,luxury,poke&noslot=1"); page.wait_for_timeout(300)
     page.click("[data-act=resume]"); wait_idle(page)
     page.click(".dest.goal", force=True)  # 둘 수 있는 말이 하나라 이미 골라져 있다
     page.wait_for_selector(".win-screen .chest", timeout=20000)
@@ -835,6 +835,82 @@ def scenario_v4(browser, base, errors):
     page.wait_for_function("() => document.querySelectorAll('#box-balls .ballchip').length === 4", timeout=15000)
     page.wait_for_selector(".win-btns:not(.hidden)", timeout=15000)
     page.screenshot(path=str(OUT / "99f-hard-box.png"))
+    ctx.close()
+
+    # ⑬ v6: 🎰 슬롯머신 · 😈 로켓단 무작위 · 진화형부터 · 💡 잡기 힌트 · 🎲 확률 막대 · 💧🔥 상성 · 🔤 영어
+    ctx, page = ctx_page()
+    page.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', JSON.stringify({ collection: [{ id: 5, t: 1 }], bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 } }));")
+    page.goto(base + "?seed=2&spots=none&fast=1&force=2&slotball=great"); page.wait_for_timeout(300)
+    page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
+    page.click("[data-act=set][data-field=study][data-value='false']")
+    page.click("[data-act=to-pick]")
+    page.evaluate("() => { window.__yut.Setup.picks[0] = []; }")
+    page.click(".pcard[data-id='5']")
+    minis = len(page.query_selector_all(".slot.filled .evo .mini"))
+    check(minis == 2, f"리자드를 고르면 진화 미리보기가 리자드 › 리자몽 ({minis}칸)")
+    page.click(".pcard[data-id='1']"); page.click("#pick-next"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    page.wait_for_selector(".slot-ov .reel", timeout=15000)
+    page.screenshot(path=str(OUT / "99g-slot.png"))
+    wait_idle(page)
+    check(ev(page, "[d.bag.great, s.startBall]") == [1, "great"], "🎰 판을 시작하면 슬롯머신으로 볼 하나 (가방에 슈퍼볼 +1)")
+    check(ev(page, "[window.__yut.Yut.formOf(s, 0), s.pieces[0].base]") == [5, 1], "잡은 리자드는 리자드부터 출발")
+    page.reload(); page.wait_for_timeout(400); page.click("[data-act=resume]"); wait_idle(page)
+    check(ev(page, "d.bag.great") == 1 and page.query_selector(".slot-ov") is None, "이어하기에서는 슬롯머신이 다시 안 나옴 (볼 두 번 안 받음)")
+    # 🔤 영어: 개 = Two
+    page.click("#btn-throw", force=True)
+    page.wait_for_selector(".result-pop .result-en", timeout=10000)
+    check(page.inner_text(".result-pop .result-en") == "Two", "윷 결과에 영어 (개 = Two)")
+    wait_idle(page)
+    # 💡 잡을 수 있었는데 다른 수
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s, at = (i, n) => Object.assign(s.pieces[i], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', n));
+      s.pieces.forEach(p => { p.state = 'wait'; }); at(0, 3); at(2, 5); s.turn = 0; s.phase = 'choose'; s.pending = [2]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
+    wait_idle(page)
+    page.click(".pchip.can", force=True)
+    page.click(".dest[data-move='new/2']", force=True)
+    page.wait_for_function("() => document.querySelector('#hint').textContent.includes('잡을 수 있었어')", timeout=10000)
+    check(True, "💡 잡을 수 있었는데 다른 수를 두면 '앗, 저기 잡을 수 있었어!'")
+    page.screenshot(path=str(OUT / "99h-missed.png"))
+    wait_idle(page)
+    ctx.close()
+
+    # 😈 로켓단은 판마다 무작위 (1단계 · 전설 아님 · 내 가족과 안 겹침)
+    ctx, page = ctx_page()
+    seen = []
+    for k in range(2):
+        page.goto(base + "?fast=1&spots=none&noslot=1"); page.wait_for_timeout(250)
+        page.click("text=로켓단 대결"); page.click("[data-act=set][data-field=study][data-value='false']")
+        page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        page.wait_for_selector("#ri-go"); page.click("#ri-go"); wait_idle(page)
+        r = page.evaluate("""() => { const s = window.__yut.G.s, D = window.YUT_DATA, R = s.teams[1].picks, root = id => window.__yut.Yut.evoPath(id, D.evoFrom)[0];
+          return { picks: R, roots: R.every(id => !D.evoFrom[id]), legend: R.some(id => D.rarity[id] === 'l'), clash: R.some(id => s.teams[0].paths.some(p => p[0] === root(id))) }; }""")
+        seen.append(r["picks"])
+        check(r["roots"] and not r["legend"] and not r["clash"], f"로켓단 말 무작위 {r['picks']} — 1단계 · 전설 아님 · 지온이 가족과 안 겹침")
+    check(seen[0] != seen[1] and seen[0] != [24, 109, 52, 202], "로켓단 말이 판마다 달라짐")
+    ctx.close()
+
+    # 🎲 미래예지 확률 막대 · 💧🔥 상성 연출
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&fast=1&noslot=1&early=1&pools=future,future", study=False)
+    page.evaluate("() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', 3)); s.turn = 0; s.phase = 'throw'; s.throwsLeft = 1; s.pending = []; Y.Act['skill-cancel'](); }")
+    wait_idle(page)
+    page.click("#btn-skill"); page.click(".skill-item[data-act=skill-pick]")
+    page.wait_for_selector(".modal .prob-bars", timeout=5000)
+    bars = page.eval_on_selector_all(".modal .prob-bars div", "e => e.map(x => x.querySelector('b').textContent + x.querySelector('em').textContent)")
+    check("개35%" in bars and "걸35%" in bars and len(bars) == 6, f"미래예지에 확률 막대 ({bars})")
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUT / "99i-prob.png"))
+    page.click("[data-act=close-modal]")
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s, at = (i, n) => Object.assign(s.pieces[i], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', n));
+      s.teams[0].paths[0] = [7, 8, 9]; s.teams[1].paths[0] = [4, 5, 6]; s.pieces[0].stage = 0; s.pieces[2].stage = 0; s.settings.battle = true;
+      at(0, 3); at(2, 5); s.turn = 0; s.phase = 'choose'; s.pending = [2]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
+    wait_idle(page)
+    page.click(".unit.can[data-node='3']", force=True)
+    page.click(".dest[data-move='n3/2']", force=True)
+    page.wait_for_selector(".bt-stamp.super", timeout=20000)
+    check("불꽃" in page.inner_text(".bt-text") or "굉장" in page.inner_text(".bt-stage"), "💧 꼬부기가 🔥 파이리를 잡으면 '효과가 굉장했다!'")
+    page.screenshot(path=str(OUT / "99j-super.png"))
+    while page.query_selector(".bt-skip"):
+        page.click(".bt-skip", force=True); page.wait_for_timeout(200)
     ctx.close()
 
     # ⑪ 🎁 기술을 못 쓰고 골인 → 받을 팀원 고르기 → 기술 두 개 → 받은 기술 쓰기

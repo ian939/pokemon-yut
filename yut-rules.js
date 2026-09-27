@@ -903,6 +903,7 @@
         early: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.early) && t.early[k])), // 전설: 15칸 가야 기술 (v4)
         now: Array.from({ length: n }, (_, k) => !!(Array.isArray(t.now) && t.now[k])),       // 시험용: 처음부터 기술
         need: Array.isArray(t.need) ? Array.from({ length: n }, (_, k) => Number(t.need[k]) || 0) : undefined, // v5: 기술까지 필요한 칸
+        bases: Array.isArray(t.bases) ? Array.from({ length: n }, (_, k) => Math.max(0, Number(t.bases[k]) || 0)) : undefined, // v6: 처음 모습 (진화형을 잡았으면 그 모습부터)
         fx: {},
       })),
       pieces: [],
@@ -920,7 +921,10 @@
       guess: null,
     };
     s.teams.forEach((t, ti) => {
-      for (let k = 0; k < n; k++) s.pieces.push({ team: ti, slot: k, state: "wait", route: "OUT", step: 0, atGoal: false, stage: 0, walk: 0, base: 0, skill: null, used: false, fx: {} });
+      for (let k = 0; k < n; k++) {
+        const b = Math.min(t.bases ? t.bases[k] : 0, t.paths[k].length - 1); // 리자드를 잡아 골랐으면 리자드부터 (잡히면 리자드로 돌아감)
+        s.pieces.push({ team: ti, slot: k, state: "wait", route: "OUT", step: 0, atGoal: false, stage: b, walk: 0, base: b, skill: null, used: false, fx: {} });
+      }
     });
     s.pieces.forEach((_, i) => learn(s, null, i)); // 시험용(now)만 처음부터
     return s;

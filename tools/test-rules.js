@@ -874,6 +874,20 @@ t("66. 💀 어려움 상자 — 볼 4개, 몬스터 25 · 슈퍼 30 · 하이�
   ok(used === 200 || v < 8, "어려움은 아끼지 않음 " + used);
 });
 
+t("67. 진화형을 골랐으면 그 모습부터 (bases) — 리자드로 출발, 5칸에 리자몽, 잡히면 리자드로", () => {
+  let s = Y.newGame({ pieces: 2, seed: 4, teams: [
+    { name: "A", picks: [5, 1], paths: [[4, 5, 6], [1, 2, 3]], bases: [1, 0] },
+    { name: "B", picks: [7, 152], paths: [[7, 8, 9], [152, 153, 154]] }] }, D.evoFrom);
+  eq([Y.formOf(s, 0), Y.formOf(s, 1), s.pieces[0].base], [5, 1, 1]);
+  put(s, 0, 4); s.pieces[0].walk = 4;
+  s = move(choose(s, [1]), "n4/1");
+  eq(Y.formOf(s, 0), 6, "5칸이면 리자몽");
+  put(s, 2, 3);
+  s = move(choose(s, [2], 1), "n3/2");
+  eq([s.pieces[0].state, Y.formOf(s, 0)], ["wait", 5], "잡히면 리자드로");
+  ok(Y.validate(s));
+});
+
 // ---------- 무작위 대국 (불변 조건 확인) ----------
 t("22. 무작위 3,000판 끝까지 — 멈춤·규칙 위반 없음", () => {
   let rs = 99;
