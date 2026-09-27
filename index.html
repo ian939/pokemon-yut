@@ -463,7 +463,8 @@ body.game-land #toast.show { transform: none; }
 .bp-tag.r-c { background: #7d8a9c; }
 /* 야생 포켓몬 바로 옆의 희귀도 표시 (이름판과 별개로 크게) */
 .bt-rar { position: absolute; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; white-space: nowrap; font-family: var(--pixel); font-weight: 700; font-size: var(--t1); line-height: 1;
-  padding: 6px 12px 5px; border: 3px solid var(--ink); border-radius: 12px; color: #fff; background: #7d8a9c; box-shadow: 0 4px 0 rgba(38,49,71,.35); animation: popIn calc(.4s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
+  padding: 6px 12px 5px; border: 3px solid var(--ink); border-radius: 12px; color: #fff; background: #7d8a9c; box-shadow: 0 4px 0 rgba(38,49,71,.35); animation: rarIn calc(.4s * var(--spd)) cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes rarIn { from { transform: translate(-50%, -50%) scale(.3); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } } /* popIn 은 가운데 맞춤(translate)을 지워 버려서 따로 */
 .bt-rar .bp-tag { font-family: var(--font); font-size: 12px; vertical-align: middle; }
 .bt-rar.r-r { background: #4a8fe0; } .bt-rar.r-u { background: #9a6be0; }
 .bt-rar.r-l { background: var(--gold); color: var(--ink); box-shadow: 0 4px 0 rgba(38,49,71,.35), 0 0 18px 6px rgba(245,184,46,.8); }
@@ -641,7 +642,7 @@ body.game-land #toast.show { transform: none; }
 @media (max-width: 520px) {
   .bt-plate .bp-tag, .bt-plate em { display: none; }
   .bt-plate { padding: 5px 8px 6px; }
-  .bt-rar { font-size: 13px; padding: 4px 8px 3px; border-width: 2px; left: auto !important; right: 3%; transform: translateY(-50%); } /* 무대 오른쪽 끝에 붙여 잘리지 않게 */
+  .bt-rar { font-size: 13px; padding: 4px 8px 3px; border-width: 2px; }
 }
 /* ===== 👑 전설 연출 ===== */
 .unit.legend .base { background: linear-gradient(90deg, #ffd23f, #fff6c2, #ffd23f); animation: legendGlow 1.6s ease-in-out infinite; }
@@ -753,7 +754,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-27d";
+const APP_VERSION = "2026-09-28a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1218,7 +1219,8 @@ Screens.setup = sec => {
     '<div class="scroll"><div class="card">' +
       "<h3>" + (fam ? "첫 번째 팀" : "우리 팀") + '</h3><div class="chips">' + memberChips("t0") + "</div>" +
       (fam ? '<h3>두 번째 팀</h3><div class="chips">' + memberChips("t1") + "</div>"
-           : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + "</div>") +
+           : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + chipHtml("cpu", "hard", "💀 어려움") + "</div>" +
+             '<p class="note">' + (Setup.cpu === "hard" ? "💀 로켓단이 늘 가장 좋은 수를 두고 기술도 아끼지 않아요. 이기면 🎁 볼 4개 + 좋은 볼이 더 잘 나와요!" : Setup.cpu === "normal" ? "🔥 로켓단이 절반은 똑똑하게 둬요. 이기면 🎁 볼 3개" : "🌱 로켓단이 아무 데나 둬요. 이기면 🎁 볼 3개") + "</p>") +
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
       '<h3>빽도 (뒤로 한 칸)</h3><div class="chips">' + chipHtml("backdo", true, "↩️ 켜기") + chipHtml("backdo", false, "끄기") + "</div>" +
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
@@ -1533,9 +1535,10 @@ function persist() {
       else st.family[w.key] = (st.family[w.key] || 0) + 1;
       if (s.settings.mode === "rocket" && !w.cpu) {
         const forced = (Q.get("box") || "").split(",").filter(b => Yut.Rewards.BALL_INFO[b]); // 테스트용 ?box=master,poke,great
-        const balls = forced.length ? forced : Yut.Rewards.rollBox(Yut.Rewards.BOX_SIZE, Math.random);
+        const hard = s.settings.cpuLevel === "hard"; // 💀 어려움: 볼 4개 + 좋은 볼이 더 잘
+        const balls = forced.length ? forced : Yut.Rewards.rollBox(hard ? Yut.Rewards.BOX_SIZE_HARD : Yut.Rewards.BOX_SIZE, Math.random, hard ? Yut.Rewards.BOX_ODDS_HARD : null);
         balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
-        s.reward = { balls, opened: false };
+        s.reward = { balls, opened: false, hard };
         st.boxes = (st.boxes || 0) + 1;
       } else if (s.settings.mode === "rocket" && w.cpu) {
         // 로켓단이 이겨도 위로 상자: 몬스터볼 1개 (+ 돈 문제로 하나 더) — 져도 속상하지 않게 (사용자 요청 2026-09-26)
@@ -1866,6 +1869,15 @@ function btPlate(side, name, team, extra) {
     '<div class="bp-hp"><span>HP</span><i class="hpbar"><i class="fill"></i></i></div></div>';
 }
 const WILD_TEAM = { name: "🌿 야생", color: "#3a9d4f" };
+// 무대 위 표시가 무대 밖으로 나가면 안쪽으로 당긴다 (글자가 큰 패드·좁은 폰)
+function fitInStage(c, el) {
+  // 튀어나오는 연출(크기 변화) 중에도 맞게: 화면상 크기가 아니라 원래 너비(offsetWidth)로 잰다. 가운데 맞춤(translate -50%) 기준
+  const sw = c.stage.clientWidth, w = el.offsetWidth, pad = 6;
+  const L = parseFloat(el.style.left) / 100 * sw;
+  const x = Math.max(w / 2 + pad, Math.min(sw - w / 2 - pad, L));
+  el.style.left = x.toFixed(0) + "px";
+  return el;
+}
 const RARITY_KO = { c: "일반", r: "레어", u: "유니크", l: "전설" };
 const RARITY_STAR = { c: "", r: "⭐", u: "⭐⭐", l: "👑" };
 // 기술을 쓸 수 있는 때 = 고른(잡은) 포켓몬의 희귀도 (사용자 확정 2026-09-27): 일반 15칸 · 레어 10칸 · 유니크 5칸 · 전설 처음부터
@@ -2130,9 +2142,9 @@ function encounter(e) {
   const aTeam = G.s.teams[e.team];
   const isNew = !ownedSet().has(id);
   const rar = rarityOf(id);
-  const extra = (isNew ? '<i class="bp-tag new">NEW!</i>' : "") + '<i class="bp-tag r-' + rar + '">' + RARITY_KO[rar] + "</i>";
+  const extra = ""; // 희귀도·NEW!는 포켓몬 옆 큰 표시로 (이름판에 넣으면 이름이 "프로…"로 잘림)
   const c = openStage({ foes: [id], foeTeam: WILD_TEAM, foeExtra: extra, ally, allyTeam: aTeam, allyLater: true });
-  const rarTag = () => c.put("bt-rar r-" + rar, (isNew ? '<i class="bp-tag new">NEW!</i> ' : "") + (RARITY_STAR[rar] ? RARITY_STAR[rar] + " " : "") + RARITY_KO[rar], c.foeXY[0][0], c.foeXY[0][1] - 30); // 포켓몬 바로 위 (좁은 폰에서도 무대 안)
+  const rarTag = () => fitInStage(c, c.put("bt-rar r-" + rar, (isNew ? '<i class="bp-tag new">NEW!</i> ' : "") + (RARITY_STAR[rar] ? RARITY_STAR[rar] + " " : "") + RARITY_KO[rar], c.foeXY[0][0], c.foeXY[0][1] - 30)); // 포켓몬 바로 위 (무대 밖으로 나가면 안으로 당긴다)
   Store.data.stats.wildSeen = (Store.data.stats.wildSeen || 0) + 1;
   Store.save();
   (async () => {
@@ -2310,7 +2322,7 @@ function rocketIntro() {
     o.className = "rocket-intro";
     o.innerHTML = '<div class="ri-flash"></div>' +
       '<div class="ri-crew"><img src="assets/ui/rocket-jessie.png" alt="로사" onerror="this.remove()"><img src="assets/ui/rocket-meowth.png" alt="나옹" onerror="this.remove()"><img src="assets/ui/rocket-james.png" alt="로이" onerror="this.remove()"></div>' +
-      '<div class="ri-talk"><p>귀염둥이 악당, 포켓몬의 감초~!</p><p>우리는 로켓단이다옹~!</p><p class="ri-small">윷놀이로 한판 붙자옹! 😼</p></div>' +
+      '<div class="ri-talk"><p>귀염둥이 악당, 포켓몬의 감초~!</p><p>우리는 로켓단이다옹~!</p><p class="ri-small">' + (G.s && G.s.settings.cpuLevel === "hard" ? "💀 오늘은 진심이다옹! 봐주지 않는다옹~!" : "윷놀이로 한판 붙자옹! 😼") + "</p></div>" +
       '<button class="btn big gold" id="ri-go">⚔️ 대결 시작!</button>';
     document.body.appendChild(o);
     SFX.alarm();
@@ -2351,7 +2363,7 @@ function boxHtml(rw) {
   if (!rw) return "";
   return '<div class="box-zone' + (rw.opened ? " opened" : "") + '" id="box-zone">' +
     '<button class="chest" data-act="open-box" aria-label="보물상자 열기"><img id="chest-img" src="assets/ui/' + (rw.opened ? "chest-open" : "chest-closed") + '.png" alt="" onerror="chestFail(this)"></button>' +
-    '<p class="box-hint" id="box-hint">' + (rw.opened ? "가방에 넣었어요! 🎒" : rw.lose ? "🎁 아깝다! 그래도 위로 상자가 있어요. 눌러서 열어 봐요" : "🎁 로켓단이 두고 간 상자예요! 눌러서 열어 봐요") + "</p>" +
+    '<p class="box-hint" id="box-hint">' + (rw.opened ? "가방에 넣었어요! 🎒" : rw.lose ? "🎁 아깝다! 그래도 위로 상자가 있어요. 눌러서 열어 봐요" : rw.hard ? "💀 어려움을 이겼다! 🎁 볼 4개 특별 상자예요. 눌러서 열어 봐요" : "🎁 로켓단이 두고 간 상자예요! 눌러서 열어 봐요") + "</p>" +
     '<div class="box-balls" id="box-balls">' + (rw.opened ? rw.balls.map(b => ballChip(b)).join("") : "") + "</div></div>";
 }
 async function openBox() {
@@ -3143,7 +3155,7 @@ async function moneyBonus() {
   G.moneyBusy = true;
   let ball = null;
   for (let step = 1; step <= QUIZ_TRIES && !ball; step++) {
-    if (await moneyQuizOnce(step)) ball = step === 1 ? Yut.Rewards.rollBox(1, Math.random)[0] : "poke"; // 첫 문제에 맞히면 상자 확률, 그다음은 몬스터볼
+    if (await moneyQuizOnce(step)) ball = step === 1 ? Yut.Rewards.rollBox(1, Math.random, rw.hard ? Yut.Rewards.BOX_ODDS_HARD : null)[0] : "poke"; // 첫 문제에 맞히면 상자 확률(어려움이면 좋은 볼), 그다음은 몬스터볼
   }
   // 결과를 먼저 저장 (새로고침해도 두 번 안 받게)
   rw.bonus = { ball };

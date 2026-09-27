@@ -857,6 +857,23 @@ t("65. 🎁 받은 기술 — 저절로 기술도 나감 · 이미 받은 기술
   const bad = clone(g.state); bad.pieces[1].gift = { key: "없는기술", used: false }; ok(!Y.validate(bad), "이상한 받은 기술");
 });
 
+t("66. 💀 어려움 상자 — 볼 4개, 몬스터 25 · 슈퍼 30 · 하이퍼 25 · 럭셔리 10 · 마스터 10 (±0.5%p) · 기술을 아끼지 않음", () => {
+  const R = Y.Rewards, rnd = Y.rng(66), N = 100000, cnt = {};
+  eq(R.BOX_SIZE_HARD, 4);
+  R.rollBox(N, rnd, R.BOX_ODDS_HARD).forEach(b => { cnt[b] = (cnt[b] || 0) + 1; });
+  Object.keys(R.BOX_ODDS_HARD).forEach(b => ok(Math.abs(cnt[b] / N - R.BOX_ODDS_HARD[b] / 100) < 0.005, b + " " + (cnt[b] / N * 100).toFixed(2) + "%"));
+  const c2 = {}; R.rollBox(N, rnd).forEach(b => { c2[b] = (c2[b] || 0) + 1; });
+  ok(Math.abs(c2.poke / N - 0.5) < 0.005, "보통 상자는 그대로 50%");
+  // 쓸모가 조금 있는 기술: 보통은 안 쓰고 어려움은 쓴다
+  const s = sk({ p0: [["nitro"], ["nitro"]] }); put(s, 0, 3); put(s, 1, 12);
+  let rs = 3; const rr = () => { const r = Y.rand(rs); rs = r[1]; return r[0]; };
+  const best = Y.cpuSkill(s, "hard", rr);
+  const v = best ? best.v : 0;
+  if (v >= 8 && v < 15) ok(!Y.cpuSkill(s, "normal", () => 0.9), "보통은 아낌");
+  let used = 0; for (let k = 0; k < 200; k++) if (Y.cpuSkill(s, "hard", rr)) used++;
+  ok(used === 200 || v < 8, "어려움은 아끼지 않음 " + used);
+});
+
 // ---------- 무작위 대국 (불변 조건 확인) ----------
 t("22. 무작위 3,000판 끝까지 — 멈춤·규칙 위반 없음", () => {
   let rs = 99;

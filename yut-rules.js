@@ -1175,7 +1175,7 @@
     cand.sort((a, b) => b.v - a.v);
     const best = cand[0];
     if (level === "easy") return rnd() < 0.3 && best.v > 0 ? best : null;
-    if (best.v < 15) return null;
+    if (best.v < (level === "hard" ? 8 : 15)) return null; // 💀 어려움: 쓸모가 조금만 있어도 쓰고, 아끼지 않는다
     if (level === "normal" && rnd() < 0.25) return null;
     return best;
   }
@@ -1258,6 +1258,8 @@
   const WILD_ODDS_BOOST = { c: 30, r: 30, u: 20, l: 20 }; // 🕐 시계 문제를 맞히면 그 조우만 (사용자 확정 2026-09-26: 유니크·전설 +10, 일반 −20)
   const Rewards = {
     BALLS, BALL_INFO, WILD_ODDS, WILD_ODDS_BOOST, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
+    // 💀 어려움을 이기면 (사용자 확정 2026-09-28): 볼 4개 + 좋은 볼이 더 잘 나온다
+    BOX_SIZE_HARD: 4, BOX_ODDS_HARD: { poke: 25, great: 30, ultra: 25, luxury: 10, master: 10 },
     // 잡을 확률 (사용자 확정 2026-09-27): 몬스터볼 기준 일반 60 · 레어 50 · 유니크 40 · 전설 30%,
     // 볼이 한 단계 좋을 때마다 +5%, 이번 조우에서 놓칠 때마다 +10% (최대 100%). 마스터볼은 늘 100%
     CATCH_BASE: { c: 0.6, r: 0.5, u: 0.4, l: 0.3 }, FAIL_BONUS: 0.1,
@@ -1267,12 +1269,13 @@
       return Math.min(1, Math.round((base + 0.05 * Math.max(0, BALLS.indexOf(ball)) + Rewards.FAIL_BONUS * (fails || 0)) * 100) / 100);
     },
     // 상자 하나 = 볼 n개, 한 개씩 따로 뽑는다
-    rollBox(n, rnd) {
-      const total = BALLS.reduce((t, b) => t + BALL_INFO[b].odds, 0);
+    rollBox(n, rnd, odds) {
+      const W = odds || BALLS.reduce((o, b) => (o[b] = BALL_INFO[b].odds, o), {});
+      const total = BALLS.reduce((t, b) => t + (W[b] || 0), 0);
       const out = [];
       for (let i = 0; i < n; i++) {
         let x = rnd() * total;
-        const b = BALLS.find(k => (x -= BALL_INFO[k].odds) < 0) || "poke";
+        const b = BALLS.find(k => (x -= (W[k] || 0)) < 0) || "poke";
         out.push(b);
       }
       return out;

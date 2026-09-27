@@ -292,7 +292,7 @@ def scenario_v2(browser, base, errors):
     answer_quiz(page)                                    # v4: 🕐 시계 문제 먼저
     page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
     page.screenshot(path=str(OUT / "71-wild-menu.png"))
-    check("NEW!" in page.inner_text(".bt-plate.foe"), "처음 보는 포켓몬이면 NEW!")
+    check("NEW!" in page.inner_text(".bt-rar"), "처음 보는 포켓몬이면 NEW! (포켓몬 위 희귀도 표시에)")
     page.click(".bt-menu .bt-ballbtn")
     page.wait_for_selector(".bt-stamp", timeout=15000)
     page.screenshot(path=str(OUT / "72-wild-caught.png"))
@@ -717,7 +717,7 @@ def scenario_v4(browser, base, errors):
     page.wait_for_selector(".bt-menu .bt-ballbtn", timeout=15000)
     check(ev(page, "window.__odds.slice(-1)[0]") == 20, "두 번째 문제에 맞혀도 전설 20%")
     tag = page.inner_text(".bt-rar")
-    check(any(k in tag for k in ("일반", "레어", "유니크", "전설")) and "bp-tag" in page.inner_html(".bt-plate.foe"), f"야생 포켓몬 바로 옆에 희귀도 ({tag})")
+    check(any(k in tag for k in ("일반", "레어", "유니크", "전설")), f"야생 포켓몬 바로 옆에 희귀도 ({tag})")
     em = page.inner_text(".bt-menu .bt-ballbtn em")
     rar = ev(page, "window.__yut.Yut.Rewards.CATCH_BASE[{ c: 'c', r: 'r', u: 'u', l: 'l' }[(D => D.rarity[s.spots[0].id] || 'c')(window.YUT_DATA)]] * 100")
     check(em == f"{round(rar)}%", f"몬스터볼 확률이 희귀도 기준 ({em}, 기준 {rar})")
@@ -812,6 +812,29 @@ def scenario_v4(browser, base, errors):
     page.click(".dest[data-move='n12/3']", force=True)
     wait_idle(page)
     check(ev(page, "s.pieces[0].skill") == "wish", "15칸이 되면 기술을 배움")
+    ctx.close()
+
+    # ⑫ 💀 어려움: 준비 화면 칩 · 이기면 볼 4개 특별 상자
+    ctx, page = ctx_page()
+    page.goto(base + "?seed=2&fast=1&spots=none"); page.wait_for_timeout(300)
+    page.click("text=로켓단 대결")
+    page.click("[data-act=set][data-field=cpu][data-value='\"hard\"']")
+    check("볼 4개" in page.inner_text(".card"), "로켓단 세기에 💀 어려움 (이기면 볼 4개 안내)")
+    page.click("[data-act=set][data-field=pieces][data-value='2']")
+    page.click("[data-act=set][data-field=study][data-value='false']")
+    page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+    page.wait_for_selector("#ri-go"); check("진심" in page.inner_text(".rocket-intro"), "어려움 등장 대사"); page.click("#ri-go"); wait_idle(page)
+    check(ev(page, "s.settings.cpuLevel") == "hard", "판에 어려움이 들어감")
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'done' });
+      Object.assign(s.pieces[1], { state: 'board', route: 'OUT', step: 19, atGoal: false }); s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; s.turn = 0; Y.Act['skill-cancel'](); }""")
+    wait_idle(page)
+    page.click(".dest.goal", force=True)
+    page.wait_for_selector(".win-screen .chest", timeout=20000)
+    check(ev(page, "d.lastGame.reward.balls.length") == 4 and "특별 상자" in page.inner_text(".win-screen"), "어려움을 이기면 볼 4개 특별 상자")
+    page.click(".win-screen .chest", force=True)
+    page.wait_for_function("() => document.querySelectorAll('#box-balls .ballchip').length === 4", timeout=15000)
+    page.wait_for_selector(".win-btns:not(.hidden)", timeout=15000)
+    page.screenshot(path=str(OUT / "99f-hard-box.png"))
     ctx.close()
 
     # ⑪ 🎁 기술을 못 쓰고 골인 → 받을 팀원 고르기 → 기술 두 개 → 받은 기술 쓰기

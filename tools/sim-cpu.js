@@ -19,7 +19,7 @@ function skillFor(s, level) {
     const x = list[Math.floor(rnd() * list.length)];
     return { piece: x.piece, target: x.targets[Math.floor(rnd() * x.targets.length)] };
   }
-  return Y.cpuSkill(s, level === "hard" ? "normal" : level, rnd);
+  return Y.cpuSkill(s, level, rnd);
 }
 
 function play(levels, seed, first, pieces, skills) {
@@ -42,13 +42,13 @@ let failed = false;
   console.log(skills ? "── ✨ 기술 켬 ──" : "── 기술 없음 ──");
   [4, 2].forEach(pieces => {
     // 마지막 두 줄이 실제 판: 아이(아무렇게나, 스타팅 포켓몬) vs 로켓단 쉬움·보통 — 아이의 승률
-    [["normal", "easy"], ["normal", "random"], ["easy", "random"], ["hard", "random"], ["random", "easy"], ["random", "normal"]].forEach(([a, b]) => {
+    [["normal", "easy"], ["normal", "random"], ["easy", "random"], ["hard", "random"], ["random", "easy"], ["random", "normal"], ["random", "hard"]].forEach(([a, b]) => {
       let win = 0;
       for (let g = 0; g < N; g++) if (play([a, b], g + 1, g % 2, pieces, skills) === 0) win++;
       const pct = win / N * 100;
       const gate = pieces === 4 && a === "normal" && b === "easy" && !skills;
       if (gate && pct < 70) failed = true;
-      const who = a === "random" ? "아이 vs 로켓단 " + (b === "easy" ? "🌱 쉬움" : "🔥 보통") : a + " vs " + b;
+      const who = a === "random" ? "아이 vs 로켓단 " + ({ easy: "🌱 쉬움", normal: "🔥 보통", hard: "💀 어려움" })[b] : a + " vs " + b;
       console.log("말 " + pieces + "개 · " + who + ": " + pct.toFixed(1) + "% 승" + (gate ? (pct >= 70 ? "  ✅ 기준 70%" : "  ❌ 기준 70%") : ""));
     });
   });
