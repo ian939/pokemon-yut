@@ -753,7 +753,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-27c";
+const APP_VERSION = "2026-09-27d";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -3111,13 +3111,16 @@ function moneyExplain(q) {
     ({ text: MONEY_UI[u].name + " " + q.counts[u] + MONEY_UI[u].n + " → <b>" + Yut.Study.won(u * q.counts[u]) + "</b>" }));
   return rows.concat([{ text: "모두 <b>" + Yut.Study.won(q.total) + "</b> (" + Yut.Study.koNum(q.total) + " 원)" }]);
 }
+// 💰 돈 문제 단계는 문제마다 무작위 1·2·3 (사용자 요청 2026-09-27 — 천·백만 나오지 않게, 만·십만도 자주)
+const moneyLevel = () => 1 + Math.floor(Math.random() * 3);
 async function moneyQuizOnce(step) {
+  const lv = moneyLevel();
   const retry = step > 1;
   const f = (Q.get("money") || "").split(",").map(Number);
   const forced = !retry && f.length === 4 && f.every(x => x >= 0 && x <= 9) ? { 100000: f[0], 10000: f[1], 1000: f[2], 100: f[3] } : null;
-  const q = Yut.Study.money(studyLevel("money"), Math.random, forced);
+  const q = Yut.Study.money(lv, Math.random, forced);
   const r = await quizWindow({
-    kind: "money", level: studyLevel("money"), step,
+    kind: "money", level: forced ? 2 : lv, step,
     title: step === 1 ? "🎁 상자 바닥에 뭔가 더 있다! 💰 돈 문제를 풀면 <b>볼 하나 더</b>!"
       : step === 2 ? "💰 두 번째 문제! 맞히면 <b>몬스터볼</b> 하나 더" : "💰 마지막 세 번째 문제! 힘내요!",
     body: moneyHtml(q.counts), question: "모두 얼마일까요?",
@@ -3323,7 +3326,7 @@ function openStats() {
     "<p>모두 " + (st.games || 0) + "판</p>" +
     "<p>🎓 공부</p>" + '<div class="stats-list">' + [["clock", "🕐 시계"], ["money", "💰 돈"]].map(([k, n]) => {
       const x = (Store.data.study || {})[k] || {};
-      return "<div><span>" + n + " · " + (x.level || 1) + "단계</span><span>" + (x.right || 0) + "/" + (x.total || 0) + "</span></div>";
+      return "<div><span>" + n + " · " + (k === "money" ? "1~3단계 섞어서" : (x.level || 1) + "단계") + "</span><span>" + (x.right || 0) + "/" + (x.total || 0) + "</span></div>";
     }).join("") + "</div>" +
     '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button><button class="btn" data-act="stats-clear">🗑️ 전적 지우기</button></div>'
   );
