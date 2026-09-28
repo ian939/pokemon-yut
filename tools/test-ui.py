@@ -1027,9 +1027,12 @@ def scenario_net(browser, base, errors):
     """v7: 🏠 친구 대결 — 가짜 Firebase + 브라우저 창 두 개로 방 만들기 → 코드로 들어가기 → 고르기 → 번갈아 두기 → 끝(각자 상자)."""
     sys.path.insert(0, str(ROOT / "tools"))
     from fake_firebase import FakeFirebase
-    fdb = FakeFirebase()
-    dburl = fdb.start()
-    q = "?fast=1&seed=5&spots=3:133,12:25&catch=1&db=" + dburl
+    live = "--live-net" in sys.argv  # 실제 주소 + 실제 Firebase 로
+    fdb = None if live else FakeFirebase()
+    dburl = "" if live else fdb.start()
+    if live:
+        base = "https://ian939.github.io/pokemon-yut/index.html"
+    q = "?fast=1&seed=5&spots=3:133,12:25&catch=1" + ("&v=%d" % int(time.time()) if live else "&db=" + dburl)
 
     def mk(save):
         ctx = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True)
@@ -1179,7 +1182,7 @@ def scenario_net(browser, base, errors):
     b = guest.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.step])) + window.__yut.G.s.turn")
     check(a == b, "이어한 뒤에도 두 패드의 판이 같음")
     hctx.close(); gctx.close()
-    fdb.stop()
+    if fdb: fdb.stop()
 
 
 def main():
@@ -1189,16 +1192,16 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only", "--net-only")):
+        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only", "--net-only", "--live-net")):
             scenario(browser, base, errors)
-        if not any(f in sys.argv for f in ("--v3-only", "--v4-only", "--net-only")):
+        if not any(f in sys.argv for f in ("--v3-only", "--v4-only", "--net-only", "--live-net")):
             scenario_v2(browser, base, errors)
-        if "--v4-only" not in sys.argv and "--net-only" not in sys.argv:
+        if not any(f in sys.argv for f in ("--v4-only", "--net-only", "--live-net")):
             scenario_v3(browser, base, errors)
-        if "--net-only" not in sys.argv:
+        if "--net-only" not in sys.argv and "--live-net" not in sys.argv:
             scenario_v4(browser, base, errors)
         scenario_net(browser, base, errors)
-        if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only", "--net-only")):
+        if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only", "--net-only", "--live-net")):
             browser.close()
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
             httpd.shutdown()
