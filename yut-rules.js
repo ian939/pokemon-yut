@@ -336,9 +336,9 @@
   }
   function srand(s) { const r = rand(s.srng || 1); s.srng = r[1]; return r[0]; }
   // 기술 배우기 — 마지막 모습이 되는 순간 후보(그 모습의 타입 기술) 중에서 무작위로 하나. 한 번 배우면 그대로
-  function learn(s, ev, i) {
+  function learn(s, ev, i, force) {
     const p = s.pieces[i], t = s.teams[p.team];
-    if (s.settings.skills === false || p.skill || p.state === "done" || !isFinal(s, i)) return;
+    if (s.settings.skills === false || p.skill || p.state === "done" || (!force && !isFinal(s, i))) return;
     const pool = ((t.pools && t.pools[p.slot]) || []).filter(k => SKILLS[k]);
     if (!pool.length) return;
     p.skill = pool[Math.floor(srand(s) * pool.length)];
@@ -359,6 +359,13 @@
   }
   // 집으로 — 처음 모습(바꿔 들어온 말은 잡은 모습)으로, 센 칸은 0부터, 효과는 풀린다. 안 쓴 기술은 남는다
   // 집으로 — 자리만 출발 칸으로. 진화한 모습·온 칸 수는 지킨다 (사용자 확정 2026-09-28: 잡혀도 진화한 모습 그대로), 효과는 풀린다
+  // 골인: 아직 기술을 못 배웠으면 들어오면서 배운다 (사용자 확정 2026-09-29 — 10칸 전에 윷·모로 골인해도) → 못 쓴 기술은 팀원에게
+  // 업혀서 같이 들어온 말은 모두 골인시킨 뒤에 넘긴다 (골인한 팀원이 받지 않게)
+  function finishPieces(s, ev, pieces) {
+    pieces.forEach(i => learn(s, ev, i, true));
+    pieces.forEach(i => Object.assign(s.pieces[i], { state: "done", atGoal: false, fx: {} }));
+    pieces.forEach(i => passSkills(s, ev, i));
+  }
   function sendHome(s, i) {
     const p = s.pieces[i];
     Object.assign(p, { state: "wait", route: "OUT", step: 0, atGoal: false, fx: {} });
@@ -717,8 +724,7 @@
       web: m.web || null, fly: !!opt.fly, back, skill: opt.skill || null });
     let captured = false;
     if (m.finish) {
-      m.pieces.forEach(i => Object.assign(s.pieces[i], { state: "done", atGoal: false, fx: {} }));
-      m.pieces.forEach(i => passSkills(s, ev, i));
+      finishPieces(s, ev, m.pieces);
     } else {
       // 🛡️ 철벽 — 잡으러 온 말이 온 자리로 튕겨 나간다 (한 번 더도 없음)
       if (m.capture.length) {
@@ -843,7 +849,7 @@
       ev.push({ type: "move", team, result: 1, unit: "n" + x.node, pieces: x.pieces.slice(), path: d.path.slice(),
         from: { node: x.node, route: x.route, step: x.step, atGoal: !!x.atGoal }, to: d.finish ? null : { node: d.node, route: d.route, step: d.step, atGoal: d.atGoal },
         finish: d.finish, web: null, fly: false, back: false, skill: "tailwind" });
-      if (d.finish) x.pieces.forEach(i => Object.assign(s.pieces[i], { state: "done", atGoal: false, fx: {} }));
+      if (d.finish) finishPieces(s, ev, x.pieces);
       else {
         x.pieces.forEach(i => Object.assign(s.pieces[i], { route: d.route, step: d.step, atGoal: d.atGoal }));
         unify(s, d.node, team, d);

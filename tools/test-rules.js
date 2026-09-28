@@ -1075,6 +1075,23 @@ t("78. 옛 판 이어 하기 (v8) — 흑안개 → 아이스차징 · 전기자
   eq(Object.keys(Y.SKILLS).length, 36);
 });
 
+t("79. 10칸 전에 윷·모로 골인해도 들어오면서 기술을 배우고 → 팀원에게 넘김 (순풍 골인도)", () => {
+  let s = Y.newGame({ pieces: 2, seed: 3, skills: true, teams: [
+    { name: "A", picks: [6, 25], pools: [["nitro"], ["surf"]], need: [10, 10] },
+    { name: "B", picks: [9, 26], pools: [["iron"], ["iron"]], need: [10, 10] }] }, D.evoFrom);
+  Object.assign(s.pieces[0], { state: "board", atGoal: false, walk: 6 }, Y.settle("A", 9)); // 방(22)을 지난 대각선 → 참먹이까지 2칸
+  s.pieces[0].route = "C"; s.pieces[0].step = 9;
+  put(s, 1, 3);
+  let r = Y.applyMove(choose(s, [5]), "n27/5");
+  eq(evTypes(r).filter(x => x === "learn" || x === "giftask"), ["learn", "giftask"]);
+  eq([r.state.pieces[0].state, r.state.pieces[0].skill, r.state.gifts[0].key], ["done", "nitro", "nitro"]);
+  eq(Y.applyGift(r.state, 1).state.pieces[1].gift.key, "nitro");
+  s = sk({ p0: [["tailwind"], ["nitro"]] });
+  s.teams[0].now = [true, false]; s.pieces[1].skill = null; s.teams[0].need = [10, 10];
+  put(s, 0, 3); Object.assign(s.pieces[1], { state: "board", atGoal: true, route: "OUT", step: 0, walk: 3 });
+  r = Y.applySkill(s, 0, null);
+  eq([r.state.pieces[1].state, r.state.pieces[1].skill, (r.state.gifts || []).length], ["done", "nitro", 1], "순풍으로 골인해도");
+});
 // ---------- 무작위 대국 (불변 조건 확인) ----------
 t("22. 무작위 3,000판 끝까지 — 멈춤·규칙 위반 없음", () => {
   let rs = 99;

@@ -295,6 +295,7 @@ def scenario_v2(browser, base, errors):
     check("NEW!" in page.inner_text(".bt-rar"), "처음 보는 포켓몬이면 NEW! (포켓몬 위 희귀도 표시에)")
     page.click(".bt-menu .bt-ballbtn")
     page.wait_for_selector(".bt-stamp", timeout=15000)
+    check(page.query_selector(".bt-rar") is None, "잡으면 희귀도 표시는 치우고 '잡았다!'만")
     page.screenshot(path=str(OUT / "72-wild-caught.png"))
     page.wait_for_selector(".bt-menu [data-key='later']", timeout=15000)  # v3: 지금 말로 쓸까요? → 나중에
     page.click(".bt-menu [data-key='later']")
@@ -1034,7 +1035,7 @@ def scenario_v8(browser, base, errors):
         ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True)
         ctx.add_init_script("localStorage.setItem('engmon_yut_v1', JSON.stringify({ settings: { study: false } }));")
         # 빠르게 모드에서는 안내가 금방 바뀐다 — 안내 칸에 뜬 글을 모두 적어 둔다
-        ctx.add_init_script("window.__hints = []; new MutationObserver(ms => ms.forEach(m => { const t = m.target; if (t && t.id === 'hint') window.__hints.push(t.textContent); })).observe(document, { childList: true, subtree: true });")
+        ctx.add_init_script("window.__hints = []; window.__rolls = []; new MutationObserver(ms => ms.forEach(m => { const t = m.target; if (t && t.id === 'hint') window.__hints.push(t.textContent); if (t && t.classList && t.classList.contains('roll-res') && t.textContent) window.__rolls.push(t.textContent); })).observe(document, { childList: true, subtree: true });")
         page = ctx.new_page()
         page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
         page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
@@ -1088,6 +1089,7 @@ def scenario_v8(browser, base, errors):
     label = use_on(page, "icecharge", 10)
     check("얼리기" in label and "100%" in label, f"아이스차징 대상 말풍선에 성공 확률 ({label.strip()})")
     check(ev(page, "(s.pieces[4].fx || {}).freeze > 0 && s.teams[1].fx.chill > 0"), "아이스차징: 얼음 + 그 팀 윷이 작아짐")
+    check(page.evaluate("() => window.__rolls.some(t => t.includes('성공'))"), "🎲 확률 막대 → '성공! ✨'")
     badge = page.query_selector("#units .unit[data-node='10'] .badge-s")
     check(badge is not None and "🧊" in badge.inner_text(), "얼은 말 모서리에 🧊")
     check("🧊" in (page.query_selector_all(".tcard")[1].inner_text() if len(page.query_selector_all(".tcard")) > 1 else ""), "상대 팀 카드에 🧊 (윷이 작아짐)")
@@ -1130,9 +1132,14 @@ def scenario_v8(browser, base, errors):
     check("50%" in label and "💧" in label, f"물 타입 상대에게 화염방사: 50% 💧 ({label.strip()})")
     page.screenshot(path=str(OUT / "v8-4-chance-target.png"))
     page.click("#dests .dest.skill-t[data-node='5']", force=True)
+    try:
+        page.wait_for_selector(".roll.no", timeout=10000); page.screenshot(path=str(OUT / "v8-6-roll-fail.png"))
+    except Exception:
+        pass
     wait_idle(page)
     hints = page.evaluate("() => window.__hints.join(' | ')")
     check("실패" in hints and "별로" in hints, "실패 안내 + '효과가 별로인 듯하다'")
+    check(page.evaluate("() => window.__rolls.some(t => t.includes('실패'))"), "🎲 확률 막대에서 바늘이 회색(실패)에 멈추고 '실패… 😵'")
     check(ev(page, "[s.pieces[0].used, s.pieces[2].state]") == [True, "board"], "실패: 기술이 사라짐 (쓴 것으로)")
     check(page.query_selector(".pchip[data-piece='0'] .sk.used") is not None, "실패한 말 칩에 ✓ (다 씀)")
     inject(page, "fresh(0)")

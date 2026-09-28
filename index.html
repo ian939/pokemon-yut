@@ -588,6 +588,23 @@ body.game-land #toast.show { transform: none; }
 .emote-pop .emo-pic { width: 64px; height: 64px; }
 .emote-pop b { font-family: var(--font); font-size: 18px; font-weight: 900; white-space: nowrap; }
 .emote-pop.out { opacity: 0; transform: translateY(-8px); }
+.roll { position: fixed; inset: 0; z-index: 360; display: grid; place-items: center; background: rgba(20,28,45,.35); animation: fadeIn .15s; }
+.roll.out { opacity: 0; transition: opacity .2s; }
+.roll-card { width: min(420px, calc(100vw - 32px)); padding: 16px 18px 14px; background: var(--paper); border: 4px solid var(--ink); border-radius: 20px; box-shadow: var(--win), var(--lift); text-align: center; }
+.roll-title { display: block; font-family: var(--font); font-size: 20px; font-weight: 900; margin-bottom: 10px; }
+.roll-bar { position: relative; height: 40px; background: #c9ced8; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
+.roll-win { position: absolute; left: 0; top: 0; bottom: 0; background: #2fa35a; }
+.roll-lab { display: flex; margin-top: 4px; font-family: var(--font); font-size: 14px; font-weight: 900; }
+.roll-lab em { font-style: normal; text-align: center; white-space: nowrap; }
+.roll-lab .g { color: #2fa35a; flex: 0 0 auto; } .roll-lab .x { color: #6b7488; flex: 1 1 0; }
+.roll-needle { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; left: 2%; background: var(--ink); border-radius: 3px; box-shadow: 0 0 0 2px #fff; }
+.roll-res { display: block; min-height: 44px; margin-top: 10px; font-family: var(--pixel); font-size: 34px; font-weight: 700; line-height: 1.3; }
+.roll.ok .roll-res { color: #2fa35a; animation: popIn .3s ease-out; }
+.roll.no .roll-res { color: #6b7488; animation: rollShake .35s linear; }
+.roll.ok .roll-card { border-color: #2fa35a; box-shadow: 0 0 0 4px #fff, 0 0 26px 8px rgba(47,163,90,.7); }
+.roll.no .roll-card { filter: saturate(.6); }
+@keyframes rollShake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@media (prefers-reduced-motion: reduce) { .roll-res { animation: none !important; } }
 .tc-note { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin: 4px 0 8px; }
 .tchart { display: grid; gap: 6px; }
 .tc-row { display: flex; gap: 8px; align-items: flex-start; background: var(--paper-2); border: 2px solid var(--ink); border-left: 8px solid var(--tc); border-radius: 12px; padding: 6px 8px; }
@@ -838,7 +855,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-29a";
+const APP_VERSION = "2026-09-29b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -2220,6 +2237,7 @@ async function stageThrow(c, ball, res) {
   if (res.ok) {
     SFX.catchOk();
     stageStars(c, x, y - 4);
+    c.stage.querySelectorAll(".bt-rar").forEach(e => e.remove()); // 등급 표시는 치우고 "잡았다!"만
     c.stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp">잡았다!</div>');
     return;
   }
@@ -2876,6 +2894,34 @@ async function cpuUseSkill(a) {
   if (current !== "game" || G.paused || humanTurn() || G.busy) return;
   await doSkill(a.piece, a.target, a.slot);
 }
+// 🎲 기술 성공·실패 보여 주기 (사용자 요청 2026-09-29): 성공 칸(초록)이 확률만큼, 바늘이 왔다 갔다 하다 멈춘다 → 성공! / 실패…
+// 바늘 자리는 결과에 맞춰 성공이면 초록 안, 실패면 회색 안 (확률 감각 익히기). 누르면 넘김
+function skillRoll(chance, ok, match, title) {
+  return new Promise(res => {
+    const pc = Math.round(chance * 100);
+    const at = ok ? Math.random() * pc * 0.92 + pc * 0.04 : pc + (100 - pc) * (0.15 + Math.random() * 0.7);
+    const el = document.createElement("div");
+    el.className = "roll";
+    el.innerHTML = '<div class="roll-card"><b class="roll-title">' + esc(title ? title + " · " : "") + "🎲 성공 " + pc + "%" + (match > 0 ? " 💥" : match < 0 ? " 💧" : "") + "</b>" +
+      '<div class="roll-bar"><i class="roll-win" style="width:' + pc + '%"></i><i class="roll-needle"></i></div>' +
+      '<div class="roll-lab"><em class="g" style="width:' + pc + '%">성공 ' + pc + "%</em>" + (pc < 100 ? '<em class="x">실패 ' + (100 - pc) + "%</em>" : "") + "</div>" +
+      '<strong class="roll-res"></strong></div>';
+    document.body.appendChild(el);
+    const nd = el.querySelector(".roll-needle"), out = el.querySelector(".roll-res");
+    let done = false;
+    const close = () => { if (done) return; done = true; el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 200 * SPEED); };
+    el.addEventListener("click", close);
+    const sweep = pc >= 100 ? [{ left: "50%" }, { left: at + "%" }] : [{ left: "2%" }, { left: "98%" }, { left: "10%" }, { left: "90%" }, { left: at + "%" }];
+    const a = nd.animate(sweep, { duration: 1000 * SPEED, easing: "cubic-bezier(.3,.1,.3,1)", fill: "forwards" });
+    a.onfinish = () => {
+      if (done) return;
+      el.classList.add(ok ? "ok" : "no");
+      out.textContent = ok ? "성공! ✨" : "실패… 😵";
+      if (ok) { SFX.again(); confetti(18); } else SFX.thud();
+      setTimeout(close, 900 * SPEED);
+    };
+  });
+}
 // 기술 장면: 화면을 가로지르는 띠 (1.6초, 누르면 넘김. "배틀 장면 건너뛰기"면 짧게)
 function cutIn(id, key, team, title) {
   return new Promise(res => {
@@ -2914,6 +2960,7 @@ const EVENT_ANIM = {
     markSeen(e.key);
     const st = prev || G.s;
     await cutIn(Yut.formOf(st, e.piece), e.key, st.teams[e.team]);
+    if (e.chance != null) await skillRoll(e.chance, e.ok !== false, e.match);
     if (e.match > 0 && e.ok !== false) { SFX.again(); toast("💥 효과가 굉장했다! (성공 +10%)", 1500); await sleep(700); }
     else if (e.match < 0) { toast("💧 효과가 별로인 듯하다… (성공 −10%)", 1500); await sleep(700); }
   },
@@ -2928,6 +2975,7 @@ const EVENT_ANIM = {
     await sleep(1300);
   },
   async reactfail(e) {
+    await skillRoll(e.chance, false, 0, (SKILL_UI[e.key] || {}).emoji + " " + skillName(e.key));
     const q = G.s.pieces[e.piece];
     if (q && q.state === "board") fxAt(Yut.posOf(q), "😵");
     SFX.thud();
