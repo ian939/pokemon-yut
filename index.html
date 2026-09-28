@@ -565,6 +565,38 @@ body.game-land #toast.show { transform: none; }
 .si-body b { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); }
 .si-body b i { font-style: normal; font-family: var(--font); font-size: 12px; font-weight: 900; color: #fff; background: var(--tc); border: 2px solid var(--ink); border-radius: 8px; padding: 0 6px; margin-left: 6px; vertical-align: middle; }
 .si-body small { font-size: 14px; font-weight: 700; color: var(--ink-soft); line-height: 1.45; }
+.emote-btn:disabled { opacity: .45; }
+.emote-pick { position: fixed; z-index: 380; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: calc(100vw - 16px); padding: 8px; background: var(--paper); border: 4px solid var(--ink); border-radius: 18px; box-shadow: var(--win), var(--lift); animation: popIn .18s ease-out; }
+.emote-pick .emo { display: grid; justify-items: center; gap: 2px; width: 76px; min-height: 92px; padding: 4px 2px; background: var(--paper-2); border: 3px solid var(--ink); border-radius: 14px; font: inherit; cursor: pointer; }
+.emote-pick .emo:active { transform: scale(.94); }
+.emo-pic { position: relative; display: block; width: 56px; height: 56px; }
+.emo-pic img { width: 100%; height: 100%; object-fit: contain; }
+.emo-mark { position: absolute; right: -8%; bottom: -6%; width: 50%; height: 50%; display: grid; place-items: center; font-style: normal; font-size: 22px; background: #fff; border: 2px solid var(--ink); border-radius: 50%; line-height: 1; }
+.emote-pop .emo-mark { font-size: 26px; }
+.emote-pop[data-k="joy"] .emo-pic img { animation: emoJoy .5s ease-in-out 3; }
+.emote-pop[data-k="wow"] .emo-pic img { animation: emoWow .4s ease-out 2; }
+.emote-pop[data-k="sad"] .emo-pic img { filter: saturate(.55) brightness(.95); transform: rotate(-8deg) translateY(4%); }
+.emote-pop[data-k="huff"] .emo-pic img { animation: emoHuff .12s linear 8; }
+.emote-pop[data-k="good"] .emo-pic img { animation: emoGood .6s ease-in-out 2; }
+@keyframes emoJoy { 50% { transform: translateY(-14%); } }
+@keyframes emoWow { 40% { transform: scale(1.18); } }
+@keyframes emoHuff { 25% { transform: translateX(-4%); } 75% { transform: translateX(4%); } }
+@keyframes emoGood { 50% { transform: rotate(10deg) scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .emote-pop .emo-pic img { animation: none !important; } }
+.emote-pick .emo b { font-size: 12px; font-weight: 900; white-space: nowrap; }
+.emote-pop { position: fixed; z-index: 370; pointer-events: none; display: flex; align-items: center; gap: 4px; padding: 4px 10px 4px 4px; background: #fff; border: 4px solid var(--tc); border-radius: 18px; box-shadow: var(--lift); animation: popIn .25s ease-out; transition: opacity .3s, transform .3s; }
+.emote-pop .emo-pic { width: 64px; height: 64px; }
+.emote-pop b { font-family: var(--font); font-size: 18px; font-weight: 900; white-space: nowrap; }
+.emote-pop.out { opacity: 0; transform: translateY(-8px); }
+.tc-note { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin: 4px 0 8px; }
+.tchart { display: grid; gap: 6px; }
+.tc-row { display: flex; gap: 8px; align-items: flex-start; background: var(--paper-2); border: 2px solid var(--ink); border-left: 8px solid var(--tc); border-radius: 12px; padding: 6px 8px; }
+.tc-atk { flex: 0 0 auto; min-width: 58px; font-family: var(--font); font-weight: 900; font-size: 15px; color: #fff; background: var(--tc); border: 2px solid var(--ink); border-radius: 8px; padding: 2px 6px; text-align: center; }
+.tc-row > div { display: grid; gap: 3px; min-width: 0; }
+.tc-row > div > div { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.tc-row i { font-style: normal; font-size: 12px; font-weight: 900; color: var(--ink-soft); margin-right: 2px; white-space: nowrap; }
+.tc-good i { color: #c0392b; } .tc-none i { color: #555; }
+.tc-chip { font-size: 12px; font-weight: 900; color: #fff; background: var(--tc); border: 1.5px solid var(--ink); border-radius: 7px; padding: 0 5px; line-height: 1.5; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
 .si-body .si-ch { font-style: normal; font-family: var(--font); font-size: 13px; font-weight: 900; color: var(--ink); }
 .res-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 4px; }
 .res-pick .btn { min-height: 86px; flex-direction: column; gap: 2px; padding: 6px; }
@@ -806,7 +838,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-28f";
+const APP_VERSION = "2026-09-29a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1429,6 +1461,7 @@ Screens.game = sec => {
     '<header class="bar"><button class="btn icon" data-act="pause" aria-label="잠깐 쉬기">⏸</button>' +
       '<div class="turn-pill" id="turn-pill"></div>' +
       '<button class="btn icon bagchip" data-act="bag" aria-label="가방">🎒<i id="bag-n"></i></button>' +
+      (netOn() ? '<button class="btn icon emote-btn" data-act="emote" id="emote-btn" aria-label="감정 표현">💬</button>' : "") +
       '<button class="btn icon" data-act="sound-game" id="sound-icon" aria-label="소리">' + (Store.data.sound === false ? "🔇" : "🔊") + "</button></header>" +
     '<div class="game-main">' +
       '<div class="board-wrap"><div class="board" id="board"></div></div>' +
@@ -2733,7 +2766,7 @@ function openSkillMenu() {
     if (p.skill && !p.used && Yut.isFinal(G.s, i) && Yut.SKILLS[p.skill].kind === "react") reacts.push([i, p.skill, "own"]);
     if (Yut.giftReady(p) && Yut.SKILLS[p.gift.key].kind === "react") reacts.push([i, p.gift.key, "gift"]);
   });
-  showModal("<h2>✨ 기술 쓰기</h2><p>한 차례에 하나, 기술마다 한 판에 한 번! 🎲 실패하면 다음 차례에 다시 해 봐요</p>" +
+  showModal("<h2>✨ 기술 쓰기</h2><p>한 차례에 하나, 기술마다 한 판에 한 번! 🎲 확률로 성공해요 — 실패해도 한 번 쓴 거예요</p>" +
     '<div class="skill-list">' + list.map(x => skillItem(x.piece, false, x.key, x.slot)).join("") + "</div>" +
     (reacts.length ? '<h2 class="sub">🛡️ 저절로 나가는 기술</h2><div class="skill-list">' + reacts.map(r => skillItem(r[0], true, r[1], r[2])).join("") + "</div>" : "") +
     '<div class="btns"><button class="btn" data-act="skilldex">📖 기술 도감</button><button class="btn" data-act="close-modal">닫기</button></div>');
@@ -2889,7 +2922,7 @@ const EVENT_ANIM = {
     if (p && p.state === "board") fxAt(Yut.posOf(p), "😵");
     SFX.thud();
     const msg = "앗, " + josa(skillName(e.key), "이/가") + " 실패했어요! (성공 " + pctTxt(e.chance) + ")";
-    toast("😵 " + msg + " 기술은 남아 있어요 — 다음 차례에 다시!", 2400);
+    toast("😵 " + msg + " 이 기술은 써 버렸어요…", 2400);
     TTS.say("앗, 실패!");
     renderPanel();
     await sleep(1300);
@@ -3200,8 +3233,20 @@ function openSkillDex() {
     '<div class="dex-types">' + TYPE_ORDER.map(t => '<div class="dex-row" style="--tc:' + (D.typeColors[t] || "#999") + '"><span>' + esc(t) + '</span><div class="dex-cards">' +
       (Yut.TYPE_SKILLS[t] || []).map(k => '<div class="dex-card' + (seen.has(k) ? "" : " unseen") + '"><b>' + SKILL_UI[k].emoji + " " + esc(skillName(k)) + "</b>" +
         (Yut.SKILLS[k].kind === "react" ? "<i>저절로</i>" : "") + "<br>" + esc(SKILL_UI[k].desc) + "</div>").join("") +
-    "</div></div>").join("") + "</div>" +
+    "</div></div>").join("") + "</div>" + typeChartHtml() +
     '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button></div>');
+}
+// ⚔️ 타입 상성표 — 공격 타입마다 강해요(+10%) · 약해요(−10%) · 안 통해요(−10%) (원작 상성, 규칙은 yut-rules.js 의 TYPE_CHART)
+function typeChartHtml() {
+  const chip = t => '<span class="tc-chip" style="--tc:' + (D.typeColors[t] || "#999") + '">' + esc(t) + "</span>";
+  const list = str => (str || "").split(" ").filter(Boolean);
+  return '<h2 class="sub">⚔️ 타입 상성표</h2><p class="tc-note">상대 말에 거는 기술은 상성이 좋으면 <b>성공 +10%</b>, 나쁘면 <b>−10%</b>! 공격하는 기술의 타입 → 맞는 포켓몬의 타입</p>' +
+    '<div class="tchart">' + TYPE_ORDER.map(t => {
+      const c = Yut.TYPE_CHART[t] || {};
+      const cell = (k, cls, label) => list(c[k]).length ? '<div class="tc-' + cls + '"><i>' + label + "</i>" + list(c[k]).map(chip).join("") + "</div>" : "";
+      return '<div class="tc-row" style="--tc:' + (D.typeColors[t] || "#999") + '"><span class="tc-atk">' + esc(t) + "</span><div>" +
+        cell(2, "good", "💥 강해요") + cell("h", "bad", "💧 약해요") + cell(0, "none", "🚫 안 통해요") + "</div></div>";
+    }).join("") + "</div>";
 }
 
 /* ================================================================
@@ -3622,6 +3667,7 @@ const giftMine = () => !!(netOn() && G.s.gifts && G.s.gifts.length && G.s.gifts[
 // 상대 동작을 받는다 — 차례대로 연출
 function onNetRoom(room) {
   if (!netOn() || current !== "game" || !room) return;
+  onEmote(room.emote);
   if ((room.seq || 0) <= G.net.seq) return;
   G.net.seq = room.seq;
   netSave();
@@ -3657,6 +3703,67 @@ function netStartGame() { // 게임 화면에 들어갈 때 (새 판 · 이어�
   Net.listen(G.net.code, onNetRoom);
 }
 const otherName = () => netOn() ? G.s.teams[1 - G.net.me].name : "";
+
+/* ---------- 💬 감정 표현 — 피카츄 표정 5가지 (사용자 확정 2026-09-29: 정해진 5개만, 글쓰기 없음, 소리 없음)
+ * 서버 yutrooms/{코드}/emote = { by, e, t } — 판 상태(seq)와 따로. 보낸 팀 카드 모서리에 2.5초 */
+const EMOTES = [
+  { k: "joy", e: "😄", t: "좋아!" }, { k: "wow", e: "😮", t: "우와!" }, { k: "sad", e: "😢", t: "아쉬워…" },
+  { k: "huff", e: "😤", t: "두고 봐!" }, { k: "good", e: "👍", t: "잘했어!" },
+];
+const EMOTE_COOL = 3000; // 한 번 보내면 3초 쉬기 (도배 막기)
+// 그림: 피카츄(공식 그림) + 모서리 감정 표시 + 감정마다 다른 움직임 — Codex 가 상표 캐릭터 그리기를 막아서 (2026-09-29)
+const emoteImg = k => '<img src="assets/ui/emote-pika.webp" alt="" draggable="false" onerror="this.remove()"><i class="emo-mark">' + ((EMOTES.find(x => x.k === k) || {}).e || "") + "</i>";
+// 고르는 창 밖을 누르면 닫는다
+document.addEventListener("pointerdown", e => { const p = $(".emote-pick"); if (p && !p.contains(e.target) && !e.target.closest("#emote-btn")) p.remove(); });
+function openEmotes() {
+  const old = $(".emote-pick");
+  if (old) { old.remove(); return; }
+  if (!netOn() || Date.now() < (G.net.emoteCool || 0)) return;
+  const box = document.createElement("div");
+  box.className = "emote-pick";
+  box.innerHTML = EMOTES.map(x => '<button class="emo" data-act="emote-send" data-k="' + x.k + '" aria-label="' + esc(x.t) + '"><span class="emo-pic">' + emoteImg(x.k) + '</span><b>' + esc(x.t) + "</b></button>").join("");
+  document.body.appendChild(box);
+  const b = $("#emote-btn");
+  if (b) { const r = b.getBoundingClientRect(); box.style.top = (r.bottom + 8) + "px"; box.style.right = Math.max(8, window.innerWidth - r.right) + "px"; }
+}
+function sendEmote(k) {
+  const pick = $(".emote-pick");
+  if (pick) pick.remove();
+  if (!netOn() || !EMOTES.some(x => x.k === k) || Date.now() < (G.net.emoteCool || 0)) return;
+  G.net.emoteCool = Date.now() + EMOTE_COOL;
+  const b = $("#emote-btn");
+  if (b) { b.disabled = true; setTimeout(() => { const c = $("#emote-btn"); if (c) c.disabled = false; }, EMOTE_COOL); }
+  const em = { by: G.net.me, e: k, t: Date.now() };
+  G.net.emoteSeen = em.by + ":" + em.t;
+  showEmote(G.net.me, k);
+  Net.patch(G.net.code, { emote: em }).catch(e => console.error(e));
+}
+// 받은 감정 — 들어오기 전에 있던 것은 안 보인다
+function onEmote(em) {
+  const key = em ? em.by + ":" + em.t : null;
+  if (G.net.emoteSeen === undefined) { G.net.emoteSeen = key; return; } // 처음 받은 방: 지금 있는 것은 옛것
+  if (!em || key === G.net.emoteSeen || !EMOTES.some(x => x.k === em.e)) return;
+  G.net.emoteSeen = key;
+  if (em.by !== G.net.me) showEmote(em.by, em.e);
+}
+// 보낸 팀 카드의 오른쪽 위 모서리에 말풍선 (카드를 다시 그려도 사라지지 않게 화면 위층에)
+function showEmote(team, k) {
+  const x = EMOTES.find(y => y.k === k);
+  const card = $$("#teams .tcard")[team];
+  if (!x || !card) return;
+  $$('.emote-pop[data-team="' + team + '"]').forEach(e => e.remove());
+  const el = document.createElement("div");
+  el.className = "emote-pop";
+  el.dataset.team = team;
+  el.dataset.k = k;
+  el.style.setProperty("--tc", G.s.teams[team].color);
+  el.innerHTML = '<span class="emo-pic">' + emoteImg(k) + "</span><b>" + esc(x.t) + "</b>";
+  document.body.appendChild(el);
+  const r = card.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  el.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.right - w * 0.85)) + "px";
+  el.style.top = Math.max(6, Math.min(window.innerHeight - h - 6, r.top - h * 0.3)) + "px";
+  setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 300); }, 2500 * Math.max(SPEED, 0.6));
+}
 
 /* ---------- 🏠 친구 대결 화면들 ---------- */
 Screens.net = sec => {
@@ -3842,7 +3949,7 @@ function openRules() {
       "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
       "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 져서 집으로 가도 <b>진화한 모습은 그대로</b>예요.</li>" +
       "<li>📖 <b>기술</b>은 <b>10칸</b> 가면 배워요 (모든 포켓몬 같아요). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
-      "<li>🎲 기술은 <b>확률로 성공</b>해요 — 일반 <b>60%</b> · 레어 <b>70%</b> · 유니크 <b>80%</b> · 👑 전설 <b>90%</b> (스타팅 포켓몬은 레어). 상대 말에 거는 기술은 타입 상성이 좋으면 <b>+10%</b>, 나쁘면 <b>−10%</b>. 실패해도 기술은 남아서 다음 차례에 다시!</li>" +
+      "<li>🎲 기술은 <b>확률로 성공</b>해요 — 일반 <b>60%</b> · 레어 <b>70%</b> · 유니크 <b>80%</b> · 👑 전설 <b>90%</b> (스타팅 포켓몬은 레어). 상대 말에 거는 기술은 타입 상성이 좋으면 <b>+10%</b>, 나쁘면 <b>−10%</b>. 실패하면 그 기술은 사라져요!</li>" +
       "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 💰 로켓단 대결이 끝나면 <b>돈 문제</b>로 볼 하나 더!</li>" +
       "<li>🎯 잡을 확률(몬스터볼): 일반 60 · 레어 50 · 유니크 40 · 전설 30% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
@@ -3939,6 +4046,8 @@ const Act = {
   "gift-to": el => { modalClose = null; closeModal(); G.paused = false; doGift(Number(el.dataset.to)); },
   "skill-cancel": () => { SFX.tap(); afterAction(); },
   "skilldex": openSkillDex,
+  "emote": openEmotes,
+  "emote-send": el => sendEmote(el.dataset.k),
   "chip": el => onChipTap(Number(el.dataset.piece)),
   "pause": openPause,
   "pause-home": () => { modalClose = null; closeModal(); G.paused = false; showScreen("home"); },

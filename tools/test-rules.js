@@ -1025,7 +1025,7 @@ t("75. 카운터가 새 기술도 되돌림 — 방전(쓴 팀) · 아이스차�
   r = Y.applySkill(s, 0, 14);
   eq([node(r.state, 0), node(r.state, 2)], [3, 14]);
 });
-t("76. 🎲 발동 확률 — 희귀도 60·70·80·90 · 상대 말 하나에 거는 기술은 상성 ±10 · 실패하면 기술은 남고 이번 차례만 씀", () => {
+t("76. 🎲 발동 확률 — 희귀도 60·70·80·90 · 상대 말 하나에 거는 기술은 상성 ±10 · 실패하면 기술이 사라짐", () => {
   const mk = (rar, types) => { const s = sk({ p0: [["flame"], ["nitro"]] }); s.teams[0].rar = [rar, rar]; if (types) s.teams[1].types = [types, types]; put(s, 0, 3); put(s, 1, 12); put(s, 2, 5); return s; };
   eq(["c", "r", "u", "l"].map(r => Y.skillChance(mk(r), 0, "flame", 5).chance), [0.6, 0.7, 0.8, 0.9]);
   eq(Y.skillChance(mk("c", [["물"], ["물"], ["물"]]), 0, "flame", 5), { chance: 0.5, base: 0.6, match: -1 }, "불꽃 → 물 별로");
@@ -1041,14 +1041,13 @@ t("76. 🎲 발동 확률 — 희귀도 60·70·80·90 · 상대 말 하나에 �
     const r = Y.applySkill(s, 0, 5), e = r.events[0];
     eq([e.type, e.chance], ["skill", 0.7]);
     if (e.ok) { okN++; eq(r.state.pieces[2].state, "wait"); continue; }
-    eq([r.state.pieces[0].used, r.state.pieces[2].state, r.state.skillTurn], [false, "board", 1]);
+    eq([r.state.pieces[0].used, r.state.pieces[2].state, r.state.skillTurn], [true, "board", 1]);
     ok(evTypes(r).includes("skillfail"));
-    eq(Y.legalSkills(r.state), [], "이번 차례엔 다시 못 씀");
-    ok(Y.legalSkills(atThrow(r.state, 3, 0)).some(x => x.piece === 0), "다음 차례에 다시");
+    ok(!Y.legalSkills(atThrow(r.state, 3, 0)).some(x => x.piece === 0), "다음 차례에도 못 씀 (사라짐)");
   }
   ok(Math.abs(okN / N - 0.7) < 0.03, "성공 비율 " + okN / N);
 });
-t("77. 🎲 저절로 기술도 희귀도 확률 — 철벽이 실패하면 잡히고 철벽은 그대로 남음", () => {
+t("77. 🎲 저절로 기술도 희귀도 확률 — 철벽이 실패하면 잡히고 철벽도 사라짐", () => {
   let okN = 0;
   const N = 2000;
   for (let k = 0; k < N; k++) {
@@ -1058,7 +1057,7 @@ t("77. 🎲 저절로 기술도 희귀도 확률 — 철벽이 실패하면 잡�
     const r = Y.applyMove(choose(s, [3]), "n4/3");
     if (evTypes(r).includes("block")) { okN++; continue; }
     ok(evTypes(r).includes("reactfail"));
-    eq([r.state.pieces[2].state, r.state.pieces[2].used], ["wait", false]);
+    eq([r.state.pieces[2].state, r.state.pieces[2].used], ["wait", true]);
   }
   ok(Math.abs(okN / N - 0.6) < 0.035, "철벽 성공 비율 " + okN / N);
 });

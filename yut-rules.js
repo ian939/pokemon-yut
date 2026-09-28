@@ -544,10 +544,11 @@
     const match = SKILLS[key] && SKILLS[key].kind === "active" ? matchup(s, i, key, tg) : 0;
     return { chance: Math.max(0.05, Math.min(1, Math.round((base + 0.1 * match) * 100) / 100)), base, match };
   }
-  // 저절로 기술이 나갈지 (희귀도 확률만). 실패하면 기술은 그대로 남는다
+  // 저절로 기술이 나갈지 (희귀도 확률만). 실패해도 기술은 쓴 것으로 (사용자 확정 2026-09-29)
   function reactRoll(s, ev, j, key) {
     const c = skillChance(s, j, key, null).chance;
     if (c >= 1 || srand(s) < c) return true;
+    spend(s, j, key);
     ev.push({ type: "reactfail", piece: j, key, team: s.pieces[j].team, chance: c });
     return false;
   }
@@ -1041,15 +1042,15 @@
     const ev = [];
     const p = s.pieces[i], key0 = entry.key;
     s.skillTurn = s.turnNo; // 한 차례에 기술 하나
-    // 🎲 발동 확률 (v8) — 실패하면 이번 차례 기술은 쓴 것으로, 기술은 그대로 남는다
+    // 🎲 발동 확률 (v8) — 실패해도 기술은 쓴 것으로 사라진다 (사용자 확정 2026-09-29)
     const ch = skillChance(s, i, key0, tg);
     const ok = ch.chance >= 1 || srand(s) < ch.chance;
+    if (entry.slot === "gift") p.gift.used = true; else p.used = true;
     ev.push({ type: "skill", piece: i, key: key0, team: p.team, target: tg, slot: entry.slot, chance: ch.chance, match: ch.match, ok });
     if (!ok) {
       ev.push({ type: "skillfail", piece: i, key: key0, team: p.team, chance: ch.chance });
       return closeAction(s, ev);
     }
-    if (entry.slot === "gift") p.gift.used = true; else p.used = true;
     s.__slot = entry.slot;   // 가로챈다: 빼앗은 기술을 같은 칸에 (아래에서 지움)
     if (key0 === "metronome") {
       const pool = metroPool(s, i);
