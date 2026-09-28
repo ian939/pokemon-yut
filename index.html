@@ -103,7 +103,7 @@ img { -webkit-user-drag: none; }
 /* ===== 처음 화면 ===== */
 .home { background: linear-gradient(#86ceff, #d7f1ff 52%, #a6e08a 53%, #6fc25a); }
 .art-title .home { background: #86ceff url(assets/ui/title-bg.webp) center 70% / cover no-repeat; }
-.home .inner { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 14px; }
+.home .inner { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 16px; padding: 14px; overflow-y: auto; }
 /* 제목: 포켓몬 로고의 노랑·파랑을 도트 글꼴로 — 먹선은 4px 계단 그림자로 또렷하게 */
 .logo {
   font-family: var(--pixel); font-weight: 700; font-size: var(--t5); line-height: 1; text-align: center; color: #ffcb05;
@@ -605,29 +605,55 @@ body.game-land #toast.show { transform: none; }
 .roll.no .roll-card { filter: saturate(.6); }
 @keyframes rollShake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 @media (prefers-reduced-motion: reduce) { .roll-res { animation: none !important; } }
-.coin-ov { position: fixed; inset: 0; z-index: 390; display: grid; place-items: center; background: rgba(20,28,45,.55); animation: fadeIn .2s; }
+.coin-ov { position: fixed; inset: 0; z-index: 390; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 12px; padding: 12px; overflow-y: auto; background: rgba(12,18,30,.86); animation: fadeIn .2s ease both; }
 .coin-ov.out { opacity: 0; transition: opacity .25s; }
-.coin-card { width: min(460px, calc(100vw - 32px)); padding: 18px 16px 16px; background: var(--paper); border: 4px solid var(--ink); border-radius: 22px; box-shadow: var(--win), var(--lift); text-align: center; }
-.coin-card h2 { font-size: 22px; margin: 0 0 10px; }
-.ct-sides { display: flex; align-items: center; gap: 8px; }
-.ct-side { flex: 1 1 0; min-width: 0; padding: 6px; border: 3px solid var(--tc); border-radius: 14px; background: var(--paper-2); transition: transform .3s, box-shadow .3s; }
-.ct-side em { display: block; font-style: normal; font-size: 13px; font-weight: 900; color: var(--ink-soft); }
-.ct-side b { display: block; font-family: var(--font); font-size: 17px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ct-vs { font-family: var(--pixel); font-weight: 700; color: var(--ink-soft); }
-.coin-ov.w0 .ct-side:first-child, .coin-ov.w1 .ct-side:nth-child(3) { transform: scale(1.08); box-shadow: 0 0 0 3px #fff, 0 0 18px 6px var(--tc); }
-.ct-coin { display: block; width: 150px; height: 150px; margin: 22px auto 8px; padding: 0; border: 0; background: none; perspective: 700px; cursor: pointer; }
-.ct-spin { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
-.coin-ov:not(.tossing) .ct-spin { animation: ctWobble 1.2s ease-in-out infinite; }
-@keyframes ctWobble { 50% { transform: rotateY(24deg) translateY(-6px); } }
-.ct-face { position: absolute; inset: 0; display: grid; place-content: center; border-radius: 50%; backface-visibility: hidden; background: radial-gradient(circle at 35% 30%, #fff6c9, #f5c542 45%, #c9921c); border: 6px solid #a8741a; box-shadow: inset 0 0 0 6px var(--tc), 0 6px 0 rgba(38,49,71,.3); }
+.coin-stage { position: relative; flex: 0 0 auto; width: min(100%, 860px, calc((100vh - 190px) * 16 / 10)); aspect-ratio: 16 / 10; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--ink), 0 14px 30px rgba(0,0,0,.4); background: #8fd3ff url(assets/ui/battle-bg.png) center / cover no-repeat; image-rendering: pixelated; }
+.ct-title { position: absolute; left: 50%; top: 5%; transform: translateX(-50%); margin: 0; white-space: nowrap; font-family: var(--pixel); font-weight: 700; font-size: var(--t3); color: #ffd23f;
+  text-shadow: 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink), 3px 3px 0 var(--ink), -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 0 7px 0 rgba(38,49,71,.45); }
+.ct-plate { position: absolute; bottom: 5%; width: 42%; display: flex; align-items: center; gap: 8px; background: var(--paper); border: 3px solid var(--ink); border-radius: 12px; padding: 6px 10px 6px 12px; box-shadow: inset 5px 0 0 var(--tc), 0 4px 0 var(--ink); transition: transform .3s, box-shadow .3s, filter .3s; }
+.ct-plate.p0 { left: 4%; } .ct-plate.p1 { right: 4%; }
+.ct-mon { position: relative; flex: 0 0 auto; width: 22%; aspect-ratio: 1; }
+.ct-pt { min-width: 0; flex: 1 1 auto; }
+.ct-pt em { display: flex; align-items: center; gap: 4px; font-style: normal; font-family: var(--pixel); font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.ct-mini { display: inline-block; flex: 0 0 auto; width: 20px; height: 20px; }
+.ct-mini img { width: 100%; height: 100%; image-rendering: pixelated; }
+.ct-pt b { display: block; font-family: var(--pixel); font-size: var(--t2); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-first { position: absolute; z-index: 2; right: -6px; top: -14px; font-family: var(--pixel); font-size: 15px; font-weight: 700; color: var(--ink); background: #ffd23f; border: 3px solid var(--ink); border-radius: 10px; padding: 2px 8px; transform: scale(0); transition: transform .25s cubic-bezier(.2,1.6,.4,1); }
+.coin-ov.w0 .ct-plate.p0, .coin-ov.w1 .ct-plate.p1 { transform: translateY(-6px); box-shadow: inset 5px 0 0 var(--tc), 0 4px 0 var(--ink), 0 0 0 4px #ffd23f, 0 0 22px 6px rgba(255,210,63,.8); }
+.coin-ov.w0 .ct-plate.p0 .ct-first, .coin-ov.w1 .ct-plate.p1 .ct-first { transform: scale(1); }
+.coin-ov.w0 .ct-plate.p1, .coin-ov.w1 .ct-plate.p0 { filter: saturate(.5) brightness(.92); }
+.ct-pad { position: absolute; left: 50%; top: 66%; width: 40%; aspect-ratio: 3 / 1; transform: translate(-50%, -50%); background: url(assets/ui/battle-pad.png) center / 100% 100% no-repeat; image-rendering: pixelated; }
+.ct-shadow { position: absolute; left: 50%; top: 63%; width: 17%; aspect-ratio: 3 / 1; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(20,40,20,.35); }
+.ct-coin { position: absolute; left: 50%; top: 42%; width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; perspective: 700px; cursor: pointer; }
+.ct-spin { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; }
+.coin-ov:not(.tossing) .ct-spin { animation: ctBob 1.1s steps(4) infinite; }
+@keyframes ctBob { 50% { transform: translateY(-6%); } }
+.ct-face { position: absolute; inset: 0; backface-visibility: hidden; }
+.ct-face img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgba(38,49,71,.35)); }
 .ct-face.back { transform: rotateY(180deg); }
-.ct-face b { font-size: 56px; line-height: 1; }
-.ct-face small { font-family: var(--font); font-size: 14px; font-weight: 900; color: #5a3d0a; }
-.coin-card .ct-say { min-height: 1.6em; font-family: var(--font); font-size: 24px; font-weight: 900; margin: 6px 0 0; color: var(--ink); }
+.ct-dialog { width: min(100%, 860px, calc((100vh - 190px) * 16 / 10)); min-height: 70px; }
+.ct-dialog .ct-say { margin: 0; }
+.coin-ov.landed .ct-say { animation: popIn .3s ease-out; }
+@media (max-width: 600px) {
+  .coin-stage { aspect-ratio: 4 / 5; }
+  .ct-plate { width: 88%; left: 6% !important; right: auto !important; }
+  .ct-plate.p0 { bottom: 24%; } .ct-plate.p1 { bottom: 5%; }
+  .ct-mon { width: 15%; }
+  .ct-coin { top: 33%; width: 40%; } .ct-pad { top: 52%; width: 58%; } .ct-shadow { top: 50%; width: 24%; }
+  .ct-title { font-size: var(--t2); }
+}
+@media (prefers-reduced-motion: reduce) { .coin-ov .ct-spin { animation: none !important; } }
 body.coining #turn-pill { visibility: hidden; }
 body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: var(--win), var(--lift) !important; transform: none !important; }
 .coin-ov.landed .ct-say { animation: popIn .3s ease-out; }
 @media (prefers-reduced-motion: reduce) { .coin-ov .ct-spin { animation: none !important; } }
+.save-code { margin: 10px auto; gap: 6px; }
+.save-code b { width: 44px; }
+.save-photo { font-weight: 900; color: #c0392b; }
+.save-info { min-height: 1.4em; font-weight: 800; }
+.save-keypad { margin: 8px auto; justify-content: center; }
+.save-btns .btn { min-height: 48px; }
 .tc-note { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin: 4px 0 8px; }
 .tchart { display: grid; gap: 6px; }
 .tc-row { display: flex; gap: 8px; align-items: flex-start; background: var(--paper-2); border: 2px solid var(--ink); border-left: 8px solid var(--tc); border-radius: 12px; padding: 6px 8px; }
@@ -813,6 +839,8 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ===== 낮은 화면·폰 다듬기 (전체 점검 2026-09-26) ===== */
 .win-btns .btn { white-space: nowrap; }
 @media (max-height: 760px) {
+  .home .menu-small { gap: 6px; }
+  .home .menu-small .btn { min-height: 44px; padding: 4px 10px; font-size: 15px; }
   .win-inner { padding: 14px 18px; }
   .win-inner h1 { font-size: var(--t2); }
   .win-inner p { margin: 4px 0 6px; }
@@ -878,7 +906,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-29c";
+const APP_VERSION = "2026-09-29e";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1069,6 +1097,7 @@ const Store = {
     this.data = d;
   },
   save() {
+    try { cloudSchedule(); } catch (e) { /* 아직 준비 전 */ }
     try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); }
     catch (e) {
       if (!this.warned) { this.warned = true; toast("저장이 안 되는 환경이에요. 창을 닫으면 판이 사라져요 🥲", 3200); }
@@ -1352,11 +1381,13 @@ Screens.home = sec => {
         '<button class="btn ghost" data-act="bag">🎒 가방</button>' +
         '<button class="btn ghost" data-act="skilldex">✨ 기술 도감</button>' +
         '<button class="btn ghost" data-act="stats">🏆 전적</button>' +
+        '<button class="btn ghost" data-act="save" id="save-btn">💾 저장' + (Store.data.cloud && Store.data.cloud.code ? " ✓" : "") + "</button>" +
         '<button class="btn ghost" data-act="sound" id="sound-btn">' + soundLabel() + "</button>" +
       "</div>" +
     "</div>" +
     '<footer class="ver">v' + APP_VERSION + "</footer>";
   checkUpdate();
+  cloudPull(); // 💾 다른 패드가 더 나중에 저장했으면 받아 온다
 };
 
 /* ---------- 준비 ---------- */
@@ -3527,40 +3558,44 @@ function coinToss() {
   if (!G.s) return Promise.resolve();
   return new Promise(res => {
     const T = G.s.teams, win = G.s.turn;
-    const face = (ti, cls) => '<div class="ct-face ' + cls + '" style="--tc:' + T[ti].color + '"><b>' + esc(emojiOf(T[ti].name)) + "</b><small>" + (ti === 0 ? "앞면" : "뒷면") + "</small></div>";
-    const side = ti => '<div class="ct-side" style="--tc:' + T[ti].color + '"><em>' + (ti === 0 ? "앞면 · Heads" : "뒷면 · Tails") + "</em><b>" + esc(T[ti].name) + "</b></div>";
+    const lead = ti => { const i = G.s.pieces.findIndex(p => p.team === ti); return i >= 0 ? Yut.formOf(G.s, i) : 25; };
+    const face = f => '<img src="assets/ui/coin-' + f + '.png" alt="" draggable="false">';
+    // 배틀 이름판 모양: 팀 색 띠 · 동전 면 · 팀 이름 · 그 팀 첫 포켓몬
+    const plate = ti => '<div class="ct-plate p' + ti + '" style="--tc:' + T[ti].color + '"><span class="ct-mon">' + spr(lead(ti), true) + "</span>" +
+      '<div class="ct-pt"><em><i class="ct-mini">' + face(ti === 0 ? "front" : "back") + "</i>" + (ti === 0 ? "앞면 · Heads" : "뒷면 · Tails") + "</em><b>" + esc(T[ti].name) + '</b></div><strong class="ct-first">먼저!</strong></div>';
     const el = document.createElement("div");
     el.className = "coin-ov";
-    el.innerHTML = '<div class="coin-card"><h2>🪙 동전 던지기! 누가 먼저 할까?</h2>' +
-      '<div class="ct-sides">' + side(0) + '<span class="ct-vs">VS</span>' + side(1) + "</div>" +
-      '<button class="ct-coin" id="ct-coin" aria-label="동전 던지기"><div class="ct-spin">' + face(0, "front") + face(1, "back") + "</div></button>" +
-      '<p class="ct-say" id="ct-say">👆 동전을 눌러서 던져요!</p></div>';
+    el.innerHTML = '<div class="coin-stage">' + plate(0) + plate(1) +
+      '<div class="ct-pad"></div><i class="ct-shadow"></i>' +
+      '<button class="ct-coin" id="ct-coin" aria-label="동전 던지기"><span class="ct-spin"><span class="ct-face front">' + face("front") + '</span><span class="ct-face back">' + face("back") + "</span></span></button>" +
+      '<h2 class="ct-title">누가 먼저 할까?</h2></div>' +
+      '<div class="bt-dialog ct-dialog"><p class="ct-say" id="ct-say">🪙 동전 던지기! 동전을 눌러서 던져요!</p><i class="bt-more">▼</i></div>';
     document.body.appendChild(el);
     document.body.classList.add("coining"); // 동전이 떨어질 때까지 누구 차례인지 가린다
     const auto = netOn() || SPEED < 1;
     let tossed = false, done = false;
     const close = () => { if (done) return; done = true; document.body.classList.remove("coining"); el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 250 * SPEED); };
-    const reveal = () => document.body.classList.remove("coining");
     const toss = () => {
       if (tossed) return;
       tossed = true;
       el.classList.add("tossing");
-      $("#ct-say", el).textContent = "빙글빙글…";
+      $("#ct-say", el).textContent = "빙글빙글… 🪙";
       SFX.throwBall();
       const spin = $(".ct-spin", el), end = 360 * 6 + (win === 0 ? 0 : 180);
+      $(".ct-shadow", el).animate([{ transform: "translate(-50%,-50%) scale(1)" }, { transform: "translate(-50%,-50%) scale(.45)", opacity: 0.35, offset: 0.5 }, { transform: "translate(-50%,-50%) scale(1)" }], { duration: 1700 * SPEED, easing: "ease-out" });
       const a = spin.animate([
-        { transform: "translateY(0) rotateY(0deg)" }, { transform: "translateY(-150px) rotateY(" + end / 2 + "deg)", offset: 0.5 },
-        { transform: "translateY(0) rotateY(" + (end - 20) + "deg)", offset: 0.88 }, { transform: "translateY(-12px) rotateY(" + (end - 8) + "deg)", offset: 0.94 },
+        { transform: "translateY(0) rotateY(0deg)" }, { transform: "translateY(-120%) rotateY(" + end / 2 + "deg)", offset: 0.5 },
+        { transform: "translateY(0) rotateY(" + (end - 20) + "deg)", offset: 0.88 }, { transform: "translateY(-10%) rotateY(" + (end - 8) + "deg)", offset: 0.94 },
         { transform: "translateY(0) rotateY(" + end + "deg)" }], { duration: 1700 * SPEED, easing: "ease-out", fill: "forwards" });
       a.onfinish = () => {
         if (done) return;
         el.classList.add("landed", "w" + win);
-        reveal();
+        document.body.classList.remove("coining");
         const msg = (win === 0 ? "앞면! " : "뒷면! ") + T[win].name + " 먼저!";
         $("#ct-say", el).textContent = msg;
         TTS.say(plain(msg));
         SFX.again();
-        setTimeout(close, 1500 * SPEED);
+        setTimeout(close, 1600 * SPEED);
         el.addEventListener("click", close);
       };
     };
@@ -3770,6 +3805,181 @@ const Net = {
   stop() { if (this.es) { try { this.es.close(); } catch (e) {} } this.es = null; clearInterval(this.poll); this.poll = null; this.code = null; this.onRoom = null; },
 };
 const netOn = () => !!(G.net && G.s && G.s.settings.mode === "net");
+
+/* ================================================================
+   💾 저장 코드 — 내 기록을 서버에 (사용자 확정 2026-09-29)
+   코드 숫자 6자리 · 한 번 켜면 저절로 저장 · 새 패드에서 코드로 불러오기(이 패드 기록은 바뀜, 글자 입력 확인)
+   패드 두 대: 잡은 포켓몬은 합치고, 볼·전적·공부 기록·설정은 나중에 저장된 쪽
+   서버 yutsaves/{코드} = { v, updated, dataJ } — dataJ 는 JSON 글자 (Firebase 가 빈 배열을 지워서). 하고 있던 판은 안 올린다
+================================================================ */
+const SAVE_KEYS = ["collection", "bag", "stats", "seenSkills", "study", "settings", "lastPicks"];
+const Cloud = {
+  timer: null, busy: false, again: false, pulled: 0,
+  url(code) { return NET_DB + "/yutsaves/" + code + ".json"; },
+  async req(code, opt) {
+    const r = await fetch(this.url(code) + (opt ? "" : "?t=" + Date.now()), opt || { cache: "no-store" });
+    if (r.status === 401 || r.status === 403) throw new Error("denied");
+    if (!r.ok) throw new Error("net " + r.status);
+    return r.json();
+  },
+  get(code) { return this.req(code); },
+  put(code, body) { return this.req(code, { method: "PUT", body: JSON.stringify(body), keepalive: true }); },
+  pick(d) { const o = {}; SAVE_KEYS.forEach(k => { o[k] = d[k]; }); return o; },
+  parse(room) { try { const x = JSON.parse(room.dataJ); return x && typeof x === "object" ? x : null; } catch (e) { return null; } },
+};
+const hashStr = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h; };
+// 잡은 포켓몬은 합친다 — 같은 포켓몬은 먼저 잡은 때로, 잡은 순서대로
+function mergeCollection(a, b) {
+  const by = {};
+  [].concat(a || [], b || []).forEach(x => { if (!x || !(x.id >= 1 && x.id <= 1025)) return; if (!by[x.id] || (x.t || 0) < (by[x.id].t || 0)) by[x.id] = x; });
+  return Object.values(by).sort((p, q) => (p.t || 0) - (q.t || 0));
+}
+// 받은 기록을 이 패드에: replace = 불러오기(이 패드 것은 버림) · 아니면 잡은 포켓몬만 합치고 나머지는 받은 것
+function applyCloud(x, replace, code, at) {
+  const d = Store.data;
+  SAVE_KEYS.forEach(k => { if (k !== "collection" && x[k] !== undefined) d[k] = x[k]; });
+  d.collection = replace ? mergeCollection(x.collection) : mergeCollection(d.collection, x.collection);
+  d.cloud = { code, at, sent: hashStr(JSON.stringify(Cloud.pick(x))) };
+  Store.save();
+  Store.load(); // 망가진 값 정리 (볼 개수·포켓몬 번호)
+}
+function cloudSchedule(now) {
+  const c = Store.data && Store.data.cloud;
+  if (!c || !c.code) return;
+  if (hashStr(JSON.stringify(Cloud.pick(Store.data))) === c.sent) return; // 바뀐 게 없음
+  clearTimeout(Cloud.timer);
+  Cloud.timer = setTimeout(cloudPush, now ? 0 : 4000);
+}
+async function cloudPush() {
+  Cloud.timer = null;
+  const c = Store.data.cloud;
+  if (!c || !c.code) return;
+  if (Cloud.busy) { Cloud.again = true; return; }
+  Cloud.busy = true;
+  try {
+    const room = await Cloud.get(c.code);
+    if (room && (room.updated || 0) > (c.at || 0)) { // 그사이 다른 패드가 저장했으면 잡은 포켓몬은 합친다
+      const x = Cloud.parse(room);
+      if (x) Store.data.collection = mergeCollection(Store.data.collection, x.collection);
+    }
+    const j = JSON.stringify(Cloud.pick(Store.data)), at = Date.now();
+    await Cloud.put(c.code, { v: 1, updated: at, dataJ: j });
+    Object.assign(Store.data.cloud, { at, sent: hashStr(j), err: null });
+    Store.save();
+  } catch (e) {
+    Store.data.cloud.err = e.message === "denied" ? "denied" : "net";
+    if (e.message !== "denied") setTimeout(() => cloudSchedule(true), 30000); // 인터넷이 돌아오면 다시
+  }
+  Cloud.busy = false;
+  if (Cloud.again) { Cloud.again = false; cloudSchedule(true); }
+  renderSaveInfo();
+}
+async function cloudPull() {
+  const c = Store.data.cloud;
+  if (!c || !c.code || Cloud.busy || Date.now() - Cloud.pulled < 15000) return;
+  Cloud.pulled = Date.now();
+  try {
+    const room = await Cloud.get(c.code);
+    if (!room || (room.updated || 0) <= (c.at || 0)) return;
+    const x = Cloud.parse(room);
+    if (!x) return;
+    const mine = Store.data.collection.length;
+    applyCloud(x, false, c.code, room.updated);
+    if (Store.data.collection.length > mine) toast("💾 다른 패드에서 잡은 포켓몬도 가져왔어요!", 2200);
+  } catch (e) { /* 다음에 */ }
+}
+window.addEventListener("online", () => cloudSchedule(true));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && Cloud.timer) { clearTimeout(Cloud.timer); cloudPush(); } });
+const agoText = t => { if (!t) return "아직"; const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? "방금" : m < 60 ? m + "분 전" : m < 1440 ? Math.floor(m / 60) + "시간 전" : Math.floor(m / 1440) + "일 전"; };
+const codeBoxes = (code, id) => '<div class="net-code save-code"' + (id ? ' id="' + id + '"' : "") + ">" + [0, 1, 2, 3, 4, 5].map(k => "<b>" + esc((code || "")[k] || "") + "</b>").join("") + "</div>";
+const bagCount = b => Yut.Rewards.BALLS.reduce((t, k) => t + ((b || {})[k] || 0), 0);
+const gamesOf = st => (st && st.games) || 0;
+function renderSaveInfo() {
+  const box = $("#save-info"), c = Store.data.cloud;
+  if (!box || !c) return;
+  box.innerHTML = c.err === "denied" ? "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 <b>yutsaves</b> 를 넣어 주세요"
+    : c.err === "net" ? "📶 인터넷이 끊겨서 아직 못 올렸어요. 연결되면 저절로 저장해요"
+    : Cloud.busy || Cloud.timer ? "💾 저장하는 중…" : "✅ 마지막 저장: " + agoText(c.at);
+}
+function openSave(fresh) {
+  const c = Store.data.cloud, d = Store.data;
+  if (c && c.code) {
+    showModal("<h2>💾 저장 켜짐</h2><p>잡은 포켓몬 · 볼 · 전적 · 공부 기록이 <b>저절로</b> 저장돼요. 다른 패드에서 이 코드를 누르면 그대로!</p>" +
+      codeBoxes(c.code) +
+      (fresh ? '<p class="save-photo">📸 부모님께 이 코드를 <b>사진 찍어</b> 달라고 해요!</p>' : "") +
+      '<p class="save-info" id="save-info"></p>' +
+      '<p class="pi-note">📕 포켓몬 ' + d.collection.length + "마리 · 🎒 볼 " + bagCount(d.bag) + "개 · 🏆 " + gamesOf(d.stats) + "판</p>" +
+      '<div class="btns save-btns"><button class="btn big green" data-act="save-now">💾 지금 저장</button><button class="btn" data-act="save-load">📥 다른 코드 불러오기</button>' +
+      '<button class="btn" data-act="save-off">저장 끄기</button><button class="btn" data-act="close-modal">닫기</button></div>');
+    renderSaveInfo();
+    return;
+  }
+  showModal("<h2>💾 내 기록 저장</h2><p>코드를 만들면 <b>잡은 포켓몬 · 볼 · 전적 · 공부 기록</b>이 서버에 저절로 저장돼요.<br>패드를 바꾸거나 기록이 지워져도 코드만 누르면 그대로 돌아와요!</p>" +
+    '<p class="net-err" id="save-err"></p>' +
+    '<div class="btns save-btns"><button class="btn big green" data-act="save-on" id="save-on">💾 저장 켜기 (코드 만들기)</button><button class="btn" data-act="save-load">📥 코드로 불러오기</button><button class="btn" data-act="close-modal">닫기</button></div>');
+}
+async function saveOn() {
+  const btn = $("#save-on"), err = $("#save-err");
+  if (btn) btn.disabled = true;
+  try {
+    let code = null;
+    for (let k = 0; k < 8 && !code; k++) {
+      const c = String(100000 + Math.floor(Math.random() * 900000));
+      if (!(await Cloud.get(c))) code = c;
+    }
+    if (!code) throw new Error("no code");
+    Store.data.cloud = { code, at: 0, sent: null };
+    Cloud.busy = false;
+    await cloudPush();
+    if (Store.data.cloud.err === "denied") throw new Error("denied");
+    SFX.catchOk();
+    const sb = $("#save-btn");
+    if (sb) sb.textContent = "💾 저장 ✓";
+    TTS.say("저장을 켰어요! 부모님께 코드를 사진 찍어 달라고 해요");
+    openSave(true);
+  } catch (e) {
+    if (Store.data.cloud && !Store.data.cloud.at) { Store.data.cloud = null; Store.save(); }
+    if (err) err.textContent = e.message === "denied" ? "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 yutsaves 를 넣어 주세요" : "📶 인터넷을 확인하고 다시 눌러 주세요";
+    if (btn) btn.disabled = false;
+  }
+}
+// 📥 코드로 불러오기 — 숫자판 6자리
+function openSaveLoad() {
+  Setup.saveIn = "";
+  showModal("<h2>📥 코드로 불러오기</h2><p>저장할 때 받은 코드 6자리를 눌러요</p>" + codeBoxes("", "save-in") +
+    '<div class="keypad save-keypad">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => '<button class="btn" data-act="save-key" data-k="' + k + '">' + k + "</button>").join("") +
+      '<button class="btn" data-act="save-key" data-k="del">⌫</button><button class="btn" data-act="save-key" data-k="0">0</button><span></span></div>' +
+    '<p class="net-err" id="save-err"></p>' +
+    '<div class="btns save-btns"><button class="btn big green" data-act="save-fetch" id="save-fetch">📥 불러오기</button><button class="btn" data-act="close-modal">취소</button></div>');
+}
+function saveKey(k) {
+  if (k === "del") Setup.saveIn = Setup.saveIn.slice(0, -1); else if (Setup.saveIn.length < 6) Setup.saveIn += k;
+  SFX.tap();
+  $$("#save-in b").forEach((b, i) => { b.textContent = Setup.saveIn[i] || ""; });
+}
+async function saveFetch() {
+  const code = Setup.saveIn, err = $("#save-err"), btn = $("#save-fetch");
+  if (code.length !== 6) { err.textContent = "코드 6자리를 눌러 주세요"; return; }
+  btn.disabled = true;
+  try {
+    const room = await Cloud.get(code);
+    const x = room && Cloud.parse(room);
+    if (!x) { err.textContent = "그런 저장이 없어요. 코드를 다시 확인해 주세요"; btn.disabled = false; return; }
+    const d = Store.data;
+    typedConfirm("불러오기",
+      "저장된 기록: 📕 포켓몬 " + ((x.collection || []).length) + "마리 · 🎒 볼 " + bagCount(x.bag) + "개 · 🏆 " + gamesOf(x.stats) + "판<br>" +
+      "지금 이 패드의 기록(포켓몬 " + d.collection.length + "마리 · 볼 " + bagCount(d.bag) + "개)은 <b>사라지고</b> 저장된 기록으로 바뀌어요.",
+      "불러오기", () => {
+        applyCloud(x, true, code, room.updated || Date.now());
+        SFX.catchOk();
+        toast("📥 불러왔어요! 포켓몬 " + Store.data.collection.length + "마리", 2400);
+        showScreen("home");
+      });
+  } catch (e) {
+    err.textContent = e.message === "denied" ? "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 yutsaves 를 넣어 주세요" : "📶 인터넷을 확인하고 다시 눌러 주세요";
+    btn.disabled = false;
+  }
+}
 const netParse = j => { try { return typeof j === "string" ? JSON.parse(j) : null; } catch (e) { return null; } };
 function netSave() { if (G.net) { Store.data.net = G.s && G.s.phase === "over" ? null : { code: G.net.code, me: G.net.me, seq: G.net.seq }; Store.save(); } } // 끝난 판은 이어하기에서 빼기
 // 내 동작을 올린다 — busy: 아직 연출·조우·선물 고르기 중 (상대는 기다린다)
@@ -4126,6 +4336,13 @@ const Act = {
   "open-box": openBox,
   "money-quiz": moneyBonus,
   "stats": openStats,
+  "save": () => openSave(false),
+  "save-on": saveOn,
+  "save-now": () => { Store.data.cloud.sent = null; cloudSchedule(true); setTimeout(renderSaveInfo, 50); SFX.tap(); },
+  "save-off": () => { Store.data.cloud = null; Store.save(); closeModal(); toast("저장을 껐어요. 서버 기록은 그대로라 코드로 다시 불러올 수 있어요", 2600); showScreen("home"); },
+  "save-load": openSaveLoad,
+  "save-key": el => saveKey(el.dataset.k),
+  "save-fetch": saveFetch,
   "sound": () => { Store.data.sound = Store.data.sound === false; Store.save(); const b = $("#sound-btn"); if (b) b.textContent = soundLabel(); if (Store.data.sound) SFX.tap(); else TTS.stop(); },
   "sound-game": () => { Act.sound(); const b = $("#sound-icon"); if (b) b.textContent = Store.data.sound === false ? "🔇" : "🔊"; },
   "set": el => {

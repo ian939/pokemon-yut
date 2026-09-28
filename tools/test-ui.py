@@ -196,7 +196,7 @@ def scenario(browser, base, errors):
     page.click("#pick-next")
     # 🪙 동전 던지기 — 눌러서 던지면 먼저 할 팀 면으로 떨어진다
     page.wait_for_selector(".coin-ov #ct-coin", timeout=10000)
-    card = page.inner_text(".coin-card")
+    card = page.inner_text(".coin-ov")
     check("앞면" in card and "뒷면" in card, "🪙 시작할 때 동전 던지기 (앞면·뒷면에 두 팀)")
     page.screenshot(path=str(OUT / "00-coin.png"))
     measure(page, "🪙 동전 던지기")
@@ -1197,6 +1197,84 @@ def scenario_v8(browser, base, errors):
     ctx.close()
 
 
+def scenario_save(browser, base, errors):
+    """💾 저장 코드: 켜기(6자리) → 저절로 저장 → 다른 패드에서 불러오기(글자 입력 확인) → 두 패드 잡은 포켓몬 합치기 · 틀린 코드."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    from fake_firebase import FakeFirebase
+    fdb = FakeFirebase()
+    dburl = fdb.start()
+    q = "?fast=1&db=" + dburl
+
+    def mk(save):
+        ctx = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True)
+        ctx.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', " + json.dumps(json.dumps(save)) + ");")
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" and "ERR_" not in m.text else None)
+        return ctx, page
+    ev = lambda page, js: page.evaluate("() => { const Y = window.__yut, d = Y.Store.data; return " + js + "; }")
+
+    actx, a = mk({"collection": [{"id": 133, "t": 1}, {"id": 25, "t": 2}], "bag": {"poke": 5, "great": 1, "ultra": 0, "luxury": 0, "master": 0}})
+    a.goto(base + q); a.wait_for_timeout(300)
+    a.click("[data-act=save]")
+    a.wait_for_selector("[data-act=save-on]")
+    a.screenshot(path=str(OUT / "s1-save-off.png"))
+    a.click("[data-act=save-on]")
+    a.wait_for_selector(".save-code b", timeout=10000)
+    code = "".join(a.eval_on_selector_all(".modal .save-code b", "e => e.map(x => x.textContent)"))
+    check(len(code) == 6 and code.isdigit(), f"💾 저장 켜기 → 코드 6자리 ({code})")
+    check("사진" in a.inner_text(".modal"), "처음 켤 때 '부모님께 사진 찍어 달라고 해요'")
+    a.wait_for_timeout(500)
+    measure(a, "💾 저장 코드 창")
+    a.screenshot(path=str(OUT / "s2-save-on.png"))
+    saved = json.loads((fdb.data.get("yutsaves") or {}).get(code, {}).get("dataJ", "null") or "null")
+    check(saved and [x["id"] for x in saved["collection"]] == [133, 25] and saved["bag"]["poke"] == 5, "서버에 잡은 포켓몬·볼이 저장됨")
+    a.click("[data-act=close-modal]")
+    check("✓" in a.inner_text("#save-btn"), "처음 화면 💾 저장 ✓")
+    # 저절로 저장: 포켓몬을 잡으면 몇 초 뒤 서버에
+    a.evaluate("() => { const S = window.__yut.Store; S.data.collection.push({ id: 7, t: 3 }); S.data.bag.poke = 4; S.save(); }")
+    a.wait_for_timeout(5200)
+    saved = json.loads(fdb.data["yutsaves"][code]["dataJ"])
+    check([x["id"] for x in saved["collection"]] == [133, 25, 7] and saved["bag"]["poke"] == 4, "잡은 포켓몬·볼이 바뀌면 저절로 저장")
+
+    # 다른 패드: 틀린 코드 → 맞는 코드 → 글자 입력 확인 → 바뀜
+    bctx, b = mk({"collection": [{"id": 1, "t": 1}], "bag": {"poke": 9, "great": 0, "ultra": 0, "luxury": 0, "master": 0}})
+    b.goto(base + q); b.wait_for_timeout(300)
+    b.click("[data-act=save]"); b.click("[data-act=save-load]")
+    wrong = "111111" if code != "111111" else "222222"
+    for k in wrong: b.click(f"[data-act=save-key][data-k='{k}']")
+    b.click("#save-fetch")
+    b.wait_for_function("() => document.querySelector('#save-err').textContent.length > 0", timeout=10000)
+    check("없어요" in b.inner_text("#save-err"), "없는 코드면 '그런 저장이 없어요'")
+    for _ in range(6): b.click("[data-act=save-key][data-k='del']")
+    for k in code: b.click(f"[data-act=save-key][data-k='{k}']")
+    measure(b, "📥 불러오기 숫자판")
+    b.screenshot(path=str(OUT / "s3-save-load.png"))
+    b.click("#save-fetch")
+    b.wait_for_selector("#confirm-in", timeout=10000)
+    check("사라지고" in b.inner_text(".modal") and "3마리" in b.inner_text(".modal"), "불러오기 전에 '이 패드 기록은 사라져요' + 저장된 기록 미리 보기")
+    check(b.query_selector("#confirm-yes").is_disabled(), "글자를 쓰기 전엔 불러오기 버튼이 꺼짐")
+    b.fill("#confirm-in", "불러오기")
+    b.click("#confirm-yes")
+    b.wait_for_timeout(500)
+    check(ev(b, "d.collection.map(x => x.id).join(',')") == "133,25,7" and ev(b, "d.bag.poke") == 4 and ev(b, "d.cloud.code") == code, "불러오면 저장된 기록으로 바뀌고 같은 코드로 저장 켜짐")
+
+    # 두 패드: 각자 다른 포켓몬을 잡음 → 잡은 포켓몬은 합쳐짐
+    b.evaluate("() => { const S = window.__yut.Store; S.data.collection.push({ id: 152, t: 10 }); S.save(); }")
+    b.wait_for_timeout(5200)
+    a.evaluate("() => { const S = window.__yut.Store; S.data.collection.push({ id: 4, t: 11 }); S.data.bag.poke = 2; S.save(); }")
+    a.wait_for_timeout(5200)
+    saved = json.loads(fdb.data["yutsaves"][code]["dataJ"])
+    check(sorted(x["id"] for x in saved["collection"]) == [4, 7, 25, 133, 152] and saved["bag"]["poke"] == 2, "두 패드가 잡은 포켓몬은 합치고, 볼은 나중에 저장한 쪽")
+    b.reload(); b.wait_for_timeout(1500)
+    check(ev(b, "d.collection.map(x => x.id).sort((p, q) => p - q).join(',')") == "4,7,25,133,152", "처음 화면에 오면 다른 패드 기록을 받아 옴")
+    # 끄기
+    b.click("[data-act=save]"); b.click("[data-act=save-off]")
+    check(ev(b, "d.cloud") is None and "✓" not in b.inner_text("#save-btn"), "저장 끄기")
+    actx.close(); bctx.close()
+    fdb.stop()
+
+
 def scenario_net(browser, base, errors):
     """v7: 🏠 친구 대결 — 가짜 Firebase + 브라우저 창 두 개로 방 만들기 → 코드로 들어가기 → 고르기 → 번갈아 두기 → 끝(각자 상자)."""
     sys.path.insert(0, str(ROOT / "tools"))
@@ -1402,6 +1480,8 @@ def main():
             httpd.shutdown()
             sys.exit(1 if fails else 0)
         scenario_net(browser, base, errors)
+        if "--live-net" not in sys.argv:
+            scenario_save(browser, base, errors)
         if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only", "--net-only", "--live-net")):
             browser.close()
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
