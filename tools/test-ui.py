@@ -1023,6 +1023,165 @@ def scenario_v4(browser, base, errors):
     ctx.close()
 
 
+def scenario_net(browser, base, errors):
+    """v7: 🏠 친구 대결 — 가짜 Firebase + 브라우저 창 두 개로 방 만들기 → 코드로 들어가기 → 고르기 → 번갈아 두기 → 끝(각자 상자)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    from fake_firebase import FakeFirebase
+    fdb = FakeFirebase()
+    dburl = fdb.start()
+    q = "?fast=1&seed=5&spots=3:133,12:25&catch=1&db=" + dburl
+
+    def mk(save):
+        ctx = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True)
+        ctx.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', " + json.dumps(json.dumps(save)) + ");")
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" and "ERR_" not in m.text else None)
+        return ctx, page
+
+    ev = lambda page, js: page.evaluate("() => { const Y = window.__yut, G = Y.G, s = G.s, d = Y.Store.data; return " + js + "; }")
+    hctx, host = mk({"settings": {"study": False}})
+    gctx, guest = mk({"settings": {"study": False}, "bag": {"poke": 3, "great": 0, "ultra": 0, "luxury": 0, "master": 0}})
+
+    # 방 만들기
+    host.goto(base + q); host.wait_for_timeout(300)
+    host.click("[data-act=new-net]"); host.click("[data-act=net-host]")
+    host.click("[data-act=set][data-field=pieces][data-value='2']")
+    host.click("[data-act=net-create]")
+    host.wait_for_selector(".net-code b", timeout=10000)
+    code = "".join(host.eval_on_selector_all(".net-code b", "e => e.map(x => x.textContent)"))
+    check(len(code) == 4 and code.isdigit(), f"🏠 방 만들기 → 코드 4자리 ({code})")
+    host.screenshot(path=str(OUT / "n1-room.png"))
+    measure(host, "🏠 방 코드 화면")
+
+    # 코드로 들어가기 — 틀린 코드 → 맞는 코드
+    guest.goto(base + q); guest.wait_for_timeout(300)
+    guest.click("[data-act=new-net]"); guest.click("[data-act=net-join]")
+    wrong = "0000" if code != "0000" else "1111"
+    for d in wrong: guest.click(f"[data-act=net-key][data-k='{d}']")
+    guest.fill("#net-name", "하윤이네")
+    guest.click("#net-go")
+    guest.wait_for_function("() => document.querySelector('#net-err').textContent.length > 0", timeout=10000)
+    check("없어요" in guest.inner_text("#net-err"), "없는 코드면 '그런 방이 없어요'")
+    for _ in range(4): guest.click("[data-act=net-key][data-k='del']")
+    for d in code: guest.click(f"[data-act=net-key][data-k='{d}']")
+    measure(guest, "🔢 코드 숫자판")
+    guest.screenshot(path=str(OUT / "n2-join.png"))
+    guest.click("#net-go")
+    # 방 만든 집: 친구가 들어오면 고르기
+    host.wait_for_selector(".pcard", timeout=15000)
+    check("지온이" in host.inner_text(".bar h2"), "친구가 들어오면 방 만든 집부터 포켓몬 고르기")
+    host.click("[data-act=pick-auto]"); host.click("#pick-next")
+    guest.wait_for_selector(".pcard", timeout=15000)
+    taken = len(guest.query_selector_all(".pcard.taken"))
+    check("하윤이네" in guest.inner_text(".bar h2") and taken >= 1, f"친구네 고르기 — 방 만든 집 포켓몬은 찜 ({taken}마리)")
+    guest.click("[data-act=pick-auto]"); guest.click("#pick-next")
+    for pg in (host, guest):
+        pg.wait_for_function("() => window.__yut.G.s && window.__yut.G.s.settings.mode === 'net' && document.querySelector('.screen.game')", timeout=20000)
+        wait_idle(pg, 30000)
+    names = ev(host, "s.teams.map(t => t.name).join(' vs ')")
+    check("하윤이네" in names and ev(guest, "s.teams.map(t => t.name).join(' vs ')") == names, f"두 패드가 같은 판 ({names})")
+    check(ev(host, "G.net.me") == 0 and ev(guest, "G.net.me") == 1, "방 만든 집 = 빨강 팀, 친구네 = 파랑 팀")
+    host.screenshot(path=str(OUT / "n3-host-game.png"))
+    guest.screenshot(path=str(OUT / "n3-guest-game.png"))
+
+    # 번갈아 두기 — 차례인 패드만 움직인다
+    bag0 = {id(host): sum(ev(host, "Object.values(d.bag)")), id(guest): sum(ev(guest, "Object.values(d.bag)"))}
+    same_checks, steps, wrong_turn = 0, 0, 0
+    def act(pg):
+        try:
+            return act0(pg)
+        except Exception:
+            return False  # 연출 중에 버튼이 사라지면 다음 번에
+    def act0(pg):
+        if pg.query_selector(".quiz .qz-choice:not([disabled])"): pg.click(".quiz .qz-choice"); return True
+        if pg.query_selector(".quiz .qz-next:not([hidden])"): pg.click(".quiz .qz-next"); return True
+        if pg.query_selector(".modal .gift-pick"): pg.click(".modal .gift-pick"); return True
+        if pg.query_selector(".bt-menu [data-key='later']"): pg.click(".bt-menu [data-key='later']"); return True
+        if pg.query_selector(".bt-menu .bt-ballbtn"): pg.click(".bt-menu .bt-ballbtn"); return True
+        sk = pg.query_selector(".bt-skip")
+        if sk: sk.click(force=True); return True
+        st = pg.evaluate("() => { const Y = window.__yut, G = Y.G; if (!G.s) return null; const mine = G.s.turn === G.net.me; return { phase: G.s.phase, mine, human: !!(G.s && !G.s.teams[G.s.turn].cpu && G.s.turn === G.net.me && !G.net.remoteBusy), busy: G.busy, over: !!document.querySelector('.win-screen'), dests: document.querySelectorAll('.dest:not(.cpu)').length }; }")
+        if not st or st["over"] or st["busy"] or not st["human"]: return False
+        if st["phase"] == "throw":
+            pg.click("#btn-throw", force=True); return True
+        if st["phase"] == "choose":
+            if st["dests"] == 0:
+                t = pg.query_selector(".unit.can") or pg.query_selector(".pchip.can")
+                if t: t.click(); pg.wait_for_timeout(40)
+            ds = pg.query_selector_all(".dest:not(.cpu)")
+            if ds: ds[-1].click(force=True); return True
+        return False
+    for step in range(900):
+        if host.query_selector(".win-screen") and guest.query_selector(".win-screen"): break
+        moved = act(host) or act(guest)
+        if moved: steps += 1
+        # 차례가 아닌 패드의 던지기 버튼은 꺼져 있어야 한다
+        for pg in (host, guest):
+            r = pg.evaluate("() => { const G = window.__yut.G; const b = document.querySelector('#btn-throw'); return G.s && G.s.phase === 'throw' && G.s.turn !== G.net.me && b && !b.disabled; }")
+            if r: wrong_turn += 1
+        if step % 25 == 10:
+            a = host.evaluate("() => { const G = window.__yut.G; return !G.busy && !G.net.running && !G.net.remoteBusy && !G.net.queue.length ? JSON.stringify(G.s.pieces.map(p => [p.state, p.route, p.step, p.stage])) + G.s.turn : null; }")
+            b = guest.evaluate("() => { const G = window.__yut.G; return !G.busy && !G.net.running && !G.net.remoteBusy && !G.net.queue.length ? JSON.stringify(G.s.pieces.map(p => [p.state, p.route, p.step, p.stage])) + G.s.turn : null; }")
+            if a and b:
+                if a == b: same_checks += 1
+                else:
+                    host.wait_for_timeout(1500)
+                    a = host.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.route, p.step, p.stage])) + window.__yut.G.s.turn")
+                    b = guest.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.route, p.step, p.stage])) + window.__yut.G.s.turn")
+                    if a == b: same_checks += 1
+                    else: check(False, f"두 패드의 판이 다름 {a} / {b}")
+        if not moved: host.wait_for_timeout(60)
+    over = bool(host.query_selector(".win-screen")) and bool(guest.query_selector(".win-screen"))
+    check(over, f"친구 대결 한 판을 끝까지 (동작 {steps}번)")
+    check(wrong_turn == 0, "차례가 아닌 패드는 던지기 버튼이 꺼져 있음")
+    host.wait_for_timeout(800)
+    fin = [pg.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.stage])) + window.__yut.G.s.winner") for pg in (host, guest)]
+    check(fin[0] == fin[1], f"끝난 판이 두 패드에서 똑같음 (중간 확인 {same_checks}번, 다른 적 없음)")
+    if over:
+        w = ev(host, "s.winner")
+        check(ev(guest, "s.winner") == w, "두 패드의 이긴 팀이 같음")
+        hb, gb = sum(ev(host, "Object.values(d.bag)")), sum(ev(guest, "Object.values(d.bag)"))
+        hwin, gwin = w == 0, w == 1
+        check((hb - bag0[id(host)]) == (3 if hwin else 1) and (gb - bag0[id(guest)]) == (3 if gwin else 1), f"각자 패드에 보상 — 이긴 집 볼 3개 · 진 집 1개 (방 만든 집 +{hb - bag0[id(host)]} · 친구네 +{gb - bag0[id(guest)]})")
+        check(host.query_selector("[data-act=rematch]") is None, "친구 대결 끝 화면엔 '한 판 더' 없음 (처음으로)")
+        host.screenshot(path=str(OUT / "n4-host-win.png"))
+        guest.screenshot(path=str(OUT / "n4-guest-win.png"))
+        check(ev(host, "d.net") is None and ev(guest, "d.net") is None, "끝난 친구 대결은 이어하기에서 빠짐")
+    hctx.close(); gctx.close()
+
+    # 이어하기: 판 도중에 친구네 패드를 새로고침 → 같은 판으로
+    hctx, host = mk({"settings": {"study": False}})
+    gctx, guest = mk({"settings": {"study": False}})
+    host.goto(base + q); host.wait_for_timeout(300)
+    host.click("[data-act=new-net]"); host.click("[data-act=net-host]")
+    host.click("[data-act=set][data-field=pieces][data-value='2']"); host.click("[data-act=net-create]")
+    host.wait_for_selector(".net-code b", timeout=10000)
+    code = "".join(host.eval_on_selector_all(".net-code b", "e => e.map(x => x.textContent)"))
+    guest.goto(base + q); guest.wait_for_timeout(300)
+    guest.click("[data-act=new-net]"); guest.click("[data-act=net-join]")
+    for d in code: guest.click(f"[data-act=net-key][data-k='{d}']")
+    guest.fill("#net-name", "하윤이네"); guest.click("#net-go")
+    host.wait_for_selector(".pcard", timeout=15000); host.click("[data-act=pick-auto]"); host.click("#pick-next")
+    guest.wait_for_selector(".pcard", timeout=15000); guest.click("[data-act=pick-auto]"); guest.click("#pick-next")
+    for pg in (host, guest):
+        pg.wait_for_function("() => document.querySelector('.screen.game') && window.__yut.G.s", timeout=20000); wait_idle(pg, 30000)
+    for k in range(6):
+        if not (act(host) or act(guest)): host.wait_for_timeout(200)
+    guest.reload(); guest.wait_for_timeout(500)
+    check(guest.query_selector("[data-act=resume]") is not None and "친구 대결" in guest.inner_text("[data-act=resume]"), "새로고침하면 '🏠 친구 대결 이어하기'")
+    guest.click("[data-act=resume]"); wait_idle(guest, 30000)
+    guest.wait_for_timeout(1500)
+    for k in range(8):
+        if not (act(host) or act(guest)): host.wait_for_timeout(250)
+    host.wait_for_timeout(2500)
+    a = host.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.step])) + window.__yut.G.s.turn")
+    b = guest.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.step])) + window.__yut.G.s.turn")
+    check(a == b, "이어한 뒤에도 두 패드의 판이 같음")
+    hctx.close(); gctx.close()
+    fdb.stop()
+
+
 def main():
     httpd = serve()
     base = f"http://127.0.0.1:{httpd.server_port}/index.html"
@@ -1030,14 +1189,16 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only")):
+        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only", "--net-only")):
             scenario(browser, base, errors)
-        if "--v3-only" not in sys.argv and "--v4-only" not in sys.argv:
+        if not any(f in sys.argv for f in ("--v3-only", "--v4-only", "--net-only")):
             scenario_v2(browser, base, errors)
-        if "--v4-only" not in sys.argv:
+        if "--v4-only" not in sys.argv and "--net-only" not in sys.argv:
             scenario_v3(browser, base, errors)
-        scenario_v4(browser, base, errors)
-        if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only")):
+        if "--net-only" not in sys.argv:
+            scenario_v4(browser, base, errors)
+        scenario_net(browser, base, errors)
+        if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only", "--net-only")):
             browser.close()
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
             httpd.shutdown()

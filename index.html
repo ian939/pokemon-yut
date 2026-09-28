@@ -696,6 +696,22 @@ body.game-land #toast.show { transform: none; }
 .rules-res i.en { display: block; font-style: normal; font-weight: 900; color: var(--blue); font-size: 13px; }
 .bt-stamp.super { top: 36%; color: #ff7a3c; font-size: var(--t3); white-space: normal; width: 92%; text-align: center; line-height: 1.1; }
 
+/* ===== 🏠 친구 대결 ===== */
+.net-card { display: grid; gap: 12px; justify-items: center; text-align: center; }
+.net-menu { display: grid; gap: 12px; width: min(420px, 100%); }
+.net-lab { font-weight: 800; color: var(--ink-soft); }
+.net-code { display: flex; gap: 10px; justify-content: center; }
+.net-code b { width: clamp(52px, 14vw, 76px); aspect-ratio: 3 / 4; display: grid; place-items: center; font-family: var(--pixel); font-weight: 700; font-size: var(--t3); background: var(--paper-2); border: 4px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); }
+.net-code.in b { background: #fff; }
+.net-wait { font-family: var(--pixel); font-weight: 700; font-size: var(--t1); line-height: 1.5; }
+.net-wait small { font-family: var(--font); font-size: 14px; color: var(--ink-soft); }
+.keypad { display: grid; grid-template-columns: repeat(3, minmax(64px, 96px)); gap: 10px; }
+.keypad .btn { min-height: 60px; font-size: var(--t2); }
+.net-card input { font-family: var(--font); font-size: 22px; font-weight: 800; text-align: center; width: min(320px, 100%); min-height: 56px; border-radius: 12px; border: 3px solid var(--ink); padding: 6px 10px; color: var(--ink); background: #fff; }
+.net-card input:focus { outline: 4px solid var(--gold); outline-offset: 2px; }
+.net-card .btn.big { width: min(420px, 100%); }
+.net-err { min-height: 22px; font-weight: 800; color: var(--red); }
+
 /* ===== 🎁 받은 기술 ===== */
 .pchip .sk.gift { top: auto; bottom: -7px; left: -7px; background: #ffd9ec; }
 .pchip .sk.gift.used { background: #c9d3df; }
@@ -789,7 +805,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-28d";
+const APP_VERSION = "2026-09-28e";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -930,7 +946,7 @@ const Store = {
       version: 1,
       sound: true,
       settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true, skills: true, study: true },
-      stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 },
+      stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 }, net: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 },
       lastPicks: {},      // { kid: [ids], mom: [ids] } — 다음 판에 미리 채워 둠
       bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }, // 윷놀이 볼 (잉글리시몬 볼과 따로) — 처음 선물 몬스터볼 3개
       collection: [],     // 윷놀이 보관함 [{ id, t, from }] — ❓ 풀숲에서 잡은 포켓몬, 다음 판부터 말로
@@ -1212,6 +1228,7 @@ function sparkle(node) {
 const Screens = {};
 let current = "";
 function showScreen(name) {
+  Net.stop();
   clearTimeout(G.cpuTimer);
   closeModal();
   TTS.stop();
@@ -1242,9 +1259,10 @@ Screens.home = sec => {
       '<div class="cast">' + [1, 2, 3, 4, 5].map((r, i) =>
         '<div class="c" style="--i:' + i + '"><img src="' + artUrl(CAST.yut[r]) + '" alt="' + esc(nameOf(CAST.yut[r])) + '" draggable="false"><b>' + RES[r].name + "</b></div>").join("") + "</div>" +
       '<div class="menu">' +
-        (resume ? '<button class="btn big gold cursor" data-act="resume">이어하기<small>' + esc(g.teams.map(t => t.name).join("  vs  ")) + "</small></button>" : "") +
+        (resume ? '<button class="btn big gold cursor" data-act="resume">' + (g.settings.mode === "net" ? "🏠 친구 대결 이어하기" : "이어하기") + "<small>" + esc(g.teams.map(t => t.name).join("  vs  ")) + "</small></button>" : "") +
         '<button class="btn big red' + (resume ? "" : " cursor") + '" data-act="new-family">👨‍👩‍👧 가족 대결</button>' +
         '<button class="btn big violet" data-act="new-rocket">😈 로켓단 대결</button>' +
+        '<button class="btn big blue" data-act="new-net">🏠 친구 대결</button>' +
       "</div>" +
       '<div class="menu-small">' +
         '<button class="btn ghost" data-act="rules">📖 윷놀이 방법</button>' +
@@ -1273,13 +1291,14 @@ function memberChips(field) {
   return MEMBERS.map(m => chipHtml(field, m.key, m.name, color, Setup.mode === "family" && m.key === other)).join("");
 }
 Screens.setup = sec => {
-  const fam = Setup.mode === "family";
+  const fam = Setup.mode === "family", net = Setup.mode === "net";
   sec.innerHTML =
-    '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>' +
-      (fam ? "👨‍👩‍👧 가족 대결 준비" : "😈 로켓단 대결 준비") + '</h2><span class="side"></span></header>' +
+    '<header class="bar"><button class="btn icon" data-act="' + (net ? "new-net" : "home") + '" aria-label="뒤로">←</button><h2>' +
+      (net ? "🏠 방 만들기" : fam ? "👨‍👩‍👧 가족 대결 준비" : "😈 로켓단 대결 준비") + '</h2><span class="side"></span></header>' +
     '<div class="scroll"><div class="card">' +
       "<h3>" + (fam ? "첫 번째 팀" : "우리 팀") + '</h3><div class="chips">' + memberChips("t0") + "</div>" +
-      (fam ? '<h3>두 번째 팀</h3><div class="chips">' + memberChips("t1") + "</div>"
+      (net ? '<p class="note">🏠 친구네 팀은 친구 패드에서 이름을 써서 들어와요. 판 설정은 방을 만든 집이 정해요.</p>'
+      : fam ? '<h3>두 번째 팀</h3><div class="chips">' + memberChips("t1") + "</div>"
            : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + chipHtml("cpu", "hard", "💀 어려움") + "</div>" +
              '<p class="note">' + (Setup.cpu === "hard" ? "💀 로켓단이 늘 가장 좋은 수를 두고 기술도 아끼지 않아요. 이기면 🎁 볼 4개 + 좋은 볼이 더 잘 나와요!" : Setup.cpu === "normal" ? "🔥 로켓단이 절반은 똑똑하게 둬요. 이기면 🎁 볼 3개" : "🌱 로켓단이 아무 데나 둬요. 이기면 🎁 볼 3개") + "</p>") +
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
@@ -1290,7 +1309,7 @@ Screens.setup = sec => {
       '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단을 이기면 💰 돈 문제로 볼 하나 더! (맞힐수록 문제가 어려워져요)" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
     "</div>" +
-    '<div class="card-actions"><button class="btn big green cursor" data-act="to-pick">포켓몬 고르러 가기</button></div></div>';
+    '<div class="card-actions">' + (net ? '<button class="btn big green cursor" data-act="net-create">🏠 방 만들고 코드 받기</button>' : '<button class="btn big green cursor" data-act="to-pick">포켓몬 고르러 가기</button>') + "</div></div>";
 };
 
 /* ---------- 포켓몬 고르기 — 스타팅 포켓몬 + ❓ 풀숲에서 잡은 포켓몬 (잡은 순서대로) ---------- */
@@ -1316,9 +1335,9 @@ function slotHtml(id, k) {
 }
 function takenBy(id) {
   const ti = Setup.ti;
-  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : Setup.rocket.slice(0, Setup.pieces);
+  const other = Setup.mode === "rocket" ? Setup.rocket.slice(0, Setup.pieces) : Setup.picks[1 - ti];
   if (other.indexOf(id) < 0 && !sameFamily(other, id)) return null;
-  return Setup.mode === "family" ? memberOf(teamKey(1 - ti)) : ROCKET_TEAM;
+  return Setup.mode === "rocket" ? ROCKET_TEAM : Setup.mode === "net" ? { name: Setup.net.names[1 - ti] } : memberOf(teamKey(1 - ti));
 }
 function cardHtml(id) {
   const mine = Setup.picks[Setup.ti];
@@ -1332,9 +1351,9 @@ function cardHtml(id) {
 }
 Screens.pick = sec => {
   const ti = Setup.ti;
-  const member = memberOf(teamKey(ti));
+  const member = Setup.mode === "net" ? { name: Setup.net.names[ti] } : memberOf(teamKey(ti));
   sec.style.setProperty("--tc", TEAM_COLORS[ti]);
-  const last = Setup.mode === "rocket" || ti === 1;
+  const last = Setup.mode === "rocket" || Setup.mode === "net" || ti === 1;
   const caught = caughtOnly(); // 잡은 순서대로 (먼저 잡은 것부터)
   sec.innerHTML =
     '<header class="bar"><button class="btn icon" data-act="pick-back" aria-label="뒤로">←</button><h2>' + esc(member.name) + ' 팀 포켓몬 고르기</h2><span class="side" id="pick-count"></span></header>' +
@@ -1367,14 +1386,14 @@ function updatePick() {
 }
 function validPicks(list, ti) {
   const avail = ownedSet();
-  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : Setup.rocket.slice(0, Setup.pieces);
+  const other = Setup.mode === "rocket" ? Setup.rocket.slice(0, Setup.pieces) : Setup.picks[1 - ti];
   const out = [];
   (list || []).forEach(id => { if (avail.has(id) && other.indexOf(id) < 0 && !sameFamily(other, id) && out.indexOf(id) < 0 && !sameFamily(out, id)) out.push(id); });
   return out.slice(0, Setup.pieces);
 }
 function autoPick() {
   const ti = Setup.ti, mine = Setup.picks[ti];
-  const other = Setup.mode === "family" ? Setup.picks[1 - ti] : Setup.rocket.slice(0, Setup.pieces);
+  const other = Setup.mode === "rocket" ? Setup.rocket.slice(0, Setup.pieces) : Setup.picks[1 - ti];
   const free = id => mine.indexOf(id) < 0 && other.indexOf(id) < 0 && !sameFamily(other, id) && !sameFamily(mine, id);
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const pool = shuffle(rosterIds().filter(free));
@@ -1389,7 +1408,7 @@ const G = {
   target: null,   // 기술 대상을 고르는 중: { piece, key, kind, targets }
   swapAfter: null, // 풀숲에서 말을 바꾼 뒤 윷판에서 이어서 보여 줄 것
 };
-const humanTurn = () => G.s && !G.s.teams[G.s.turn].cpu;
+const humanTurn = () => G.s && !G.s.teams[G.s.turn].cpu && (!netOn() || (G.s.turn === G.net.me && !G.net.remoteBusy)); // 친구 대결: 내 팀 차례 + 상대가 연출을 다 끝냈을 때
 const nodeXY = node => node === "goal" ? Yut.NODES[0] : Yut.NODES[node]; // 골인 = 출발 칸(참먹이) 동그라미 위
 function placeAt(el, node) { const xy = nodeXY(node); el.style.left = pct(xy[0]); el.style.top = pct(xy[1]); }
 const unitAt = (team, node) => $('#units .unit[data-team="' + team + '"][data-node="' + node + '"]');
@@ -1539,8 +1558,8 @@ function renderTop() {
   let label = "윷 던지기!", on = false;
   if (G.s.phase === "throw") {
     if (human) { on = true; label = G.s.pending.length ? (narrow ? "한 번 더!" : "한 번 더 던지기!") : (narrow ? "던지기!" : "윷 던지기!"); }
-    else label = narrow ? "로켓단 차례" : "로켓단이 던지는 중…";
-  } else if (G.s.phase === "choose") label = human ? (narrow ? "말 움직이기" : "👆 말을 움직여요") : (narrow ? "로켓단 차례" : "로켓단이 고르는 중…");
+    else label = netOn() ? (narrow ? "친구 차례" : "🏠 " + plain(otherName()) + " 차례") : narrow ? "로켓단 차례" : "로켓단이 던지는 중…";
+  } else if (G.s.phase === "choose") label = human ? (narrow ? "말 움직이기" : "👆 말을 움직여요") : netOn() ? (narrow ? "친구 차례" : "🏠 " + plain(otherName()) + " 차례") : (narrow ? "로켓단 차례" : "로켓단이 고르는 중…");
   else label = "판이 끝났어요";
   btn.textContent = label;
   btn.disabled = !on || G.busy || !!G.target;
@@ -1596,6 +1615,16 @@ function persist() {
       const st = Store.data.stats;
       st.games = (st.games || 0) + 1;
       if (s.settings.mode === "rocket") { if (w.cpu) st.rocket.lose++; else st.rocket.win++; }
+      else if (s.settings.mode === "net" && G.net) {
+        const mine = s.winner === G.net.me;
+        st.net = st.net || { win: 0, lose: 0 };
+        if (mine) st.net.win++; else st.net.lose++;
+        const balls = mine ? Yut.Rewards.rollBox(Yut.Rewards.BOX_SIZE, Math.random) : ["poke"];
+        balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
+        s.reward = { balls, opened: false, lose: !mine };
+        st.boxes = (st.boxes || 0) + 1;
+        Store.data.net = null; // 끝난 친구 대결은 이어하기에서 빼기
+      }
       else st.family[w.key] = (st.family[w.key] || 0) + 1;
       if (s.settings.mode === "rocket" && !w.cpu) {
         const forced = (Q.get("box") || "").split(",").filter(b => Yut.Rewards.BALL_INFO[b]); // 테스트용 ?box=master,poke,great
@@ -1629,6 +1658,7 @@ function preloadSprites(s) {
 }
 function mountGame() {
   G.busy = false; G.sel = null; G.newPick = null; G.paused = false;
+  netStartGame();
   preloadSprites(G.s);
   renderAll();
   try { history.pushState({ yut: "game" }, ""); } catch (e) {}
@@ -1657,7 +1687,11 @@ function afterAction() {
   G.moves = Yut.legalMoves(G.s);
   if (G.s.phase === "over") { hint(""); return; }
   if (G.paused) return;
-  if (G.s.gifts && G.s.gifts.length && !G.s.teams[G.s.gifts[0].team].cpu) { openGiftChooser(); return; } // 🎁 누구에게 줄까?
+  if (G.s.gifts && G.s.gifts.length && !G.s.teams[G.s.gifts[0].team].cpu && (!netOn() || G.s.gifts[0].team === G.net.me)) { openGiftChooser(); return; } // 🎁 누구에게 줄까?
+  if (netOn() && !humanTurn()) { // 🏠 친구 차례 — 친구 패드에서 올라오기를 기다린다
+    hint(G.net.remoteBusy ? otherName() + "가 하는 중… 🕐" : otherName() + " 차례예요. 친구 패드에서 던져요 🕐");
+    return;
+  }
   if (G.s.phase === "choose") {
     if (humanTurn()) prepareChoose();
     else { hint("😈 로켓단이 생각하는 중…"); cpuTick(); }
@@ -1769,6 +1803,7 @@ async function doThrow() {
   const t = r.events[0];
   G.s = r.state;
   persist();
+  netSend(r.events, true);
   try {
     await animSticks(t.sticks);
     if (t.poisoned) { toast("☠️ 맹독! 윷이 " + josa(RES[t.result].name, "으로/로") + " 나왔어요…", 1600); TTS.say("맹독!"); await sleep(800); }
@@ -1778,6 +1813,7 @@ async function doThrow() {
     renderPending();
     await playEvents(r.events.slice(1), null);
   } catch (e) { console.error(e); }
+  netSend([], giftMine());
   G.busy = false;
   afterAction();
 }
@@ -1835,6 +1871,7 @@ async function doMove(id) {
   const r = Yut.applyMove(prev, id, m.unit === "new" ? G.newPick : undefined);
   G.s = r.state;
   persist();
+  netSend(r.events, true);
   renderTop();
   renderPending(); // 방금 쓴 결과는 바로 칩에서 뺀다
   try { await playEvents(r.events, prev); } catch (e) { console.error(e); }
@@ -1845,6 +1882,7 @@ async function doMove(id) {
   }
   G.newPick = null;
   G.sel = null;
+  netSend([], giftMine()); // 조우·말 바꾸기까지 끝난 판을 올린다 (선물 고르기가 남았으면 아직 기다리게)
   G.busy = false;
   afterAction();
 }
@@ -2210,7 +2248,10 @@ const FORCE_CATCH = Q.get("catch"); // 테스트용: ?catch=1 늘 성공 / ?catc
 async function animWild(e) {
   const spotEl = $('#spots .spot[data-node="' + e.node + '"]');
   if (spotEl) spotEl.classList.add("shake");
-  if (G.s.teams[e.team].cpu) { rollSpot(e, false); await rocketNet(e); }
+  if (netOn() && e.team !== G.net.me) { // 🏠 친구 팀의 조우는 친구 패드에서
+    toast("🌿 " + G.s.teams[e.team].name + "가 풀숲에서 야생 포켓몬을 만났어요!", 2400);
+    await sleep(900);
+  } else if (G.s.teams[e.team].cpu) { rollSpot(e, false); await rocketNet(e); }
   else {
     await sleep(450);
     const boosted = studyOn() ? await clockQuiz() : false; // 🕐 맞히면 이번 조우만 30·30·20·20
@@ -2298,6 +2339,7 @@ function encounter(e) {
         await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", true);
         await c.wait(800);
         const swapped = c.live() ? await offerSwap(c, e, id) : false;
+        if (netOn()) G.net.note = "🌿 " + G.s.teams[e.team].name + "가 " + josa(name, "을/를") + " 잡았어요!" + (swapped ? " 🔄 말로 바꿨어요" : "");
         if (!swapped) await c.say(josa(name, "을/를") + " 보관함에 넣었어요! 다음 판부터 말로 쓸 수 있어요.");
         await c.wait(1100);
         break;
@@ -2309,6 +2351,7 @@ function encounter(e) {
       if (c.live()) SFX.runHome();
       stageRunOff(c);
       await c.say(josa(name, "은/는") + " 풀숲으로 도망갔다… 다음에 또 만나자!");
+      if (netOn()) G.net.note = "🌿 " + josa(name, "은/는") + " " + G.s.teams[e.team].name + "에게서 도망갔어요";
       await c.wait(1000);
     }
     c.close();
@@ -2384,7 +2427,7 @@ async function announceTurn(ti, first) {
 function cpuTick() {
   clearTimeout(G.cpuTimer);
   G.cpuTimer = setTimeout(async () => {
-    if (current !== "game" || !G.s || G.busy || G.paused || humanTurn() || G.s.phase === "over") return;
+    if (current !== "game" || !G.s || G.busy || G.paused || humanTurn() || G.s.phase === "over" || !G.s.teams[G.s.turn].cpu) return;
     if (G.s.settings.skills !== false) {
       const a = Yut.cpuSkill(G.s, G.s.settings.cpuLevel);
       if (a) { await cpuUseSkill(a); return; }
@@ -2422,7 +2465,9 @@ async function showWin(ti) {
   const finals = t.paths.map(p => p[p.length - 1]);
   const rocket = s.settings.mode === "rocket";
   const title = rocket && t.cpu ? "😼 로켓단이 이겼다옹~!" : "🎉 " + t.name + " 팀 승리!";
-  const sub = rocket ? (t.cpu ? "아깝다! 다음엔 꼭 이길 수 있어요. 위로 상자를 열어 봐요!" : "로켓단은 또 지는 거냐옹~! 😵") : "포켓몬이 모두 골인했어요!";
+  const netMine = netOn() && ti === G.net.me;
+  const sub = rocket ? (t.cpu ? "아깝다! 다음엔 꼭 이길 수 있어요. 위로 상자를 열어 봐요!" : "로켓단은 또 지는 거냐옹~! 😵")
+    : netOn() ? (netMine ? "친구네를 이겼어요! 보물상자를 열어 봐요 🎁" : "아깝다! 친구네가 이겼어요. 위로 상자를 열어 봐요") : "포켓몬이 모두 골인했어요!";
   hint("");
   SFX.win();
   confetti(80);
@@ -2435,7 +2480,7 @@ async function showWin(ti) {
     '<div class="win-team">' + finals.map((id, k) =>
       '<div class="w" style="--i:' + k + '"><img src="' + artUrl(id) + '" alt="" onerror="artFail(this,' + id + ')"><b>' + esc(nameOf(id)) + "</b></div>").join("") + "</div>" +
     boxHtml(s.reward) + bonusHtml(s.reward) +
-    '<div class="win-btns' + (s.reward && (!s.reward.opened || (s.settings.study !== false && !s.reward.bonus)) ? " hidden" : "") + '"><button class="btn big gold" data-act="rematch">🔁 한 판 더</button><button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
+    '<div class="win-btns' + (s.reward && (!s.reward.opened || (studyFlag() && !s.reward.bonus)) ? " hidden" : "") + '">' + (netOn() ? "" : '<button class="btn big gold" data-act="rematch">🔁 한 판 더</button>') + '<button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
   document.body.appendChild(o);
 }
 /* ---------- 🎁 보물상자 — 볼은 이긴 순간 이미 가방에 들어갔다. 여기서는 열어서 보여 주기만 ---------- */
@@ -2477,7 +2522,7 @@ async function openBox() {
   zone.classList.add("opened");
   Store.data.lastGame = G.s;
   Store.save();
-  if (G.s.settings.study !== false) { // 💰 상자 바닥에 하나 더 — 돈 문제
+  if (studyFlag()) { // 💰 상자 바닥에 하나 더 — 돈 문제
     zone.insertAdjacentHTML("afterend", bonusHtml(rw));
     await sleep(700);
     await moneyBonus();
@@ -2536,7 +2581,9 @@ function startGame(teams, opts) {
   s.intro = true;
   s.settings.study = opts.study !== false; // 🎓 공부 문제 (화면 쪽 설정)
   G.s = s;
+  G.net = opts.net ? { code: opts.net.code, me: opts.net.me, seq: 0, queue: [], running: false, remoteBusy: false, note: null } : null;
   persist();
+  netSend([], false); // 친구 대결: 판을 서버에 올린다 → 방 만든 집 패드도 윷판으로
   showScreen("game");
 }
 function startFromSetup() {
@@ -2734,8 +2781,10 @@ async function doSkill(i, target, slot) {
   const prev = G.s;
   G.s = r.state;
   persist();
+  netSend(r.events, true);
   renderTop();
   try { await playEvents(r.events, prev); } catch (e) { console.error(e); }
+  netSend([], giftMine());
   G.busy = false;
   afterAction();
 }
@@ -3074,7 +3123,8 @@ function openSkillDex() {
    v4: 🎓 공부 문제 — 🕐 시계 보기 · 💰 돈 세기
 ================================================================ */
 const STUDY_COLORS = ["#e5484d", "#f28c28", "#2fa35a", "#2f6fd6"]; // 사진 속 시계처럼 빨·주·초·파 돌아가며 (12=빨강, 1=주황, 2=초록, 3=파랑 …)
-const studyOn = () => (G.s && G.s.settings.study === false) ? false : (G.s ? true : Setup.study !== false);
+const studyOn = () => netOn() ? Store.data.settings.study !== false : (G.s && G.s.settings.study === false) ? false : (G.s ? true : Setup.study !== false); // 친구 대결: 공부 문제는 각 집 설정대로
+const studyFlag = () => studyOn();
 function studyRecord(kind, ok) {
   const st = Store.data.study || (Store.data.study = {});
   st[kind] = Yut.Study.record(st[kind], ok);
@@ -3232,7 +3282,7 @@ async function moneyQuizOnce(step) {
   return r.ok;
 }
 function bonusHtml(rw) {
-  if (!rw || !rw.opened || !G.s || G.s.settings.study === false) return "";
+  if (!rw || !rw.opened || !G.s || !studyFlag()) return "";
   if (rw.bonus) return '<div class="bonus-zone" id="bonus-zone"><p class="box-hint">' + (rw.bonus.ball ? "💰 돈 문제 보너스!" : "💰 돈 문제 — 다음엔 꼭!") + "</p></div>";
   return '<div class="bonus-zone" id="bonus-zone"><button class="btn big gold cursor" data-act="money-quiz">💰 돈 문제 풀고 볼 하나 더!</button></div>';
 }
@@ -3353,7 +3403,9 @@ async function doGift(to) {
   G.busy = true;
   G.s = r.state;
   persist();
+  netSend(r.events, true);
   try { await playEvents(r.events, null); } catch (e) { console.error(e); }
+  netSend([], giftMine());
   G.busy = false;
   afterAction();
 }
@@ -3422,6 +3474,241 @@ function openPieceInfo(i) {
     () => { if (inGame) { G.paused = false; if (current === "game" && !G.busy) afterAction(); } });
 }
 
+/* ================================================================
+   v7: 🏠 친구 대결 — 초대방 + 코드 4자리 (Firebase REST · yutrooms/{코드})
+   자기 차례인 패드가 계산해서 { state, last:{ events, busy, note } } 를 올리고, 다른 패드는 받아서 똑같이 연출한다
+================================================================ */
+const NET_DB = (Q.get("db") || "https://elglishmon-default-rtdb.asia-southeast1.firebasedatabase.app").replace(/\/+$/, "");
+const ROOM_TTL = 24 * 60 * 60 * 1000; // 방은 하루
+const Net = {
+  es: null, poll: null, code: null, onRoom: null,
+  url(code) { return NET_DB + "/yutrooms/" + code + ".json"; },
+  async get(code) { const r = await fetch(this.url(code) + "?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw new Error("net " + r.status); return r.json(); },
+  async send(code, method, data) {
+    for (let k = 0; k < 5; k++) { // 끊기면 몇 번 다시
+      try { const r = await fetch(this.url(code), { method, body: JSON.stringify(data) }); if (r.ok) return true; if (r.status === 401 || r.status === 403) throw new Error("denied"); }
+      catch (e) { if (e.message === "denied") throw e; }
+      await new Promise(res => setTimeout(res, 800 * (k + 1)));
+    }
+    throw new Error("net fail");
+  },
+  put(code, data) { return this.send(code, "PUT", data); },
+  patch(code, data) { return this.send(code, "PATCH", data); },
+  // 실시간 구독 (Firebase 스트리밍) + 4초마다 확인 (스트리밍이 막힌 곳에서도 되게)
+  listen(code, onRoom) {
+    this.stop();
+    this.code = code; this.onRoom = onRoom;
+    let pulling = false;
+    const pull = async () => {
+      if (pulling || this.code !== code) return;
+      pulling = true;
+      try { const room = await this.get(code); if (this.code === code && this.onRoom) this.onRoom(room); } catch (e) {}
+      pulling = false;
+    };
+    this.pull = pull;
+    try { this.es = new EventSource(this.url(code)); ["put", "patch"].forEach(t => this.es.addEventListener(t, () => pull())); } catch (e) { this.es = null; }
+    this.poll = setInterval(pull, 4000);
+    pull();
+  },
+  stop() { if (this.es) { try { this.es.close(); } catch (e) {} } this.es = null; clearInterval(this.poll); this.poll = null; this.code = null; this.onRoom = null; },
+};
+const netOn = () => !!(G.net && G.s && G.s.settings.mode === "net");
+const netParse = j => { try { return typeof j === "string" ? JSON.parse(j) : null; } catch (e) { return null; } };
+function netSave() { if (G.net) { Store.data.net = G.s && G.s.phase === "over" ? null : { code: G.net.code, me: G.net.me, seq: G.net.seq }; Store.save(); } } // 끝난 판은 이어하기에서 빼기
+// 내 동작을 올린다 — busy: 아직 연출·조우·선물 고르기 중 (상대는 기다린다)
+let netChain = Promise.resolve();
+function netSend(events, busy) {
+  if (!netOn()) return;
+  G.net.seq++;
+  const st = JSON.parse(JSON.stringify(G.s));
+  delete st.reward; delete st.recorded; delete st.intro;
+  const note = G.net.note || null;
+  G.net.note = null;
+  // 판 상태·연출은 JSON 글자로 — Firebase 는 빈 배열·null 을 지워 버려서 그대로 올리면 판이 망가진다
+  const payload = { seq: G.net.seq, stateJ: JSON.stringify(st), status: st.phase === "over" ? "over" : "play", updated: Date.now(),
+    lastJ: JSON.stringify({ seq: G.net.seq, by: G.net.me, events: events || [], busy: !!busy, note }) };
+  netSave();
+  const code = G.net.code;
+  netChain = netChain.then(() => Net.patch(code, payload)).catch(e => { console.error(e); toast("📶 인터넷이 끊겼어요. 연결되면 이어서 해요", 2600); });
+}
+const giftMine = () => !!(netOn() && G.s.gifts && G.s.gifts.length && G.s.gifts[0].team === G.net.me);
+// 상대 동작을 받는다 — 차례대로 연출
+function onNetRoom(room) {
+  if (!netOn() || current !== "game" || !room) return;
+  if ((room.seq || 0) <= G.net.seq) return;
+  G.net.seq = room.seq;
+  netSave();
+  const L = netParse(room.lastJ) || {};
+  const st = netParse(room.stateJ);
+  if (L.by === G.net.me || !st) return;
+  G.net.queue.push({ state: st, last: L });
+  netDrain();
+}
+async function netDrain() {
+  if (G.net.running) return;
+  G.net.running = true;
+  while (G.net.queue.length && current === "game") {
+    if (G.busy) { await new Promise(r => setTimeout(r, 120)); continue; }
+    const x = G.net.queue.shift();
+    const prev = G.s;
+    G.s = Object.assign(x.state, { reward: prev.reward, recorded: prev.recorded }); // 보상 기록은 내 패드 것
+    G.net.remoteBusy = !!x.last.busy;
+    persist();
+    if (x.last.events && x.last.events.length) {
+      G.busy = true; renderTop();
+      try { await playEvents(x.last.events, prev); } catch (e) { console.error(e); }
+      G.busy = false;
+    }
+    if (x.last.note) toast(x.last.note, 2600);
+    afterAction();
+  }
+  G.net.running = false;
+}
+function netStartGame() { // 게임 화면에 들어갈 때 (새 판 · 이어하기)
+  if (!netOn()) return;
+  G.net.queue = G.net.queue || []; G.net.running = false;
+  Net.listen(G.net.code, onNetRoom);
+}
+const otherName = () => netOn() ? G.s.teams[1 - G.net.me].name : "";
+
+/* ---------- 🏠 친구 대결 화면들 ---------- */
+Screens.net = sec => {
+  sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>🏠 친구 대결</h2><span class="side"></span></header>' +
+    '<div class="scroll"><div class="card net-card">' +
+      "<p class=\"note\">친구네 가족과 각자 패드로 대결해요. 한 집이 방을 만들고, 코드 4자리를 친구네에 알려 주세요 (문자·전화).</p>" +
+      '<div class="net-menu"><button class="btn big red" data-act="net-host">🏠 방 만들기</button>' +
+      '<button class="btn big blue" data-act="net-join">🔢 코드로 들어가기</button></div>' +
+    "</div></div>";
+};
+async function netCreate() {
+  const btn = $("[data-act=net-create]");
+  if (btn) btn.disabled = true;
+  try {
+    let code = null;
+    for (let k = 0; k < 8 && !code; k++) {
+      const c = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+      const old = await Net.get(c);
+      if (!old || Date.now() - (old.created || 0) > ROOM_TTL || old.status === "over") code = c;
+    }
+    if (!code) throw new Error("no code");
+    const host = memberOf(Setup.t0).name;
+    await Net.put(code, { v: 1, created: Date.now(), updated: Date.now(), host: { name: host }, guest: null, status: "wait", seq: 0,
+      settings: { pieces: Setup.pieces, backdo: Setup.backdo, skills: Setup.skills, battle: Setup.battle } });
+    Store.data.settings = Object.assign(Store.data.settings, { pieces: Setup.pieces, backdo: Setup.backdo, t0: Setup.t0, battle: Setup.battle, skills: Setup.skills, study: Setup.study });
+    Store.data.net = { code, me: 0, seq: 0 };
+    Store.save();
+    Setup.net = { code, me: 0, names: [host, ""] };
+    showScreen("netwait");
+  } catch (e) {
+    console.error(e);
+    toast(e.message === "denied" ? "서버가 아직 준비되지 않았어요 (Firebase 규칙을 확인해 주세요)" : "방을 만들지 못했어요. 인터넷을 확인해 주세요 📶", 3000);
+    if (btn) btn.disabled = false;
+  }
+}
+// 기다리기 화면 — 방 만든 집: 친구가 들어오기 · 친구가 고르기 / 들어간 집: 방 만든 집이 고르기
+Screens.netwait = sec => {
+  const N = Setup.net, host = N.me === 0;
+  const stage = N.stage || "join";
+  const msg = stage === "join" ? "친구를 기다려요… 🕐<br><small>친구네 패드에서 🏠 친구 대결 → 🔢 코드로 들어가기</small>"
+    : stage === "guest-pick" ? esc(N.names[1]) + "가 포켓몬을 고르는 중… 🕐" : esc(N.names[0]) + " 팀이 포켓몬을 고르는 중… 🕐";
+  sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="net-leave" aria-label="그만두기">←</button><h2>🏠 친구 대결</h2><span class="side"></span></header>' +
+    '<div class="scroll"><div class="card net-card">' +
+      (host ? '<p class="net-lab">친구에게 알려 줄 코드</p><div class="net-code">' + N.code.split("").map(d => "<b>" + d + "</b>").join("") + "</div>" : '<p class="net-lab">코드 ' + esc(N.code) + " · " + esc(N.names[0]) + " 팀의 방</p>") +
+      '<p class="net-wait">' + msg + "</p>" +
+    "</div></div>";
+  Net.listen(N.code, room => {
+    if (!room || current !== "netwait") return;
+    if (host && stage === "join" && room.guest && room.guest.name) {
+      N.names[1] = room.guest.name;
+      SFX.again(); toast("🏠 " + room.guest.name + "가 들어왔어요!", 2000);
+      Setup.ti = 0; Setup.picks = [validPicks(Store.data.lastPicks[Setup.t0], 0), []];
+      showScreen("pick");
+    } else if (!host && stage === "host-pick" && room.status === "pick-guest") {
+      Setup.picks = [room.picks && room.picks[0] || [], []];
+      Setup.ti = 1; Setup.picks[1] = validPicks(Store.data.lastPicks.guest, 1);
+      showScreen("pick");
+    } else if (room.status === "play" && room.stateJ) {
+      netEnterGame(room);
+    }
+  });
+};
+function netEnterGame(room) {
+  const N = Setup.net;
+  G.net = { code: N.code, me: N.me, seq: room.seq || 0, queue: [], running: false, remoteBusy: false, note: null };
+  G.s = netParse(room.stateJ);
+  G.s.intro = true; // 시작 연출은 각자 패드에서
+  persist(); netSave();
+  showScreen("game");
+}
+// 🔢 코드로 들어가기 — 큰 숫자판 + 이름 쓰기
+Screens.netjoin = sec => {
+  const N = Setup.join || (Setup.join = { code: "", name: Store.data.netName || "" });
+  sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="new-net" aria-label="뒤로">←</button><h2>🔢 코드로 들어가기</h2><span class="side"></span></header>' +
+    '<div class="scroll"><div class="card net-card">' +
+      '<div class="net-code in" id="net-in">' + [0, 1, 2, 3].map(k => "<b>" + esc(N.code[k] || "") + "</b>").join("") + "</div>" +
+      '<div class="keypad">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => '<button class="btn" data-act="net-key" data-k="' + d + '">' + d + "</button>").join("") +
+        '<button class="btn" data-act="net-key" data-k="del">⌫</button><button class="btn" data-act="net-key" data-k="0">0</button><span></span></div>' +
+      '<h3>우리 팀 이름</h3><input id="net-name" maxlength="8" placeholder="예: 하윤이네" value="' + esc(N.name) + '" autocomplete="off">' +
+      '<p class="net-err" id="net-err"></p>' +
+      '<button class="btn big green" data-act="net-go" id="net-go">🏠 들어가기</button>' +
+    "</div></div>";
+  const inp = $("#net-name");
+  inp.addEventListener("input", () => { N.name = inp.value; });
+};
+function netKey(k) {
+  const N = Setup.join;
+  if (k === "del") N.code = N.code.slice(0, -1); else if (N.code.length < 4) N.code += k;
+  SFX.tap();
+  $$("#net-in b").forEach((b, i) => { b.textContent = N.code[i] || ""; });
+}
+async function netJoin() {
+  const N = Setup.join, err = $("#net-err");
+  const name = (($("#net-name") || {}).value || "").trim().slice(0, 8);
+  if (N.code.length !== 4) { err.textContent = "코드 4자리를 눌러 주세요"; return; }
+  if (!name) { err.textContent = "우리 팀 이름을 써 주세요"; return; }
+  $("#net-go").disabled = true;
+  try {
+    const room = await Net.get(N.code);
+    const bad = !room ? "그런 방이 없어요. 코드를 다시 확인해 주세요" : Date.now() - (room.created || 0) > ROOM_TTL || room.status === "over" ? "끝났거나 오래된 방이에요" : room.guest ? "벌써 친구가 들어온 방이에요" : "";
+    if (bad) { err.textContent = bad; $("#net-go").disabled = false; return; }
+    const gname = "🏠 " + name;
+    await Net.patch(N.code, { guest: { name: gname }, status: "pick-host", updated: Date.now() });
+    Store.data.netName = name; Store.data.net = { code: N.code, me: 1, seq: 0 }; Store.save();
+    Object.assign(Setup, { mode: "net", pieces: room.settings.pieces, backdo: room.settings.backdo, skills: room.settings.skills !== false, battle: room.settings.battle !== false });
+    Setup.net = { code: N.code, me: 1, names: [room.host.name, gname], stage: "host-pick" };
+    showScreen("netwait");
+  } catch (e) {
+    console.error(e);
+    err.textContent = e.message === "denied" ? "서버가 아직 준비되지 않았어요" : "들어가지 못했어요. 인터넷을 확인해 주세요 📶";
+    $("#net-go").disabled = false;
+  }
+}
+// 고르기 끝 — 방 만든 집: 올리고 기다리기 / 들어간 집: 판을 만들어 올리기
+async function netPickDone() {
+  const N = Setup.net;
+  try {
+    if (N.me === 0) {
+      Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice(); Store.save();
+      await Net.patch(N.code, { picks: { 0: Setup.picks[0] }, status: "pick-guest", updated: Date.now() });
+      N.stage = "guest-pick";
+      showScreen("netwait");
+    } else {
+      Store.data.lastPicks.guest = Setup.picks[1].slice(); Store.save();
+      const teams = [
+        { key: "net0", name: N.names[0], color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() },
+        { key: "net1", name: N.names[1], color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() }];
+      const first = Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2);
+      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, net: { code: N.code, me: 1 } });
+    }
+  } catch (e) { console.error(e); toast("📶 올리지 못했어요. 인터넷을 확인하고 다시 눌러 주세요", 2600); }
+}
+function netLeave() {
+  Net.stop();
+  Store.data.net = null; Store.save();
+  G.net = null; Setup.net = null;
+  showScreen("home");
+}
+
 /* ---------- 쉬기·그만두기 ---------- */
 function openPause() {
   if (!G.s || current !== "game") return;
@@ -3485,6 +3772,7 @@ function openStats() {
     "<h2>🏆 전적</h2>" +
     "<p>가족 대결</p>" + '<div class="stats-list">' + (fam || "<div><span>아직 기록이 없어요</span><span></span></div>") + "</div>" +
     "<p>로켓단 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.rocket.win + '번</span></div><div><span>😼 로켓단이 이겼어요</span><span>' + st.rocket.lose + "번</span></div></div>" +
+    "<p>🏠 친구 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + ((st.net || {}).win || 0) + '번</span></div><div><span>😅 친구네가 이겼어요</span><span>' + ((st.net || {}).lose || 0) + "번</span></div></div>" +
     "<p>모두 " + (st.games || 0) + "판</p>" +
     "<p>🎓 공부</p>" + '<div class="stats-list">' + [["clock", "🕐 시계"], ["money", "💰 돈"]].map(([k, n]) => {
       const x = (Store.data.study || {})[k] || {};
@@ -3498,9 +3786,20 @@ function openStats() {
 ================================================================ */
 const Act = {
   "home": () => showScreen("home"),
-  "resume": () => { G.s = Store.data.game; if (!G.s) return showScreen("home"); showScreen("game"); },
+  "resume": () => {
+    G.s = Store.data.game; if (!G.s) return showScreen("home");
+    G.net = G.s.settings.mode === "net" && Store.data.net ? Object.assign({ queue: [], running: false, remoteBusy: false, note: null }, Store.data.net) : null;
+    showScreen("game");
+  },
   "new-family": () => { Setup.mode = "family"; showScreen("setup"); },
   "new-rocket": () => { Setup.mode = "rocket"; showScreen("setup"); },
+  "new-net": () => { Setup.mode = "net"; Setup.net = null; showScreen("net"); },
+  "net-host": () => { Setup.mode = "net"; showScreen("setup"); },
+  "net-join": () => { Setup.mode = "net"; Setup.join = null; showScreen("netjoin"); },
+  "net-create": netCreate,
+  "net-key": el => netKey(el.dataset.k),
+  "net-go": netJoin,
+  "net-leave": netLeave,
   "rules": openRules,
   "bag": openBag,
   "open-box": openBox,
@@ -3537,13 +3836,14 @@ const Act = {
   "pick-auto": () => { autoPick(); SFX.pop(); updatePick(); },
   "pick-next": () => {
     if (Setup.picks[Setup.ti].length < Setup.pieces) return;
+    if (Setup.mode === "net") { netPickDone(); return; }
     if (Setup.mode === "family" && Setup.ti === 0) {
       Setup.ti = 1;
       Setup.picks[1] = validPicks(Setup.picks[1], 1);
       showScreen("pick");
     } else startFromSetup();
   },
-  "pick-back": () => { if (Setup.ti === 1) { Setup.ti = 0; showScreen("pick"); } else showScreen("setup"); },
+  "pick-back": () => { if (Setup.mode === "net") { netLeave(); return; } if (Setup.ti === 1) { Setup.ti = 0; showScreen("pick"); } else showScreen("setup"); },
   "throw": () => { if (humanTurn()) doThrow(); },
   "skill": () => openSkillMenu(),
   "skill-pick": el => { closeModal(); beginSkill(Number(el.dataset.piece), el.dataset.slot); },
@@ -3555,7 +3855,7 @@ const Act = {
   "pause": openPause,
   "pause-home": () => { modalClose = null; closeModal(); G.paused = false; showScreen("home"); },
   "pause-giveup": () => typedConfirm("판 그만두기", "이 판을 지우면 되돌릴 수 없어요.", "그만", () => {
-    Store.data.game = null; Store.save(); G.s = null; G.paused = false; showScreen("home"); toast("판을 정리했어요");
+    Store.data.game = null; Store.data.net = null; Store.save(); G.s = null; G.net = null; G.paused = false; showScreen("home"); toast("판을 정리했어요");
   }),
   "stats-clear": () => typedConfirm("전적 지우기", "전적을 모두 지우면 되돌릴 수 없어요.", "지우기", () => {
     Store.data.stats = Store.defaults().stats; Store.save(); toast("전적을 지웠어요");
