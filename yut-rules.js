@@ -1540,9 +1540,9 @@
     BALLS, BALL_INFO, WILD_ODDS, WILD_ODDS_BOOST, BOX_SIZE: 3, THROWS: 3, UNOWNED_FIRST: 0.5,
     // 💀 어려움을 이기면 (사용자 확정 2026-09-28): 볼 4개 + 좋은 볼이 더 잘 나온다
     BOX_SIZE_HARD: 4, BOX_ODDS_HARD: { poke: 25, great: 30, ultra: 25, luxury: 10, master: 10 },
-    // 잡을 확률 (사용자 확정 2026-09-27): 몬스터볼 기준 일반 60 · 레어 50 · 유니크 40 · 전설 30%,
+    // 잡을 확률 (사용자 확정 2026-09-29, 전에는 60·50·40·30): 몬스터볼 기준 일반 80 · 레어 70 · 유니크 60 · 전설 40%,
     // 볼이 한 단계 좋을 때마다 +5%, 이번 조우에서 놓칠 때마다 +10% (최대 100%). 마스터볼은 늘 100%
-    CATCH_BASE: { c: 0.6, r: 0.5, u: 0.4, l: 0.3 }, FAIL_BONUS: 0.1,
+    CATCH_BASE: { c: 0.8, r: 0.7, u: 0.6, l: 0.4 }, FAIL_BONUS: 0.1,
     catchRate(ball, rarity, fails) {
       if (ball === "master") return 1;
       const base = Rewards.CATCH_BASE[rarity] != null ? Rewards.CATCH_BASE[rarity] : Rewards.CATCH_BASE.c;

@@ -84,7 +84,15 @@ def measure(page, name):
 
 
 def wait_idle(page, timeout=20000):
-    page.wait_for_function("() => window.__yut && !window.__yut.G.busy", timeout=timeout)
+    # 🪙 시작 동전은 우리 패드에서 눌러 던진다 (빠르게 모드·친구 대결은 저절로)
+    end = time.time() + timeout / 1000
+    while not page.evaluate("() => !!(window.__yut && !window.__yut.G.busy)"):
+        coin = page.query_selector(".coin-ov:not(.tossing) #ct-coin")
+        if coin:
+            coin.click(force=True)
+        if time.time() > end:
+            raise TimeoutError("wait_idle " + str(timeout))
+        page.wait_for_timeout(100)
 
 
 def wait_idle_or_popup(page, timeout=20000):
@@ -186,6 +194,18 @@ def scenario(browser, base, errors):
     page.click(".pcard[data-id='7']")
     page.click(".pcard[data-id='152']")
     page.click("#pick-next")
+    # 🪙 동전 던지기 — 눌러서 던지면 먼저 할 팀 면으로 떨어진다
+    page.wait_for_selector(".coin-ov #ct-coin", timeout=10000)
+    card = page.inner_text(".coin-card")
+    check("앞면" in card and "뒷면" in card, "🪙 시작할 때 동전 던지기 (앞면·뒷면에 두 팀)")
+    page.screenshot(path=str(OUT / "00-coin.png"))
+    measure(page, "🪙 동전 던지기")
+    page.click("#ct-coin", force=True)
+    page.wait_for_selector(".coin-ov.landed", timeout=10000)
+    first = page.evaluate("() => window.__yut.G.s.turn")
+    say = page.inner_text("#ct-say")
+    check(("앞면" if first == 0 else "뒷면") in say and "먼저" in say, f"동전이 먼저 할 팀 면으로 ({say})")
+    page.screenshot(path=str(OUT / "00-coin-landed.png"))
     wait_idle(page)
 
     def throw():

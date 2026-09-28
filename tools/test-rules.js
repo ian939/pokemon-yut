@@ -257,9 +257,9 @@ t("28. 옛 저장(❓ 칸 없음)도 이어하기 되고, 발동 안 함", () =>
   s = withSpots([{ node: 3, id: 9999 }]);
   ok(!Y.validate(s), "이상한 포켓몬 번호를 통과시킴");
 });
-t("29. 보물상자 10만 번 — 50·30·10·5·5 (±0.5%p), 잡을 확률 60·65·70·75·100%", () => {
+t("29. 보물상자 10만 번 — 50·30·10·5·5 (±0.5%p), 잡을 확률(일반) 80·85·90·95·100%", () => {
   const R = Y.Rewards;
-  eq(R.BALLS.map(b => Math.round(R.catchRate(b) * 100)), [60, 65, 70, 75, 100]);
+  eq(R.BALLS.map(b => Math.round(R.catchRate(b) * 100)), [80, 85, 90, 95, 100]);
   const rnd = Y.rng(4242), cnt = {}, N = 100000;
   R.rollBox(N, rnd).forEach(b => { cnt[b] = (cnt[b] || 0) + 1; });
   const want = { poke: 0.5, great: 0.3, ultra: 0.1, luxury: 0.05, master: 0.05 };
@@ -786,14 +786,14 @@ t("61. 시계를 맞히면 풀숲 희귀도 30·30·20·20 (±1%p) · 풀숲 포
   ok(w && w.id == null && Y.validate(r.state), "id 없이 wild 이벤트 → 화면이 문제를 낸 뒤 뽑는다");
 });
 
-t("62. 잡을 확률 — 몬스터볼 기준 일반 60 · 레어 50 · 유니크 40 · 전설 30, 볼 단계 +5, 놓칠 때마다 +10, 마스터볼 100", () => {
+t("62. 잡을 확률 — 몬스터볼 기준 일반 80 · 레어 70 · 유니크 60 · 전설 40, 볼 단계 +5, 놓칠 때마다 +10, 마스터볼 100", () => {
   const R = Y.Rewards;
-  eq(["c", "r", "u", "l"].map(k => Math.round(R.catchRate("poke", k) * 100)), [60, 50, 40, 30]);
-  eq(R.BALLS.map(b => Math.round(R.catchRate(b, "l") * 100)), [30, 35, 40, 45, 100], "전설: 볼 단계마다 +5");
-  eq([0, 1, 2].map(f => Math.round(R.catchRate("poke", "u", f) * 100)), [40, 50, 60], "놓칠 때마다 +10");
+  eq(["c", "r", "u", "l"].map(k => Math.round(R.catchRate("poke", k) * 100)), [80, 70, 60, 40]);
+  eq(R.BALLS.map(b => Math.round(R.catchRate(b, "l") * 100)), [40, 45, 50, 55, 100], "전설: 볼 단계마다 +5");
+  eq([0, 1, 2].map(f => Math.round(R.catchRate("poke", "u", f) * 100)), [60, 70, 80], "놓칠 때마다 +10");
   eq(Math.round(R.catchRate("luxury", "c", 5) * 100), 100, "100%를 넘지 않음");
   const rnd = Y.rng(5), N = 60000;
-  [["poke", "l", 0, 0.3], ["great", "r", 1, 0.65], ["ultra", "u", 2, 0.7]].forEach(([b, k, f, want]) => {
+  [["poke", "l", 0, 0.4], ["great", "r", 1, 0.85], ["ultra", "u", 2, 0.9]].forEach(([b, k, f, want]) => {
     let okN = 0;
     for (let i = 0; i < N; i++) if (R.throwBall(b, rnd, k, f).ok) okN++;
     ok(Math.abs(okN / N - want) < 0.01, b + " " + k + " 놓친 " + f + ": " + (okN / N * 100).toFixed(1) + "%");

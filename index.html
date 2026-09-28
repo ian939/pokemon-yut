@@ -605,6 +605,29 @@ body.game-land #toast.show { transform: none; }
 .roll.no .roll-card { filter: saturate(.6); }
 @keyframes rollShake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 @media (prefers-reduced-motion: reduce) { .roll-res { animation: none !important; } }
+.coin-ov { position: fixed; inset: 0; z-index: 390; display: grid; place-items: center; background: rgba(20,28,45,.55); animation: fadeIn .2s; }
+.coin-ov.out { opacity: 0; transition: opacity .25s; }
+.coin-card { width: min(460px, calc(100vw - 32px)); padding: 18px 16px 16px; background: var(--paper); border: 4px solid var(--ink); border-radius: 22px; box-shadow: var(--win), var(--lift); text-align: center; }
+.coin-card h2 { font-size: 22px; margin: 0 0 10px; }
+.ct-sides { display: flex; align-items: center; gap: 8px; }
+.ct-side { flex: 1 1 0; min-width: 0; padding: 6px; border: 3px solid var(--tc); border-radius: 14px; background: var(--paper-2); transition: transform .3s, box-shadow .3s; }
+.ct-side em { display: block; font-style: normal; font-size: 13px; font-weight: 900; color: var(--ink-soft); }
+.ct-side b { display: block; font-family: var(--font); font-size: 17px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-vs { font-family: var(--pixel); font-weight: 700; color: var(--ink-soft); }
+.coin-ov.w0 .ct-side:first-child, .coin-ov.w1 .ct-side:nth-child(3) { transform: scale(1.08); box-shadow: 0 0 0 3px #fff, 0 0 18px 6px var(--tc); }
+.ct-coin { display: block; width: 150px; height: 150px; margin: 22px auto 8px; padding: 0; border: 0; background: none; perspective: 700px; cursor: pointer; }
+.ct-spin { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+.coin-ov:not(.tossing) .ct-spin { animation: ctWobble 1.2s ease-in-out infinite; }
+@keyframes ctWobble { 50% { transform: rotateY(24deg) translateY(-6px); } }
+.ct-face { position: absolute; inset: 0; display: grid; place-content: center; border-radius: 50%; backface-visibility: hidden; background: radial-gradient(circle at 35% 30%, #fff6c9, #f5c542 45%, #c9921c); border: 6px solid #a8741a; box-shadow: inset 0 0 0 6px var(--tc), 0 6px 0 rgba(38,49,71,.3); }
+.ct-face.back { transform: rotateY(180deg); }
+.ct-face b { font-size: 56px; line-height: 1; }
+.ct-face small { font-family: var(--font); font-size: 14px; font-weight: 900; color: #5a3d0a; }
+.coin-card .ct-say { min-height: 1.6em; font-family: var(--font); font-size: 24px; font-weight: 900; margin: 6px 0 0; color: var(--ink); }
+body.coining #turn-pill { visibility: hidden; }
+body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: var(--win), var(--lift) !important; transform: none !important; }
+.coin-ov.landed .ct-say { animation: popIn .3s ease-out; }
+@media (prefers-reduced-motion: reduce) { .coin-ov .ct-spin { animation: none !important; } }
 .tc-note { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin: 4px 0 8px; }
 .tchart { display: grid; gap: 6px; }
 .tc-row { display: flex; gap: 8px; align-items: flex-start; background: var(--paper-2); border: 2px solid var(--ink); border-left: 8px solid var(--tc); border-radius: 12px; padding: 6px 8px; }
@@ -855,7 +878,7 @@ body.game-land #toast.show { transform: none; }
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-29b";
+const APP_VERSION = "2026-09-29c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1734,6 +1757,7 @@ function mountGame() {
     renderTop();
     (async () => {
       if (G.s.settings.mode === "rocket") { await rocketIntro(); await rocketGacha(); }
+      await coinToss();
       await announceStartSkills();
       await announceTurn(G.s.turn, true);
       G.busy = false;
@@ -2618,7 +2642,7 @@ function openBag() {
     "<h2>🎒 가방</h2>" +
     '<div class="bag-list">' + R.BALLS.map(b => '<div class="' + ((Store.data.bag[b] || 0) ? "" : "zero") + '"><img src="assets/items/' + R.BALL_INFO[b].img + '.png" alt=""><span>' + R.BALL_INFO[b].name +
       "</span><b>×" + (Store.data.bag[b] || 0) + "</b><em>" + (b === "master" ? "100%" : Math.round(R.catchRate(b, "l") * 100) + "~" + Math.round(R.catchRate(b, "c") * 100) + "%") + "</em></div>").join("") + "</div>" +
-    '<p class="catch-note">잡을 확률 (몬스터볼): <b>일반 60 · 레어 50 · 유니크 40 · 전설 30%</b><br>좋은 볼일수록 +5% · 놓칠 때마다 +10% · 마스터볼은 100%</p>' +
+    '<p class="catch-note">잡을 확률 (몬스터볼): <b>일반 80 · 레어 70 · 유니크 60 · 전설 40%</b><br>좋은 볼일수록 +5% · 놓칠 때마다 +10% · 마스터볼은 100%</p>' +
     '<p class="small">🎁 로켓단을 이기면 상자에서 볼 3개 · 🌿 ❓ 풀숲에서 던져서 잡아요</p>' +
     '<h2 class="sub">📦 보관함 <small>' + col.length + "마리</small></h2>" +
     (col.length
@@ -2667,6 +2691,11 @@ function startGame(teams, opts) {
   netSend([], false); // 친구 대결: 판을 서버에 올린다 → 방 만든 집 패드도 윷판으로
   showScreen("game");
 }
+// 🪙 누가 먼저? — 동전 결과를 판을 만들 때 뽑아 두고, 시작 연출에서 동전이 그 면으로 떨어진다. 시험용 ?first=0|1
+function coinFirst() {
+  if (Q.get("first") === "0" || Q.get("first") === "1") return Number(Q.get("first"));
+  return Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2);
+}
 function startFromSetup() {
   const fam = Setup.mode === "family";
   const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
@@ -2675,7 +2704,7 @@ function startFromSetup() {
   Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle, skills: Setup.skills, study: Setup.study };
   Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
   if (fam) Store.data.lastPicks[Setup.t1] = Setup.picks[1].slice();
-  const first = fam ? (Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2)) : 0; // 로켓단 대결은 아이 먼저
+  const first = coinFirst(); // 🪙 동전 던지기로 (사용자 요청 2026-09-29 — 로켓단 대결도)
   startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: Setup.mode, cpuLevel: Setup.cpu, battle: Setup.battle, skills: Setup.skills, study: Setup.study, first });
 }
 function rematch() {
@@ -2683,7 +2712,7 @@ function rematch() {
   if (!last) { showScreen("home"); return; }
   const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.cpu ? rocketRoster(last.settings.pieces, rosterIds()) : t.picks.slice() })); // 로켓단은 판마다 새로
   startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false,
-    skills: last.settings.skills !== false, study: last.settings.study !== false, first: last.winner === 0 ? 1 : 0 }); // 진 팀 먼저
+    skills: last.settings.skills !== false, study: last.settings.study !== false, first: coinFirst() }); // 🪙 한 판 더도 동전 던지기로
 }
 
 /* ================================================================
@@ -3492,6 +3521,54 @@ async function moneyBonus() {
 
 
 /* ---------- 😼 로켓단 캡슐 뽑기 — 로켓단이 기계에서 몬스터볼 캡슐을 뽑아 이번 판 포켓몬을 데려오는 장면 (보여 주기만, 누를 것 없음) ---------- */
+/* ---------- 🪙 동전 던지기 — 앞면(Heads) = 첫 팀 · 뒷면(Tails) = 둘째 팀, 먼저 할 팀 면으로 떨어진다 ----------
+ * 우리 패드에서는 동전을 눌러 던진다. 친구 대결·빠르게 모드는 저절로 (두 패드가 같은 판 상태를 보고 같은 면이 나온다) */
+function coinToss() {
+  if (!G.s) return Promise.resolve();
+  return new Promise(res => {
+    const T = G.s.teams, win = G.s.turn;
+    const face = (ti, cls) => '<div class="ct-face ' + cls + '" style="--tc:' + T[ti].color + '"><b>' + esc(emojiOf(T[ti].name)) + "</b><small>" + (ti === 0 ? "앞면" : "뒷면") + "</small></div>";
+    const side = ti => '<div class="ct-side" style="--tc:' + T[ti].color + '"><em>' + (ti === 0 ? "앞면 · Heads" : "뒷면 · Tails") + "</em><b>" + esc(T[ti].name) + "</b></div>";
+    const el = document.createElement("div");
+    el.className = "coin-ov";
+    el.innerHTML = '<div class="coin-card"><h2>🪙 동전 던지기! 누가 먼저 할까?</h2>' +
+      '<div class="ct-sides">' + side(0) + '<span class="ct-vs">VS</span>' + side(1) + "</div>" +
+      '<button class="ct-coin" id="ct-coin" aria-label="동전 던지기"><div class="ct-spin">' + face(0, "front") + face(1, "back") + "</div></button>" +
+      '<p class="ct-say" id="ct-say">👆 동전을 눌러서 던져요!</p></div>';
+    document.body.appendChild(el);
+    document.body.classList.add("coining"); // 동전이 떨어질 때까지 누구 차례인지 가린다
+    const auto = netOn() || SPEED < 1;
+    let tossed = false, done = false;
+    const close = () => { if (done) return; done = true; document.body.classList.remove("coining"); el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 250 * SPEED); };
+    const reveal = () => document.body.classList.remove("coining");
+    const toss = () => {
+      if (tossed) return;
+      tossed = true;
+      el.classList.add("tossing");
+      $("#ct-say", el).textContent = "빙글빙글…";
+      SFX.throwBall();
+      const spin = $(".ct-spin", el), end = 360 * 6 + (win === 0 ? 0 : 180);
+      const a = spin.animate([
+        { transform: "translateY(0) rotateY(0deg)" }, { transform: "translateY(-150px) rotateY(" + end / 2 + "deg)", offset: 0.5 },
+        { transform: "translateY(0) rotateY(" + (end - 20) + "deg)", offset: 0.88 }, { transform: "translateY(-12px) rotateY(" + (end - 8) + "deg)", offset: 0.94 },
+        { transform: "translateY(0) rotateY(" + end + "deg)" }], { duration: 1700 * SPEED, easing: "ease-out", fill: "forwards" });
+      a.onfinish = () => {
+        if (done) return;
+        el.classList.add("landed", "w" + win);
+        reveal();
+        const msg = (win === 0 ? "앞면! " : "뒷면! ") + T[win].name + " 먼저!";
+        $("#ct-say", el).textContent = msg;
+        TTS.say(plain(msg));
+        SFX.again();
+        setTimeout(close, 1500 * SPEED);
+        el.addEventListener("click", close);
+      };
+    };
+    $("#ct-coin", el).addEventListener("click", ev => { ev.stopPropagation(); toss(); });
+    TTS.say("동전 던지기! 누가 먼저 할까?");
+    if (auto) setTimeout(toss, 500 * SPEED);
+  });
+}
 function rocketGacha() {
   if (!G.s || G.s.settings.mode !== "rocket" || Q.get("noslot") === "1") return Promise.resolve();
   return new Promise(res => {
@@ -3939,7 +4016,7 @@ async function netPickDone() {
       const teams = [
         { key: "net0", name: N.names[0], color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() },
         { key: "net1", name: N.names[1], color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() }];
-      const first = Q.get("seed") ? Number(Q.get("seed")) % 2 : Math.floor(Math.random() * 2);
+      const first = coinFirst();
       startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, net: { code: N.code, me: 1 } });
     }
   } catch (e) { console.error(e); toast("📶 올리지 못했어요. 인터넷을 확인하고 다시 눌러 주세요", 2600); }
@@ -3996,10 +4073,11 @@ function openRules() {
       "<li>🤝 내 말끼리 같은 칸에 서면 <b>업어서</b> 같이 가요.</li>" +
       "<li>⚔️ 상대 말이 있는 칸에 멈추면 <b>배틀</b>! 기술로 물리치면 상대 포켓몬은 <b>집(출발 자리)</b>으로 돌아가고, 이긴 팀은 한 번 더!</li>" +
       "<li>✨ <b>5칸</b> 갈 때마다 포켓몬이 <b>진화</b>해요. 배틀에 져서 집으로 가도 <b>진화한 모습은 그대로</b>예요.</li>" +
+      "<li>🪙 시작할 때 <b>동전</b>을 던져서 먼저 할 팀을 정해요 — 앞면(Heads)·뒷면(Tails)</li>" +
       "<li>📖 <b>기술</b>은 <b>10칸</b> 가면 배워요 (모든 포켓몬 같아요). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
       "<li>🎲 기술은 <b>확률로 성공</b>해요 — 일반 <b>60%</b> · 레어 <b>70%</b> · 유니크 <b>80%</b> · 👑 전설 <b>90%</b> (스타팅 포켓몬은 레어). 상대 말에 거는 기술은 타입 상성이 좋으면 <b>+10%</b>, 나쁘면 <b>−10%</b>. 실패하면 그 기술은 사라져요!</li>" +
       "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 💰 로켓단 대결이 끝나면 <b>돈 문제</b>로 볼 하나 더!</li>" +
-      "<li>🎯 잡을 확률(몬스터볼): 일반 60 · 레어 50 · 유니크 40 · 전설 30% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
+      "<li>🎯 잡을 확률(몬스터볼): 일반 80 · 레어 70 · 유니크 60 · 전설 40% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
       "<li>😼 로켓단도 풀숲에서 그물로 포켓몬을 잡아 가요. 먼저 가서 잡아요!</li>" +
       "<li>🎁 로켓단을 이기면 <b>보물상자</b>에서 볼 3개!</li>" +
