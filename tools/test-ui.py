@@ -423,7 +423,7 @@ def scenario_v3(browser, base, errors):
         return ctx, page
 
     def start(page, query, mode="family", pieces=4, skills=True):
-        page.goto(base + query)
+        page.goto(base + query + ("" if "luck=" in query else "&luck=1"))
         page.wait_for_timeout(300)
         page.click("text=" + ("가족 대결" if mode == "family" else "로켓단 대결"))
         page.click(f"[data-act=set][data-field=pieces][data-value='{pieces}']")
@@ -623,7 +623,7 @@ def scenario_v3(browser, base, errors):
     ctx, page = ctx_page(390, 844)
     page.goto(base + "?fast=1"); page.wait_for_timeout(300)
     page.click("[data-act=skilldex]"); page.wait_for_timeout(200)
-    check(len(page.query_selector_all(".dex-card")) == 27, "기술 도감: 27개")
+    check(len(page.query_selector_all(".dex-card")) == 36, "기술 도감: 36개 (타입마다 2개)")
     page.screenshot(path=str(OUT / "91-skilldex.png"))
     measure(page, "기술 도감 (폰)")
     ctx.close()
@@ -642,7 +642,7 @@ def scenario_v4(browser, base, errors):
         return ctx, page
 
     def start(page, query, mode="family", study=True):
-        page.goto(base + query)
+        page.goto(base + query + ("" if "luck=" in query else "&luck=1"))
         page.wait_for_timeout(300)
         page.click("text=" + ("가족 대결" if mode == "family" else "로켓단 대결"))
         page.click("[data-act=set][data-field=pieces][data-value='2']")
@@ -800,18 +800,19 @@ def scenario_v4(browser, base, errors):
     check(ev(page, "d.study.clock.level") == 2, "시계를 3번 연속 맞히면 2단계로")
     ctx.close()
 
-    # ⑦ ✨ 15칸 규칙: 진화 없음·2단계·전설은 15칸에 기술 (보라 점으로 남은 칸 표시)
+    # ⑦ ✨ 10칸 규칙 (v8: 모두 10칸) — 칩에 남은 칸 표시
     ctx, page = ctx_page()
     start(page, "?seed=2&spots=none&fast=1&pools=wish,nitro")
+    check(ev(page, "s.teams.every(t => t.need.length > 0 && t.need.every(n => n === 10))"), "모든 말이 10칸에 기술")
     page.evaluate("""() => { const Y = window.__yut, s = Y.G.s, t = s.teams[0];
-      t.picks[0] = 128; t.paths[0] = [128]; t.pools[0] = ['wish']; t.need[0] = 15; s.pieces[0].stage = 0;
-      Object.assign(s.pieces[0], { state: 'board', atGoal: false, walk: 12 }, Y.Yut.settle('OUT', 12)); s.turn = 0; s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
+      t.picks[0] = 128; t.paths[0] = [128]; t.pools[0] = ['wish']; s.pieces[0].stage = 0;
+      Object.assign(s.pieces[0], { state: 'board', atGoal: false, walk: 7 }, Y.Yut.settle('OUT', 12)); s.turn = 0; s.phase = 'choose'; s.pending = [3]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }""")
     wait_idle(page)
-    check(page.query_selector(".pchip[data-piece='0'] .sk.left") is not None and ev(page, "s.pieces[0].skill") is None, "진화 없는 켄타로스 12칸: 아직 기술 없음, 칩에 남은 칸")
+    check(page.query_selector(".pchip[data-piece='0'] .sk.left") is not None and ev(page, "s.pieces[0].skill") is None, "켄타로스 7칸: 아직 기술 없음, 칩에 남은 칸")
     page.click(".unit.can[data-node='12']", force=True)
     page.click(".dest[data-move='n12/3']", force=True)
     wait_idle(page)
-    check(ev(page, "s.pieces[0].skill") == "wish", "15칸이 되면 기술을 배움")
+    check(ev(page, "s.pieces[0].skill") == "wish", "10칸이 되면 기술을 배움")
     ctx.close()
 
     # ⑫ 💀 어려움: 준비 화면 칩 · 이기면 볼 4개 특별 상자
@@ -949,12 +950,12 @@ def scenario_v4(browser, base, errors):
     check("받은 기술" in page.inner_text(".modal"), "기술 보기 창에 받은 기술")
     ctx.close()
 
-    # ⑩ 희귀도로 기술까지 필요한 칸 (일반 15 · 레어 10 · 유니크 5 · 전설 0) + 👑 전설 연출
+    # ⑩ v8: 전설도 10칸 · 기술 성공 90% + 👑 전설 연출
     ctx, page = ctx_page()
     page.add_init_script("if (!localStorage.getItem('engmon_yut_v1')) localStorage.setItem('engmon_yut_v1', JSON.stringify({ collection: [{ id: 150, t: 1 }] }));")
     # 빠르게 모드에서는 배너가 0.2초만 떠서 기다리기로는 놓친다 — 뜨는 배너를 모두 적어 둔다
     page.add_init_script("window.__banners = []; new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('banner') && n.classList.contains('legend')) window.__banners.push(n.textContent); }))).observe(document, { childList: true, subtree: true });")
-    page.goto(base + "?seed=2&spots=none&fast=1&pools=nitro,nitro")
+    page.goto(base + "?seed=2&spots=none&fast=1&pools=nitro,nitro&luck=1")
     page.wait_for_timeout(300)
     page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='2']")
     page.click("[data-act=to-pick]")
@@ -963,9 +964,10 @@ def scenario_v4(browser, base, errors):
     page.click("[data-act=pick-auto]"); page.click("#pick-next")
     wait_idle(page)
     check(page.evaluate("() => window.__banners.some(t => t.includes('전설의'))"), "👑 전설: 판을 시작할 때 금빛 배너")
-    check(ev(page, "JSON.stringify(s.teams[0].need)") == "[0,10]" and ev(page, "s.pieces[0].skill") == "nitro" and ev(page, "s.pieces[1].skill") is None,
-          "뮤츠(전설)는 처음부터 기술 · 파이리(레어)는 10칸")
-    page.evaluate("() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'board', atGoal: false }, Y.Yut.settle('OUT', 3)); s.turn = 0; s.phase = 'throw'; s.throwsLeft = 1; s.pending = []; Y.Act['skill-cancel'](); }")
+    check(ev(page, "JSON.stringify(s.teams[0].need)") == "[10,10]" and ev(page, "s.pieces[0].skill") is None,
+          "v8: 뮤츠(전설)도 10칸에 기술")
+    check(page.evaluate("() => window.__banners.some(t => t.includes('90%'))"), "전설 배너에 '기술 성공 90%'")
+    page.evaluate("() => { const Y = window.__yut, s = Y.G.s; Object.assign(s.pieces[0], { state: 'board', atGoal: false, walk: 10, skill: 'nitro', used: false }, Y.Yut.settle('OUT', 3)); s.turn = 0; s.phase = 'throw'; s.throwsLeft = 1; s.pending = []; Y.Act['skill-cancel'](); }")
     wait_idle(page)
     check(page.query_selector("#units .unit.legend") is not None, "윷판 위 전설 말은 금빛 받침 + 👑")
     page.click("#btn-skill"); page.click(".skill-item[data-act=skill-pick]")
@@ -1020,6 +1022,148 @@ def scenario_v4(browser, base, errors):
     page.wait_for_timeout(400)
     page.screenshot(path=str(OUT / "99-piece-info-phone.png"))
     measure(page, "🔍 포켓몬·기술 보기 (폰)")
+    ctx.close()
+
+
+def scenario_v8(browser, base, errors):
+    """v8: ✨ 기술 36개 (새 기술 쓰기·효과 표시) · 🎲 발동 확률 (성공 %·상성·실패하면 기술이 남음)."""
+    def ctx_page(vw=1180, vh=820):
+        ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True)
+        ctx.add_init_script("localStorage.setItem('engmon_yut_v1', JSON.stringify({ settings: { study: false } }));")
+        # 빠르게 모드에서는 안내가 금방 바뀐다 — 안내 칸에 뜬 글을 모두 적어 둔다
+        ctx.add_init_script("window.__hints = []; new MutationObserver(ms => ms.forEach(m => { const t = m.target; if (t && t.id === 'hint') window.__hints.push(t.textContent); })).observe(document, { childList: true, subtree: true });")
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
+        return ctx, page
+
+    def start(page, query, pieces=4):
+        page.goto(base + query)
+        page.wait_for_timeout(300)
+        page.click("text=가족 대결")
+        page.click(f"[data-act=set][data-field=pieces][data-value='{pieces}']")
+        page.click("[data-act=to-pick]")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        wait_idle(page)
+
+    def inject(page, js):
+        page.evaluate("""() => { const Y = window.__yut, G = Y.G, s = G.s;
+          const at = (i, n, walk) => Object.assign(s.pieces[i], { state: 'board', atGoal: false, walk: walk || 0 }, Y.Yut.settle('OUT', n));
+          const reset = () => { s.pieces.forEach(p => Object.assign(p, { state: 'wait', route: 'OUT', step: 0, atGoal: false, fx: {} })); s.traps = []; s.teams.forEach(t => { t.fx = {}; }); };
+          const fresh = (team, phase, pending) => { s.turn = team; s.turnNo += 2; s.phase = phase || 'throw'; s.throwsLeft = phase === 'choose' ? 0 : 1; s.pending = pending || []; };
+          """ + js + """;
+          Y.Act['skill-cancel'](); }""")
+        wait_idle(page)
+
+    ev = lambda page, js: page.evaluate("() => { const Y = window.__yut, G = Y.G, s = G.s; return " + js + "; }")
+
+    def open_skill(page, key):
+        page.wait_for_selector("#btn-skill:not([hidden])", timeout=10000)
+        page.click("#btn-skill")
+        page.wait_for_selector(".skill-item[data-act=skill-pick]", timeout=5000)
+        name = ev(page, f"Y.Yut.SKILLS['{key}'].name")
+        pick = next((it for it in page.query_selector_all(".skill-item[data-act=skill-pick]") if name in it.inner_text()), None)
+        check(pick is not None, f"기술 창에 {name}")
+        return pick
+
+    def use_on(page, key, node):
+        pick = open_skill(page, key)
+        if not pick: return ""
+        pick.click()
+        sel = f"#dests .dest.skill-t[data-node='{node}']"
+        page.wait_for_selector(sel, timeout=5000)
+        label = page.inner_text(sel)
+        page.click(sel, force=True)
+        wait_idle(page)
+        return label
+
+    # ① 새 기술: 아이스차징 · 사이드체인지 · 자력선 · 독압정 (늘 성공 ?luck=1)
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&fast=1&early=1&luck=1&pools=icecharge,allyswitch,magnet,spike|nitro,nitro,nitro,nitro")
+    inject(page, "reset(); fresh(0); at(0, 3); at(4, 10); at(5, 13)")
+    label = use_on(page, "icecharge", 10)
+    check("얼리기" in label and "100%" in label, f"아이스차징 대상 말풍선에 성공 확률 ({label.strip()})")
+    check(ev(page, "(s.pieces[4].fx || {}).freeze > 0 && s.teams[1].fx.chill > 0"), "아이스차징: 얼음 + 그 팀 윷이 작아짐")
+    badge = page.query_selector("#units .unit[data-node='10'] .badge-s")
+    check(badge is not None and "🧊" in badge.inner_text(), "얼은 말 모서리에 🧊")
+    check("🧊" in (page.query_selector_all(".tcard")[1].inner_text() if len(page.query_selector_all(".tcard")) > 1 else ""), "상대 팀 카드에 🧊 (윷이 작아짐)")
+    page.screenshot(path=str(OUT / "v8-1-icecharge.png"))
+    inject(page, "reset(); fresh(0); at(1, 4); at(5, 14)")
+    use_on(page, "allyswitch", 14)
+    check(ev(page, "[Y.Yut.posOf(s.pieces[1]), Y.Yut.posOf(s.pieces[5])]") == [14, 4], "사이드체인지: 우리 말 ↔ 상대 말")
+    check(page.query_selector("#units .unit[data-team='0'][data-node='14']") is not None and page.query_selector("#units .unit[data-team='1'][data-node='4']") is not None, "사이드체인지: 판 위 말 그림도 자리 바꿈")
+    inject(page, "reset(); fresh(0); at(2, 9); at(3, 3)")
+    use_on(page, "magnet", 3)
+    check(ev(page, "Y.Yut.posOf(s.pieces[3])") == 9 and len(page.query_selector_all("#units .unit[data-team='0']")) == 1, "자력선: 뒤의 우리 말을 끌어와 업음 (말 그림 하나)")
+    inject(page, "reset(); fresh(0); at(3, 3)")
+    use_on(page, "spike", 9)
+    trap = page.query_selector("#traps .trap[data-node='9']")
+    check(trap is not None and "🟣" in trap.inner_text(), "독압정: 빈 칸에 🟣")
+    page.screenshot(path=str(OUT / "v8-2-spike.png"))
+    # 상대가 압정 칸에 멈추면 다음 차례에 못 움직임 (표시 🟣)
+    inject(page, "fresh(1, 'choose', [2]); at(4, 7)")
+    page.click(".unit.can[data-node='7']", force=True)
+    page.click(".dest[data-move='n7/2']", force=True)
+    wait_idle(page)
+    check(ev(page, "(s.pieces[4].fx || {}).spike > 0") and page.query_selector("#traps .trap[data-node='9']") is None, "상대가 압정에 멈추면 🟣 한 번 쉼, 압정은 사라짐")
+    ctx.close()
+
+    # ② 🎲 확률: 기술 창에 성공 % · 상성 −10% · 실패하면 기술이 남음 → 다음 차례에 다시
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&fast=1&early=1&luck=no&pools=flame,nitro|nitro,nitro", pieces=2)
+    check(ev(page, "JSON.stringify(s.teams[0].rar)") == '["r","r"]', "스타팅 포켓몬은 레어 확률 (70%)")
+    inject(page, "reset(); fresh(0); at(0, 3); at(2, 5); s.teams[0].rar = ['c', 'c']; s.teams[1].types[0] = s.teams[1].paths[0].map(() => ['물'])")
+    pick = open_skill(page, "flame")
+    txt = pick.inner_text() if pick else ""
+    check("성공 60%" in txt and "상성" in txt, f"기술 창: 성공 확률 + 상성 안내 ({txt.splitlines()[-1] if txt else ''})")
+    page.screenshot(path=str(OUT / "v8-3-chance-menu.png"))
+    # 실패하는 난수를 골라 둔다
+    page.evaluate("""() => { const Y = window.__yut, s = Y.G.s;
+      for (let k = 1; k < 500; k++) { const c = Y.Yut.clone(s); c.srng = k; const r = Y.Yut.applySkill(c, 0, 5); if (r.events.some(e => e.type === 'skillfail')) { s.srng = k; break; } } }""")
+    pick.click()
+    page.wait_for_selector("#dests .dest.skill-t[data-node='5']", timeout=5000)
+    label = page.inner_text("#dests .dest.skill-t[data-node='5']")
+    check("50%" in label and "💧" in label, f"물 타입 상대에게 화염방사: 50% 💧 ({label.strip()})")
+    page.screenshot(path=str(OUT / "v8-4-chance-target.png"))
+    page.click("#dests .dest.skill-t[data-node='5']", force=True)
+    wait_idle(page)
+    hints = page.evaluate("() => window.__hints.join(' | ')")
+    check("실패" in hints and "별로" in hints, "실패 안내 + '효과가 별로인 듯하다'")
+    check(ev(page, "[s.pieces[0].used, s.pieces[2].state, s.skillTurn === s.turnNo]") == [False, "board", True], "실패: 기술은 그대로 남고, 이번 차례 기술만 씀")
+    check(ev(page, "Y.Yut.legalSkills(s).length") == 0, "실패한 차례엔 다시 못 씀")
+    inject(page, "fresh(0)")
+    check(ev(page, "Y.Yut.legalSkills(s).some(x => x.piece === 0)"), "다음 차례엔 다시 쓸 수 있음")
+    # 🔍 기술 보기 창에 확률
+    page.click(".pchip[data-piece='0']")
+    page.wait_for_selector(".modal .pi-skill", timeout=5000)
+    check("60%" in page.inner_text(".modal"), "기술 보기 창에 성공 확률")
+    page.click("[data-act=close-modal]")
+    ctx.close()
+
+    # ③ 💤 수면가루 — 차례가 시작될 때 깰까? 안내
+    ctx, page = ctx_page()
+    start(page, "?seed=2&spots=none&fast=1&early=1&luck=1&pools=sleep,nitro|nitro,nitro", pieces=2)
+    inject(page, "reset(); fresh(0); at(0, 3); at(1, 8); at(2, 10)")
+    use_on(page, "sleep", 10)
+    check(ev(page, "(s.pieces[2].fx || {}).sleep > 0"), "수면가루: 잠")
+    page.evaluate("() => { window.__hints = []; }")
+    inject(page, "fresh(0, 'choose', [1])")
+    page.click(".unit.can[data-node='8']", force=True)
+    page.click(".dest[data-move='n8/1']", force=True)
+    wait_idle(page)
+    hints = page.evaluate("() => window.__hints.join(' | ')")
+    check("깼다" in hints or "쿨쿨" in hints, "상대 차례가 시작되면 '깼다!' 또는 '아직 쿨쿨…' (20%)")
+    ctx.close()
+
+    # ④ 폰 크기: 기술 창 확률 줄이 넘치지 않음
+    ctx, page = ctx_page(390, 844)
+    start(page, "?seed=2&spots=none&fast=1&early=1&luck=no&pools=outrage,stoneedge|nitro,nitro", pieces=2)
+    inject(page, "reset(); fresh(0); at(0, 3); at(1, 7); at(2, 4); at(3, 12)")
+    open_skill(page, "outrage")
+    page.wait_for_timeout(800)
+    measure(page, "🎲 기술 창 (폰)")
+    page.screenshot(path=str(OUT / "v8-5-phone-menu.png"))
     ctx.close()
 
 
@@ -1192,14 +1336,21 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only", "--net-only", "--live-net")):
+        if not any(f in sys.argv for f in ("--v2-only", "--v3-only", "--v4-only", "--net-only", "--live-net", "--v8-only")):
             scenario(browser, base, errors)
-        if not any(f in sys.argv for f in ("--v3-only", "--v4-only", "--net-only", "--live-net")):
+        if not any(f in sys.argv for f in ("--v3-only", "--v4-only", "--net-only", "--live-net", "--v8-only")):
             scenario_v2(browser, base, errors)
-        if not any(f in sys.argv for f in ("--v4-only", "--net-only", "--live-net")):
+        if not any(f in sys.argv for f in ("--v4-only", "--net-only", "--live-net", "--v8-only")):
             scenario_v3(browser, base, errors)
-        if "--net-only" not in sys.argv and "--live-net" not in sys.argv:
+        if "--net-only" not in sys.argv and "--live-net" not in sys.argv and "--v8-only" not in sys.argv:
             scenario_v4(browser, base, errors)
+        if "--net-only" not in sys.argv and "--live-net" not in sys.argv:
+            scenario_v8(browser, base, errors)
+        if "--v8-only" in sys.argv:
+            browser.close()
+            check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
+            httpd.shutdown()
+            sys.exit(1 if fails else 0)
         scenario_net(browser, base, errors)
         if any(f in sys.argv for f in ("--scenario-only", "--v2-only", "--v3-only", "--v4-only", "--net-only", "--live-net")):
             browser.close()
