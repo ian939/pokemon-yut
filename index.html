@@ -654,6 +654,9 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .save-info { min-height: 1.4em; font-weight: 800; }
 .save-keypad { margin: 8px auto; justify-content: center; }
 .save-btns .btn { min-height: 48px; }
+#turn-timer { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 400; pointer-events: none; font-family: var(--pixel); font-weight: 700; font-size: 22px; color: var(--ink); background: #fff; border: 4px solid var(--ink); border-radius: 14px; padding: 4px 14px 2px; box-shadow: 0 4px 0 rgba(38,49,71,.35); }
+#turn-timer.hurry { color: #fff; background: var(--red); animation: timerPulse .5s steps(2) infinite; }
+@keyframes timerPulse { 50% { transform: translateX(-50%) scale(1.12); } }
 .tc-note { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin: 4px 0 8px; }
 .tchart { display: grid; gap: 6px; }
 .tc-row { display: flex; gap: 8px; align-items: flex-start; background: var(--paper-2); border: 2px solid var(--ink); border-left: 8px solid var(--tc); border-radius: 12px; padding: 6px 8px; }
@@ -906,7 +909,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-29e";
+const APP_VERSION = "2026-09-29f";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1391,7 +1394,7 @@ Screens.home = sec => {
 };
 
 /* ---------- 준비 ---------- */
-const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, study: true, ti: 0, picks: [[], []], rocket: [] };
+const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, study: true, timer: 20, ti: 0, picks: [[], []], rocket: [] };
 const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
 const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
 function chipHtml(field, value, label, color, disabled) {
@@ -1422,6 +1425,8 @@ Screens.setup = sec => {
       '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
       '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단을 이기면 💰 돈 문제로 볼 하나 더! (맞힐수록 문제가 어려워져요)" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
+      (net ? '<h3>⏱ 차례 타이머</h3><div class="chips">' + chipHtml("timer", 20, "20초") + chipHtml("timer", 10, "10초") + chipHtml("timer", 0, "없음") + "</div>" +
+        '<p class="note">' + (Setup.timer ? "내 차례에 " + Setup.timer + "초 안에 안 하면 저절로 던지고 가장 좋은 칸으로 가요 (친구가 오래 기다리지 않게). ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)" : "시간 제한 없이 해요. ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)") + "</p>" : "") +
     "</div>" +
     '<div class="card-actions">' + (net ? '<button class="btn big green cursor" data-act="net-create">🏠 방 만들고 코드 받기</button>' : '<button class="btn big green cursor" data-act="to-pick">포켓몬 고르러 가기</button>') + "</div></div>";
 };
@@ -2385,6 +2390,7 @@ async function animWild(e) {
     toast("🌿 " + G.s.teams[e.team].name + "가 풀숲에서 야생 포켓몬을 만났어요!", 2400);
     await sleep(900);
   } else if (G.s.teams[e.team].cpu) { rollSpot(e, false); await rocketNet(e); }
+  else if (netOn()) { rollSpot(e, false); await encounter(e, true); } // 🏠 친구 대결: 문제 없이, 볼은 저절로 (친구가 기다리니까)
   else {
     await sleep(450);
     const boosted = studyOn() ? await clockQuiz() : false; // 🕐 맞히면 이번 조우만 30·30·20·20
@@ -2394,7 +2400,9 @@ async function animWild(e) {
   if (spotEl) spotEl.remove();
   if (G.swapAfter) { const x = G.swapAfter; G.swapAfter = null; await afterSwapBoard(x); }
 }
-function encounter(e) {
+// 🏠 친구 대결 풀숲 (사용자 확정 2026-09-29): 몬스터볼이 저절로 한 번, 잡을 확률 70% (가방 볼은 안 씀) · 잡으면 말 바꾸기는 고를 수 있음
+const NET_CATCH = 0.7;
+function encounter(e, auto) {
   const R = Yut.Rewards;
   const id = e.id, name = nameOf(id);
   const ally = Yut.formOf(G.s, e.pieces[0]);
@@ -2431,9 +2439,28 @@ function encounter(e) {
     c.anim(c.allyEl, [{ transform: "translateX(-90%)", opacity: 0 }, { transform: "none", opacity: 1 }], 480);
     await c.say("가라, " + nameOf(ally) + "!");
     await c.wait(350);
-    // ③ 볼 고르기 → 던지기 (한 조우에 3번까지)
     let tries = 0, caught = false;
-    while (c.live()) {
+    if (auto) {
+      await c.say("몬스터볼이 저절로 날아가요! (잡을 확률 " + Math.round(NET_CATCH * 100) + "%)", true);
+      const res = FORCE_CATCH === "1" ? { ok: true, shakes: 3 } : FORCE_CATCH === "0" ? { ok: false, shakes: 2 } : (() => { const ok = Math.random() < NET_CATCH; return { ok, shakes: ok ? 3 : 1 + Math.floor(Math.random() * 3) }; })();
+      if (res.ok) {
+        caught = true;
+        if (!Store.data.collection.some(x => x.id === id)) Store.data.collection.push({ id, t: Date.now(), from: "wild" });
+        Store.data.stats.wildCaught = (Store.data.stats.wildCaught || 0) + 1;
+        Store.save();
+      }
+      await stageThrow(c, "poke", res);
+      if (c.live() && res.ok) {
+        await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", true);
+        await c.wait(600);
+        const swapped = c.live() ? await offerSwap(c, e, id) : false;
+        G.net.note = "🌿 " + G.s.teams[e.team].name + "가 " + josa(name, "을/를") + " 잡았어요!" + (swapped ? " 🔄 말로 바꿨어요" : "");
+        if (!swapped) await c.say(josa(name, "을/를") + " 보관함에 넣었어요! 다음 판부터 말로 쓸 수 있어요.");
+        await c.wait(700);
+      }
+    }
+    // ③ 볼 고르기 → 던지기 (한 조우에 3번까지)
+    while (c.live() && !auto) {
       const have = R.BALLS.filter(b => (Store.data.bag[b] || 0) > 0);
       if (!have.length) {
         await c.say("가방에 볼이 없어요! 로켓단을 이기면 🎁 상자에서 볼을 얻을 수 있어요.", true);
@@ -2485,7 +2512,7 @@ function encounter(e) {
       stageRunOff(c);
       await c.say(josa(name, "은/는") + " 풀숲으로 도망갔다… 다음에 또 만나자!");
       if (netOn()) G.net.note = "🌿 " + josa(name, "은/는") + " " + G.s.teams[e.team].name + "에게서 도망갔어요";
-      await c.wait(1000);
+      await c.wait(auto ? 700 : 1000);
     }
     c.close();
   })().catch(err => { console.error(err); c.close(); });
@@ -2715,6 +2742,7 @@ function startGame(teams, opts) {
   }, D.evoFrom);
   s.intro = true;
   if (Q.get("luck") === "1") s.luck = true;
+  if (opts.mode === "net") s.settings.timer = opts.timer == null ? 20 : Number(opts.timer) || 0; // ⏱ 친구 대결 차례 타이머 (0 = 없음)
   s.settings.study = opts.study !== false; // 🎓 공부 문제 (화면 쪽 설정)
   G.s = s;
   G.net = opts.net ? { code: opts.net.code, me: opts.net.me, seq: 0, queue: [], running: false, remoteBusy: false, note: null } : null;
@@ -4034,10 +4062,52 @@ async function netDrain() {
 }
 function netStartGame() { // 게임 화면에 들어갈 때 (새 판 · 이어하기)
   if (!netOn()) return;
+  timerStart();
   G.net.queue = G.net.queue || []; G.net.running = false;
   Net.listen(G.net.code, onNetRoom);
 }
 const otherName = () => netOn() ? G.s.teams[1 - G.net.me].name : "";
+
+/* ---------- ⏱ 친구 대결 차례 타이머 (사용자 확정 2026-09-29: 20초 · 10초 · 없음, 처음엔 20초)
+ * 내가 골라야 할 때(던지기 · 말 고르기 · 말 바꾸기 · 기술 넘겨주기)마다 새로 센다. 다 되면 저절로:
+ * 던지기 → 던진다 · 말 고르기 → 가장 좋은 칸 · 말 바꾸기 → 나중에 · 넘겨주기 → 알아서 */
+const TurnTimer = { left: null, id: null };
+const timerLimit = () => (netOn() && G.s && G.s.settings.timer) || 0;
+function timerWaiting() {
+  if (!netOn() || current !== "game" || !G.s || G.s.phase === "over" || G.net.remoteBusy) return null;
+  if ($(".battle .bt-menu [data-key='later']")) return "swap";
+  if ($(".modal .gift-pick")) return "gift";
+  if (G.s.turn !== G.net.me || G.busy || $(".coin-ov")) return null;
+  return humanTurn() ? G.s.phase : null;
+}
+function timerTick() {
+  const lim = timerLimit(), el = $("#turn-timer");
+  const w = lim ? timerWaiting() : null;
+  if (!w) { TurnTimer.left = null; TurnTimer.w = null; if (el) el.hidden = true; return; }
+  if (TurnTimer.left == null || TurnTimer.w !== w) { TurnTimer.left = lim; TurnTimer.w = w; }
+  else TurnTimer.left--;
+  if (el) { el.hidden = false; el.textContent = "⏱ " + Math.max(0, TurnTimer.left); el.classList.toggle("hurry", TurnTimer.left <= 5); }
+  if (TurnTimer.left <= 0) { TurnTimer.left = null; TurnTimer.w = null; timeUp(w); }
+}
+function timeUp(w) {
+  toast("⏱ 시간이 다 됐어요! 저절로 할게요", 1600);
+  if (w === "swap") { const b = $(".battle .bt-menu [data-key='later']"); if (b) b.click(); return; }
+  if (w === "gift") { const b = $(".modal .gift-pick"); if (b) b.click(); return; }
+  if ($("#overlay").classList.contains("show")) { modalClose = null; closeModal(); G.paused = false; }
+  G.target = null;
+  if (G.s.phase === "throw") { doThrow(); return; }
+  if (G.s.phase === "choose") {
+    const m = Yut.cpuChoose(G.s, "hard");
+    if (m) { G.moves = Yut.legalMoves(G.s); if (m.unit === "new") G.newPick = null; doMove(m.id); }
+  }
+}
+function timerStart() {
+  clearInterval(TurnTimer.id);
+  TurnTimer.left = null;
+  if (!timerLimit()) return;
+  if (!$("#turn-timer")) { const t = document.createElement("div"); t.id = "turn-timer"; t.hidden = true; document.body.appendChild(t); }
+  TurnTimer.id = setInterval(timerTick, 1000 * Math.max(SPEED, 0.05));
+}
 
 /* ---------- 💬 감정 표현 — 피카츄 표정 5가지 (사용자 확정 2026-09-29: 정해진 5개만, 글쓰기 없음, 소리 없음)
  * 서버 yutrooms/{코드}/emote = { by, e, t } — 판 상태(seq)와 따로. 보낸 팀 카드 모서리에 2.5초 */
@@ -4122,7 +4192,7 @@ async function netCreate() {
     if (!code) throw new Error("no code");
     const host = memberOf(Setup.t0).name;
     await Net.put(code, { v: 1, created: Date.now(), updated: Date.now(), host: { name: host }, guest: null, status: "wait", seq: 0,
-      settings: { pieces: Setup.pieces, backdo: Setup.backdo, skills: Setup.skills, battle: Setup.battle } });
+      settings: { pieces: Setup.pieces, backdo: Setup.backdo, skills: Setup.skills, battle: Setup.battle, timer: Setup.timer } });
     Store.data.settings = Object.assign(Store.data.settings, { pieces: Setup.pieces, backdo: Setup.backdo, t0: Setup.t0, battle: Setup.battle, skills: Setup.skills, study: Setup.study });
     Store.data.net = { code, me: 0, seq: 0 };
     Store.save();
@@ -4203,7 +4273,7 @@ async function netJoin() {
     const gname = "🏠 " + name;
     await Net.patch(N.code, { guest: { name: gname }, status: "pick-host", updated: Date.now() });
     Store.data.netName = name; Store.data.net = { code: N.code, me: 1, seq: 0 }; Store.save();
-    Object.assign(Setup, { mode: "net", pieces: room.settings.pieces, backdo: room.settings.backdo, skills: room.settings.skills !== false, battle: room.settings.battle !== false });
+    Object.assign(Setup, { mode: "net", pieces: room.settings.pieces, backdo: room.settings.backdo, skills: room.settings.skills !== false, battle: room.settings.battle !== false, timer: room.settings.timer == null ? 20 : room.settings.timer });
     Setup.net = { code: N.code, me: 1, names: [room.host.name, gname], stage: "host-pick" };
     showScreen("netwait");
   } catch (e) {
@@ -4227,7 +4297,7 @@ async function netPickDone() {
         { key: "net0", name: N.names[0], color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() },
         { key: "net1", name: N.names[1], color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() }];
       const first = coinFirst();
-      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, net: { code: N.code, me: 1 } });
+      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, timer: Setup.timer, net: { code: N.code, me: 1 } });
     }
   } catch (e) { console.error(e); toast("📶 올리지 못했어요. 인터넷을 확인하고 다시 눌러 주세요", 2600); }
 }

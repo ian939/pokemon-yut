@@ -1302,6 +1302,7 @@ def scenario_net(browser, base, errors):
     host.goto(base + q); host.wait_for_timeout(300)
     host.click("[data-act=new-net]"); host.click("[data-act=net-host]")
     host.click("[data-act=set][data-field=pieces][data-value='2']")
+    check(len(host.query_selector_all("[data-act=set][data-field=timer]")) == 3 and host.query_selector("[data-act=set][data-field=timer][data-value='20'].on") is not None, "⏱ 방 만들기에 차례 타이머 20초 · 10초 · 없음 (처음엔 20초)")
     host.click("[data-act=net-create]")
     host.wait_for_selector(".net-code b", timeout=10000)
     code = "".join(host.eval_on_selector_all(".net-code b", "e => e.map(x => x.textContent)"))
@@ -1358,11 +1359,31 @@ def scenario_net(browser, base, errors):
     guest.click("#emote-btn"); guest.click(".emote-pick .emo[data-k='huff']")
     host.wait_for_selector(".emote-pop[data-team='1']", timeout=15000)
     check("두고 봐" in host.inner_text(".emote-pop[data-team='1']"), "방 만든 집 패드에 '😤 두고 봐!'")
-    check(ev(host, "s.pieces.length") == ev(guest, "s.pieces.length") and ev(host, "G.net.seq") == ev(guest, "G.net.seq"), "감정 표현은 판 동기화에 영향 없음")
+    same = False
+    for _ in range(40):  # ⏱ 타이머가 그사이 저절로 둘 수 있어서 두 패드가 맞춰질 때까지
+        if ev(host, "G.net.seq") == ev(guest, "G.net.seq") and not ev(host, "G.busy") and not ev(guest, "G.busy"):
+            same = True; break
+        host.wait_for_timeout(250)
+    check(same and ev(host, "s.pieces.length") == ev(guest, "s.pieces.length"), "감정 표현은 판 동기화에 영향 없음")
+
+    # ⏱ 차례 타이머: 가만히 있으면 저절로 던진다
+    check(ev(host, "s.settings.timer") == 20 and ev(guest, "s.settings.timer") == 20, "두 패드 모두 차례 타이머 20초")
+    turn_pg = host if ev(host, "s.turn") == 0 else guest
+    seq0 = ev(turn_pg, "G.net.seq")
+    try:
+        turn_pg.wait_for_selector("#turn-timer:not([hidden])", timeout=8000)
+        seen = turn_pg.inner_text("#turn-timer")
+    except Exception:
+        seen = ""
+    check("⏱" in seen, f"내 차례에 ⏱ 남은 초 ({seen})")
+    turn_pg.wait_for_function(f"() => window.__yut.G.net.seq > {seq0}", timeout=15000)
+    check(True, "시간이 다 되면 저절로 던짐")
+    wait_idle(turn_pg, 30000)
 
     # 번갈아 두기 — 차례인 패드만 움직인다
     bag0 = {id(host): sum(ev(host, "Object.values(d.bag)")), id(guest): sum(ev(guest, "Object.values(d.bag)"))}
     same_checks, steps, wrong_turn = 0, 0, 0
+    ball_menu = [0]
     def act(pg):
         try:
             return act0(pg)
@@ -1373,7 +1394,7 @@ def scenario_net(browser, base, errors):
         if pg.query_selector(".quiz .qz-next:not([hidden])"): pg.click(".quiz .qz-next"); return True
         if pg.query_selector(".modal .gift-pick"): pg.click(".modal .gift-pick"); return True
         if pg.query_selector(".bt-menu [data-key='later']"): pg.click(".bt-menu [data-key='later']"); return True
-        if pg.query_selector(".bt-menu .bt-ballbtn"): pg.click(".bt-menu .bt-ballbtn"); return True
+        if pg.query_selector(".bt-menu .bt-ballbtn"): ball_menu[0] += 1; pg.click(".bt-menu .bt-ballbtn"); return True
         sk = pg.query_selector(".bt-skip")
         if sk: sk.click(force=True); return True
         st = pg.evaluate("() => { const Y = window.__yut, G = Y.G; if (!G.s) return null; const mine = G.s.turn === G.net.me; return { phase: G.s.phase, mine, human: !!(G.s && !G.s.teams[G.s.turn].cpu && G.s.turn === G.net.me && !G.net.remoteBusy), busy: G.busy, over: !!document.querySelector('.win-screen'), dests: document.querySelectorAll('.dest:not(.cpu)').length }; }")
@@ -1423,6 +1444,9 @@ def scenario_net(browser, base, errors):
         host.screenshot(path=str(OUT / "n4-host-win.png"))
         guest.screenshot(path=str(OUT / "n4-guest-win.png"))
         check(ev(host, "d.net") is None and ev(guest, "d.net") is None, "끝난 친구 대결은 이어하기에서 빠짐")
+        seen_w = ev(host, "d.stats.wildSeen || 0") + ev(guest, "d.stats.wildSeen || 0")
+        got_w = ev(host, "d.collection.length") + ev(guest, "d.collection.length")
+        check(ball_menu[0] == 0 and (seen_w == 0 or got_w >= 1), f"🌿 친구 대결 풀숲: 볼 고르기 없이 저절로 던짐 (조우 {seen_w}번 · 잡음 {got_w}마리)")
     hctx.close(); gctx.close()
 
     # 이어하기: 판 도중에 친구네 패드를 새로고침 → 같은 판으로
