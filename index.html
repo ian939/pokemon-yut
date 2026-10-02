@@ -649,6 +649,12 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .coin-ov.landed .ct-say { animation: popIn .3s ease-out; }
 @media (prefers-reduced-motion: reduce) { .coin-ov .ct-spin { animation: none !important; } }
 .save-code { margin: 10px auto; gap: 6px; }
+.help-tabs { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.help-tabs .chip { min-height: 48px; font-size: 17px; }
+.pf-h { margin: 6px 0 6px; } .pf-h small { font-weight: 700; color: var(--ink-soft); font-size: 13px; }
+.pf-set { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.pf-set .btn { min-height: 48px; }
+.pc-study { color: #2f6fd6 !important; }
 .rank-by { justify-content: center; margin-bottom: 10px; }
 .rank-by .chip { min-height: 48px; font-size: 17px; }
 .rank-list { display: grid; gap: 8px; }
@@ -947,7 +953,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-02b";
+const APP_VERSION = "2026-10-02c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1465,13 +1471,9 @@ Screens.home = sec => {
         '<button class="btn big blue" data-act="new-net">🏠 친구 대결</button>' +
       "</div>" +
       '<div class="menu-small">' +
-        '<button class="btn ghost" data-act="rules">📖 윷놀이 방법</button>' +
-        '<button class="btn ghost" data-act="bag">🎒 가방</button>' +
-        '<button class="btn ghost" data-act="skilldex">✨ 기술 도감</button>' +
-        '<button class="btn ghost" data-act="stats">🏆 전적</button>' +
+        '<button class="btn ghost" data-act="help">📖 방법 · 도감</button>' +
         '<button class="btn ghost" data-act="rank">🥇 랭킹</button>' +
-        '<button class="btn ghost" data-act="profiles" id="prof-btn">👤 프로필</button>' +
-        '<button class="btn ghost" data-act="sound" id="sound-btn">' + soundLabel() + "</button>" +
+        '<button class="btn ghost" data-act="profiles" id="prof-btn">👤 프로필 · 설정</button>' +
       "</div>" +
     "</div>" +
     '<footer class="ver">v' + APP_VERSION + "</footer>";
@@ -2789,7 +2791,7 @@ async function openBox() {
   if (btns) btns.classList.remove("hidden");
 }
 /* ---------- 🎒 가방 — 볼 5종 + 윷놀이 보관함 ---------- */
-// 👤 가방·전적 창 위의 프로필 고르기
+// 👤 가방 창 위의 프로필 고르기
 function profTabs(act, pid) {
   return '<div class="prof-tabs">' + Store.data.order.map(id => { const p = Store.data.profiles[id];
     return '<button class="chip prof-chip' + (id === pid ? " on" : "") + '" data-act="' + act + '" data-id="' + esc(id) + '">' + avHtml(p.avatar) + esc(p.name) + "</button>"; }).join("") + "</div>";
@@ -2801,7 +2803,7 @@ function openBag(pid) {
   pid = Store.cur;
   const col = Store.data.collection.slice(); // 잡은 순서대로
   showModal(
-    "<h2>🎒 " + esc(Store.prof().name) + "의 가방</h2>" + (inGame && netOn() ? "" : profTabs("bag-prof", pid)) +
+    "<h2>🎒 " + esc(Store.prof().name) + "의 가방</h2>" + (inGame && netOn() ? "" : profTabs("prof-bag", pid)) +
     '<div class="bag-list">' + R.BALLS.map(b => '<div class="' + ((Store.data.bag[b] || 0) ? "" : "zero") + '"><img src="assets/items/' + R.BALL_INFO[b].img + '.png" alt=""><span>' + R.BALL_INFO[b].name +
       "</span><b>×" + (Store.data.bag[b] || 0) + "</b><em>" + (b === "master" ? "100%" : Math.round(R.catchRate(b, "l") * 100) + "~" + Math.round(R.catchRate(b, "c") * 100) + "%") + "</em></div>").join("") + "</div>" +
     '<p class="catch-note">잡을 확률 (몬스터볼): <b>일반 80 · 레어 70 · 유니크 60 · 전설 40%</b><br>좋은 볼일수록 +5% · 놓칠 때마다 +10% · 마스터볼은 100%</p>' +
@@ -3468,10 +3470,13 @@ async function announceStartSkills() {
   await sleep(1700);
 }
 /* ---------- 📖 기술 도감 — 36개 (타입마다 2개), 본 기술은 밝게 ---------- */
+// 📖 방법 · 도감 — 한 창에 탭 두 개 (사용자 요청 2026-10-02)
+const helpTabs = on => '<div class="help-tabs">' + [["rules", "📖 윷놀이 방법"], ["dex", "✨ 기술 도감"]].map(([k, n]) =>
+  '<button class="chip' + (k === on ? " on" : "") + '" data-act="help-tab" data-tab="' + k + '">' + n + "</button>").join("") + "</div>";
 function openSkillDex() {
   const seen = new Set(Store.data.seenSkills || []);
   const keys = Object.keys(Yut.SKILLS);
-  showModal("<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 10칸 가면 타입에 맞는 기술을 하나 배워요 · 🎲 성공 확률 일반 60 · 레어 70 · 유니크 80 · 👑 전설 90% · 상성 ±10%</p>" +
+  showModal(helpTabs("dex") + "<h2>✨ 기술 도감</h2><p>본 기술 <b>" + keys.filter(k => seen.has(k)).length + "/" + keys.length + "</b> · 10칸 가면 타입에 맞는 기술을 하나 배워요 · 🎲 성공 확률 일반 60 · 레어 70 · 유니크 80 · 👑 전설 90% · 상성 ±10%</p>" +
     '<div class="dex-types">' + TYPE_ORDER.map(t => '<div class="dex-row" style="--tc:' + (D.typeColors[t] || "#999") + '"><span>' + esc(t) + '</span><div class="dex-cards">' +
       (Yut.TYPE_SKILLS[t] || []).map(k => '<div class="dex-card' + (seen.has(k) ? "" : " unseen") + '"><b>' + SKILL_UI[k].emoji + " " + esc(skillName(k)) + "</b>" +
         (Yut.SKILLS[k].kind === "react" ? "<i>저절로</i>" : "") + "<br>" + esc(SKILL_UI[k].desc) + "</div>").join("") +
@@ -4071,7 +4076,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 const agoText = t => { if (!t) return "아직"; const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? "방금" : m < 60 ? m + "분 전" : m < 1440 ? Math.floor(m / 60) + "시간 전" : Math.floor(m / 1440) + "일 전"; };
 const codeBoxes = (code, id) => '<div class="net-code save-code"' + (id ? ' id="' + id + '"' : "") + ">" + [0, 1, 2, 3, 4, 5].map(k => "<b>" + esc((code || "")[k] || "") + "</b>").join("") + "</div>";
 const bagCount = b => Yut.Rewards.BALLS.reduce((t, k) => t + ((b || {})[k] || 0), 0);
-const profLine = p => "📕 포켓몬 " + (p.collection || []).length + "마리 · 🎒 볼 " + bagCount(p.bag) + "개 · 🏆 " + ((p.stats || {}).games || 0) + "판";
+const profLine = p => "📕 포켓몬 " + (p.collection || []).length + "마리 · 🎒 볼 " + bagCount(p.bag) + "개 · " + ((p.stats || {}).games || 0) + "판";
 const DENIED = "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 yutsaves 를 넣어 주세요";
 function renderSaveInfo() {
   const box = $("#save-info");
@@ -4169,12 +4174,18 @@ Screens.profiles = sec => {
   const D2 = Store.data;
   sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>👤 프로필</h2><span class="side"></span></header>' +
     '<div class="scroll"><div class="card">' +
-      '<p class="note">사람마다 <b>이름</b>과 <b>캐릭터 포켓몬</b>을 정해요. 잡은 포켓몬 · 볼 · 전적은 사람마다 따로 모여요. 💾 저장 코드를 만들면 다른 패드에서도 그대로!</p>' +
+      '<h3 class="pf-h">⚙️ 설정 <small>이 패드</small></h3><div class="pf-set"><button class="btn" data-act="sound" id="sound-btn">' + soundLabel() + "</button></div>" +
+      '<h3 class="pf-h">👤 프로필</h3><p class="note">사람마다 <b>이름</b>과 <b>캐릭터 포켓몬</b>을 정해요. 잡은 포켓몬 · 볼 · 공부 기록은 사람마다 따로 모여요. 💾 저장 코드를 만들면 다른 패드에서도 그대로, 🥇 랭킹에도 나와요!</p>' +
       '<div class="prof-list">' + D2.order.map(id => {
         const p = D2.profiles[id];
-        return '<div class="prof-card" data-id="' + esc(id) + '"><span class="pc-av">' + spr(p.avatar) + '</span><div class="pc-body"><b>' + esc(p.name) + "</b><small>" + esc(profLine(p)) + "</small>" +
+        const sc = k => ((p.study || {})[k] || {});
+        const study = (sc("clock").total || sc("money").total) ? "🎓 시계 " + (sc("clock").level || 1) + "단계 " + (sc("clock").right || 0) + "/" + (sc("clock").total || 0) + " · 돈 " + (sc("money").right || 0) + "/" + (sc("money").total || 0) : "";
+        const w = p.stats || {};
+        const wins = "🏆 이김 " + ["family", "rocket", "net"].reduce((t, k) => t + ((w[k] || {}).win || 0), 0) + "번";
+        return '<div class="prof-card" data-id="' + esc(id) + '"><span class="pc-av">' + spr(p.avatar) + '</span><div class="pc-body"><b>' + esc(p.name) + "</b><small>" + esc(profLine(p)) + " · " + wins + "</small>" + (study ? '<small class="pc-study">' + esc(study) + "</small>" : "") +
           (p.cloud ? '<em class="pc-code">💾 ' + esc(p.cloud.code) + "</em>" : "") + '</div><div class="pc-btns">' +
           '<button class="btn" data-act="prof-edit" data-id="' + esc(id) + '">✏️ 꾸미기</button>' +
+          '<button class="btn" data-act="prof-bag" data-id="' + esc(id) + '">🎒 가방</button>' +
           '<button class="btn' + (p.cloud ? " green" : "") + '" data-act="prof-save" data-id="' + esc(id) + '">💾 ' + (p.cloud ? "저장 ✓" : "저장") + "</button>" +
           '<button class="btn" data-act="prof-del" data-id="' + esc(id) + '" aria-label="지우기">🗑️</button></div></div>';
       }).join("") + "</div>" +
@@ -4219,7 +4230,7 @@ function profDel(id) {
   const D2 = Store.data, p = D2.profiles[id];
   if (!p) return;
   if (D2.order.length <= 1) { toast("프로필이 하나는 있어야 해요", 1800); return; }
-  typedConfirm("지우기", esc(p.name) + "의 포켓몬 " + p.collection.length + "마리 · 볼 " + bagCount(p.bag) + "개 · 전적이 <b>이 패드에서 사라져요.</b>" +
+  typedConfirm("지우기", esc(p.name) + "의 포켓몬 " + p.collection.length + "마리 · 볼 " + bagCount(p.bag) + "개 · 기록이 <b>이 패드에서 사라져요.</b>" +
     (p.cloud ? "<br>💾 서버 기록은 남아서 코드 <b>" + esc(p.cloud.code) + "</b>로 다시 불러올 수 있어요." : ""), "지우기", () => {
     Rank.remove(p);
     delete D2.profiles[id];
@@ -4236,7 +4247,7 @@ function openSave(id, fresh) {
   const p = Store.data.profiles[id];
   if (!p) return;
   if (p.cloud) {
-    showModal("<h2>💾 " + esc(p.name) + "의 저장 코드</h2><p>" + esc(p.name) + "의 잡은 포켓몬 · 볼 · 전적 · 공부 기록이 <b>저절로</b> 저장돼요. 다른 패드에서 이 코드를 누르면 그대로!</p>" +
+    showModal("<h2>💾 " + esc(p.name) + "의 저장 코드</h2><p>" + esc(p.name) + "의 잡은 포켓몬 · 볼 · 이긴 기록 · 공부 기록이 <b>저절로</b> 저장돼요. 다른 패드에서 이 코드를 누르면 그대로!</p>" +
       codeBoxes(p.cloud.code) +
       (fresh ? '<p class="save-photo">📸 부모님께 이 코드를 <b>사진 찍어</b> 달라고 해요!</p>' : "") +
       '<p class="save-info" id="save-info" data-id="' + esc(id) + '"></p>' +
@@ -4246,7 +4257,7 @@ function openSave(id, fresh) {
     renderSaveInfo();
     return;
   }
-  showModal("<h2>💾 " + esc(p.name) + " 저장하기</h2><p>코드를 만들면 <b>" + esc(p.name) + "의 잡은 포켓몬 · 볼 · 전적 · 공부 기록</b>이 서버에 저절로 저장돼요.<br>패드를 바꾸거나 기록이 지워져도 코드만 누르면 그대로 돌아와요!</p>" +
+  showModal("<h2>💾 " + esc(p.name) + " 저장하기</h2><p>코드를 만들면 <b>" + esc(p.name) + "의 잡은 포켓몬 · 볼 · 이긴 기록 · 공부 기록</b>이 서버에 저절로 저장돼요.<br>패드를 바꾸거나 기록이 지워져도 코드만 누르면 그대로 돌아와요!</p>" +
     '<p class="net-err" id="save-err"></p>' +
     '<div class="btns save-btns"><button class="btn big green" data-act="save-on" data-id="' + esc(id) + '" id="save-on">💾 저장 켜기 (코드 만들기)</button><button class="btn" data-act="close-modal">닫기</button></div>');
 }
@@ -4648,7 +4659,7 @@ window.addEventListener("popstate", () => {
 
 /* ---------- 도움말 ---------- */
 function openRules() {
-  showModal(
+  showModal(helpTabs("rules") +
     "<h2>📖 윷놀이 방법</h2>" +
     '<div class="rules-res">' + [1, 2, 3, 4, 5, -1].map(r =>
       '<div><img src="' + artUrl(CAST.yut[r]) + '" alt=""><b>' + RES[r].name + '</b><i class="en">' + RES[r].en + "</i>" + (RES[r].animal ? RES[r].emoji + " " + RES[r].animal + " · " : "") + RES[r].steps + "</div>").join("") + "</div>" +
@@ -4671,22 +4682,6 @@ function openRules() {
       "<li>🏆 내 포켓몬이 먼저 전부 골인하면 이겨요!</li>" +
     "</ul>" +
     '<div class="btns"><button class="btn big green" data-act="close-modal">알겠어요!</button></div>'
-  );
-}
-function openStats(pid) {
-  Store.use(typeof pid === "string" ? pid : Store.data.settings.t0);
-  const st = Store.data.stats;
-  showModal(
-    "<h2>🏆 " + esc(Store.prof().name) + "의 전적</h2>" + profTabs("stats-prof", Store.cur) +
-    "<p>가족 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.family.win + '번</span></div><div><span>😅 졌어요</span><span>' + st.family.lose + "번</span></div></div>" +
-    "<p>로켓단 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.rocket.win + '번</span></div><div><span>😼 로켓단이 이겼어요</span><span>' + st.rocket.lose + "번</span></div></div>" +
-    "<p>🏠 친구 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + ((st.net || {}).win || 0) + '번</span></div><div><span>😅 친구네가 이겼어요</span><span>' + ((st.net || {}).lose || 0) + "번</span></div></div>" +
-    "<p>모두 " + (st.games || 0) + "판</p>" +
-    "<p>🎓 공부</p>" + '<div class="stats-list">' + [["clock", "🕐 시계"], ["money", "💰 돈"]].map(([k, n]) => {
-      const x = (Store.data.study || {})[k] || {};
-      return "<div><span>" + n + " · " + (k === "money" ? "1~3단계 섞어서" : (x.level || 1) + "단계") + "</span><span>" + (x.right || 0) + "/" + (x.total || 0) + "</span></div>";
-    }).join("") + "</div>" +
-    '<div class="btns"><button class="btn big green" data-act="close-modal">닫기</button><button class="btn" data-act="stats-clear">🗑️ 전적 지우기</button></div>'
   );
 }
 /* ================================================================
@@ -4712,7 +4707,8 @@ const Act = {
   "bag": openBag,
   "open-box": openBox,
   "money-quiz": moneyBonus,
-  "stats": openStats,
+  "help": () => openRules(),
+  "help-tab": el => { SFX.tap(); if (el.dataset.tab === "dex") openSkillDex(); else openRules(); },
   "rank": () => showScreen("rank"),
   "rank-by": el => { Setup.rankBy = el.dataset.by; SFX.tap(); renderRank(); },
   "profiles": () => showScreen("profiles"),
@@ -4723,8 +4719,8 @@ const Act = {
   "prof-ok": profOk,
   "av-pick": el => { G.profEdit.av = Number(el.dataset.id); $$(".av-pick").forEach(b => b.classList.toggle("on", b === el)); SFX.tap(); },
   "join-prof": el => { Setup.t0 = el.dataset.id; $$("#net-prof .prof-chip").forEach(b => b.classList.toggle("on", b === el)); SFX.tap(); },
-  "bag-prof": el => openBag(el.dataset.id),
-  "stats-prof": el => openStats(el.dataset.id),
+
+  "prof-bag": el => openBag(el.dataset.id),
   "save": () => showScreen("profiles"),
   "save-on": el => saveOn(el.dataset.id),
   "save-now": el => { const p = Store.data.profiles[el.dataset.id]; if (p && p.cloud) { p.cloud.sent = null; cloudSchedule(true); } setTimeout(renderSaveInfo, 50); SFX.tap(); },
@@ -4786,9 +4782,6 @@ const Act = {
   "pause-home": () => { modalClose = null; closeModal(); G.paused = false; showScreen("home"); },
   "pause-giveup": () => typedConfirm("판 그만두기", "이 판을 지우면 되돌릴 수 없어요.", "그만", () => {
     Store.data.game = null; Store.data.net = null; Store.save(); G.s = null; G.net = null; G.paused = false; showScreen("home"); toast("판을 정리했어요");
-  }),
-  "stats-clear": () => typedConfirm("전적 지우기", esc(Store.prof().name) + "의 전적을 모두 지우면 되돌릴 수 없어요.", "지우기", () => {
-    Store.data.stats = newStats(); Store.save(); toast(Store.prof().name + "의 전적을 지웠어요");
   }),
   "rematch": rematch,
   "win-home": () => showScreen("home"),
