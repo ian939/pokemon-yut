@@ -1402,7 +1402,7 @@ def scenario_land(browser, base, errors):
         ctx.add_init_script("localStorage.setItem('engmon_yut_v1', JSON.stringify({ settings: { study: false } }));")
         page = ctx.new_page()
         page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
-        page.goto(base + "?fast=1&seed=2&spots=none"); page.wait_for_timeout(300)
+        page.goto(base + "?fast=1&seed=2&spots=none&first=0&force=4,2"); page.wait_for_timeout(300)
         page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='4']")
         page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
         wait_idle(page)
@@ -1410,6 +1410,12 @@ def scenario_land(browser, base, errors):
             b = document.querySelector('.game .bar').getBoundingClientRect(), t = document.querySelector('#btn-throw').getBoundingClientRect();
           return { mat: m.height > 30 && m.top >= 0 && m.bottom <= innerHeight + 1, bar: p.top >= b.bottom - 1, thr: t.height >= 44 && t.bottom <= innerHeight + 1 }; }""")
         check(r["mat"] and r["bar"] and r["thr"], f"📱 가로 {vw}x{vh}: 윷 멍석 보임 · 던지기 버튼 보임 · 위쪽 줄 안 덮음 {r}")
+        # 던질 때마다 멍석이 위아래로 움직이지 않음 (남은 결과 · 안내 글이 늘어도) — 사용자 제보 2026-10-03
+        top = lambda: page.evaluate("() => Math.round(document.querySelector('.mat').getBoundingClientRect().top)")
+        tops = [top()]
+        for _ in range(2):
+            page.click("#btn-throw"); wait_idle(page); page.wait_for_timeout(150); tops.append(top())
+        check(max(tops) - min(tops) <= 2, f"📱 가로 {vw}x{vh}: 윷(윷 → 개) 두 번 던져도 멍석 자리 그대로 {tops}")
         # 던지기 버튼 글이 버튼 밖으로 안 나감 (폴드처럼 좁은 가로 · 로켓단 차례 글이 길 때)
         page.evaluate("() => { const Y = window.__yut, s = Y.G.s; s.phase = 'choose'; s.turn = 1; s.pending = [4, 2]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }")
         page.wait_for_timeout(200)

@@ -190,21 +190,21 @@ img { -webkit-user-drag: none; }
 .game.land.tight .pchip { width: 46px; height: 46px; }
 .game.land.tight .throw-zone { padding: 10px 12px; gap: 6px; }
 .game.land.tight .mat { width: min(100%, 170px); }
-.game.land.tight .pending { min-height: 36px; }
+.game.land.tight .pending { height: 44px; }
 .game.land.tight .btn.throw { min-height: 56px; }
 .game.land.tight .hint { min-height: calc(var(--t1) * 1.45 * 2 + 20px); }
 /* 더 낮으면(안드로이드 가로 — 주소창·아래 버튼줄 때문에 높이가 낮다) 멍석을 숨기지 않고 작게 줄여 던지기 버튼 옆에 나란히 (사용자 요청 2026-10-02: 가로에서 윷이 안 보임) */
 .game.land.tighter .throw-zone { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; justify-items: stretch; }
 .game.land.tighter .mat { width: clamp(96px, 11vw, 140px); grid-row: span 2; justify-self: center; }
-.game.land.tighter .pending { min-height: 30px; }
+.game.land.tighter .pending { height: 44px; }
 .game.land.tighter .hint { grid-column: 1 / -1; }
 /* 폰 가로(높이 400px 안팎): 그래도 넘치면 던지기 칸(멍석 · 버튼 · 안내)을 맨 위에 두고, 팀 카드는 그 아래에서 밀어 본다 — 위쪽 줄을 덮지 않게 */
 .game.land.tightest .panel { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 4px; }
 .game.land.tightest .throw-zone { order: -1; flex: none; padding: 8px 10px; }
-.game.land.tightest .hint { min-height: 0; max-height: calc(var(--t1) * 1.45 * 2 + 16px); padding-top: 6px; padding-bottom: 6px; }
+.game.land.tightest .hint { min-height: 0; height: calc(var(--t1) * 1.45 * 2 + 16px); padding-top: 6px; padding-bottom: 6px; }
 .game.land.tightest .teams { flex: none; }
 /* 가로: 안내 칸은 3줄까지 — 판을 잴 때는 3줄로 재서, 긴 알림이 떠도 패널이 넘쳐 위쪽 줄(가방)을 덮지 않게 */
-.game.land .hint { max-height: calc(var(--t1) * 1.45 * 3 + 20px); overflow: hidden; }
+.game.land .hint { height: calc(var(--t1) * 1.45 * 3 + 20px); min-height: 0; overflow: hidden; } /* 높이 고정 — 글 길이가 바뀌어도 멍석·버튼이 안 움직이게 */
 .game.land .hint.measure { height: calc(var(--t1) * 1.45 * 3 + 20px); }
 /* 세로 화면: 안내 칸 높이를 고정 — 글이 길어져도 판 크기가 들썩이지 않게 (3줄, 폰은 4줄) */
 .game.port .hint { height: calc(var(--t1) * 1.45 * 3 + 20px); min-height: 0; overflow: hidden; }
@@ -323,7 +323,11 @@ img { -webkit-user-drag: none; }
 .art-sticks .stick.flat.mark { background-image: url(assets/ui/stick-back.png); }
 .art-sticks .stick.flat.mark::after { display: none; }
 .stick.toss { animation: toss calc(.72s * var(--spd)) cubic-bezier(.3,.6,.4,1) both; animation-delay: calc(var(--d, 0s) * var(--spd)); }
-.pending { display: flex; gap: 6px; min-height: 44px; flex-wrap: wrap; justify-content: center; align-items: center; }
+/* 남은 결과 줄은 높이를 고정 — 결과가 늘어도 줄이 커지지 않아 멍석·버튼이 위아래로 움직이지 않게 (사용자 제보 2026-10-03). 많으면 작게(.compact → .tiny) */
+.pending { display: flex; gap: 6px; height: 48px; flex-wrap: nowrap; justify-content: center; align-items: center; overflow: hidden; width: 100%; }
+.pending.compact { gap: 4px; } .pending.compact .lab { display: none; }
+.pending.compact .rchip { padding-right: 6px; font-size: calc(var(--t1) * .85); } .pending.compact .rchip img { width: 28px; height: 28px; }
+.pending.tiny .rchip img { display: none; } .pending.tiny .rchip { padding: 0 6px; }
 .pending .lab { font-size: 14px; font-weight: 800; color: var(--ink-soft); }
 .rchip { display: inline-flex; align-items: center; gap: 2px; background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 0 10px 0 0; font-family: var(--pixel); font-weight: 700; font-size: var(--t1); box-shadow: 0 3px 0 var(--ink); }
 .rchip img { width: 36px; height: 36px; object-fit: contain; }
@@ -962,7 +966,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-03a";
+const APP_VERSION = "2026-10-03b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1783,6 +1787,9 @@ function renderPending() {
   box.innerHTML = G.s.pending.length
     ? '<span class="lab">남은 결과</span>' + G.s.pending.map(r => '<span class="rchip"><img src="' + artUrl(CAST.yut[r]) + '" alt="">' + RES[r].name + "</span>").join("")
     : "";
+  box.classList.remove("compact", "tiny"); // 한 줄에 안 들어가면 작게
+  if (box.scrollWidth > box.clientWidth + 1) box.classList.add("compact");
+  if (box.scrollWidth > box.clientWidth + 1) box.classList.add("tiny");
 }
 function setSticks(sticks) {
   const mark = G.s.settings.backdo;
