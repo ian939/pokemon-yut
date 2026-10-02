@@ -23,7 +23,7 @@
 /* ===== 패드 터치 잠금 (pad-input-lock 스킬) — 스타일시트 맨 위 ===== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
-  margin: 0; height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%;
+  margin: 0; height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; /* 안드로이드 가로에서 글자를 저절로 키우지 않게 */
   touch-action: pan-x pan-y; overscroll-behavior: none;
   -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
 }
@@ -327,7 +327,7 @@ img { -webkit-user-drag: none; }
 .pending .lab { font-size: 14px; font-weight: 800; color: var(--ink-soft); }
 .rchip { display: inline-flex; align-items: center; gap: 2px; background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; padding: 0 10px 0 0; font-family: var(--pixel); font-weight: 700; font-size: var(--t1); box-shadow: 0 3px 0 var(--ink); }
 .rchip img { width: 36px; height: 36px; object-fit: contain; }
-.btn.throw { width: 100%; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+.btn.throw { width: 100%; white-space: nowrap; overflow: hidden; padding-left: 12px; padding-right: 12px; }
 /* 안내 칸 = 윷판 화면의 DS 대화창. 알림(진화·업기·골인…)도 여기에 떠서 판을 가리지 않는다 */
 .hint { position: relative; width: 100%; min-height: calc(var(--t1) * 2.9 + 20px); padding: 10px 34px 10px 14px; background: var(--paper-2); border: 3px solid var(--ink); border-radius: 12px;
   font-family: var(--pixel); font-weight: 700; font-size: var(--t1); line-height: 1.45; color: var(--ink); text-align: left; }
@@ -962,7 +962,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-02f";
+const APP_VERSION = "2026-10-03a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1705,7 +1705,7 @@ function fitBoard() {
   }
   sec.style.setProperty("--bs", Math.max(250, Math.floor(bs)) + "px");
 }
-window.addEventListener("resize", fitBoard);
+window.addEventListener("resize", () => { fitBoard(); if (current === "game" && G.s) renderTop(); }); // 접거나 돌리면 버튼 글도 다시 맞춘다
 
 function buildBoard() {
   const b = $("#board");
@@ -1798,6 +1798,15 @@ function fitText(el, min) {
   let fs = parseFloat(getComputedStyle(el).fontSize) || 16;
   while (el.scrollWidth > el.clientWidth + 1 && fs > (min || 11)) { fs -= 1; el.style.fontSize = fs + "px"; }
 }
+// 던지기 버튼 글 맞추기 — 긴 글 → (넘치면) 짧은 글 → (그래도 넘치면) 글자 줄이기. 버튼 크기가 바뀔 때마다 다시
+function fitThrow(btn) {
+  if (!btn || !btn.dataset.full) return;
+  btn.style.fontSize = "";
+  btn.textContent = window.innerWidth < 520 ? btn.dataset.short : btn.dataset.full;
+  if (btn.scrollWidth > btn.clientWidth + 1) btn.textContent = btn.dataset.short;
+  fitText(btn, 13);
+}
+const throwRO = typeof ResizeObserver !== "undefined" ? new ResizeObserver(es => es.forEach(e => { const w = Math.round(e.contentRect.width); if (e.target._w !== w) { e.target._w = w; fitThrow(e.target); } })) : null;
 function renderTop() {
   const t = G.s.teams[G.s.turn];
   const pill = $("#turn-pill");
@@ -1807,15 +1816,18 @@ function renderTop() {
   if (pill) fitText(pill.firstElementChild, 12); // 이름이 길면(8글자까지) 글자를 줄여서 다 보이게
   const btn = $("#btn-throw");
   if (!btn) return;
+  if (throwRO && !btn._ro) { btn._ro = true; throwRO.observe(btn); }
   const human = humanTurn();
-  const narrow = window.innerWidth < 520; // 폰: 버튼 글을 짧게
-  let label = "윷 던지기!", on = false;
+  // 버튼 글: [긴 글, 짧은 글] — 버튼 폭을 재서 넘치면 짧은 글, 그래도 넘치면 글자를 줄인다 (폴드처럼 가로가 좁은 가로 화면에서 글이 버튼 밖으로 나가던 것, 2026-10-03)
+  let pair = ["윷 던지기!", "던지기!"], on = false;
+  const friend = ["🏠 " + plain(otherName()) + " 차례", "친구 차례"];
   if (G.s.phase === "throw") {
-    if (human) { on = true; label = G.s.pending.length ? (narrow ? "한 번 더!" : "한 번 더 던지기!") : (narrow ? "던지기!" : "윷 던지기!"); }
-    else label = netOn() ? (narrow ? "친구 차례" : "🏠 " + plain(otherName()) + " 차례") : narrow ? "로켓단 차례" : "로켓단이 던지는 중…";
-  } else if (G.s.phase === "choose") label = human ? (narrow ? "말 움직이기" : "👆 말을 움직여요") : netOn() ? (narrow ? "친구 차례" : "🏠 " + plain(otherName()) + " 차례") : (narrow ? "로켓단 차례" : "로켓단이 고르는 중…");
-  else label = "판이 끝났어요";
-  btn.textContent = label;
+    if (human) { on = true; pair = G.s.pending.length ? ["한 번 더 던지기!", "한 번 더!"] : ["윷 던지기!", "던지기!"]; }
+    else pair = netOn() ? friend : ["로켓단이 던지는 중…", "로켓단 차례"];
+  } else if (G.s.phase === "choose") pair = human ? ["👆 말을 움직여요", "말 움직이기"] : netOn() ? friend : ["로켓단이 고르는 중…", "로켓단 차례"];
+  else pair = ["판이 끝났어요", "끝!"];
+  btn.dataset.full = pair[0]; btn.dataset.short = pair[1];
+  fitThrow(btn);
   btn.disabled = !on || G.busy || !!G.target;
   btn.classList.toggle("go", on && !G.busy && !G.target);
   btn.classList.toggle("cursor", on && !G.busy && !G.target);

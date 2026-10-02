@@ -1397,7 +1397,7 @@ def scenario_save(browser, base, errors):
 
 def scenario_land(browser, base, errors):
     """안드로이드 가로 화면(주소창·버튼줄 때문에 낮음): 윷 멍석이 늘 보이고, 패널이 위쪽 줄을 덮지 않음 (2026-10-02 사용자 제보: 가로에서 윷이 안 보임)."""
-    for vw, vh in ((740, 340), (800, 360), (915, 380), (1024, 560), (1180, 650), (1280, 690)):
+    for vw, vh in ((740, 340), (800, 360), (915, 380), (818, 757), (884, 700), (952, 628), (1024, 560), (1180, 650), (1280, 690)):
         ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True, is_mobile=True)
         ctx.add_init_script("localStorage.setItem('engmon_yut_v1', JSON.stringify({ settings: { study: false } }));")
         page = ctx.new_page()
@@ -1410,6 +1410,11 @@ def scenario_land(browser, base, errors):
             b = document.querySelector('.game .bar').getBoundingClientRect(), t = document.querySelector('#btn-throw').getBoundingClientRect();
           return { mat: m.height > 30 && m.top >= 0 && m.bottom <= innerHeight + 1, bar: p.top >= b.bottom - 1, thr: t.height >= 44 && t.bottom <= innerHeight + 1 }; }""")
         check(r["mat"] and r["bar"] and r["thr"], f"📱 가로 {vw}x{vh}: 윷 멍석 보임 · 던지기 버튼 보임 · 위쪽 줄 안 덮음 {r}")
+        # 던지기 버튼 글이 버튼 밖으로 안 나감 (폴드처럼 좁은 가로 · 로켓단 차례 글이 길 때)
+        page.evaluate("() => { const Y = window.__yut, s = Y.G.s; s.phase = 'choose'; s.turn = 1; s.pending = [4, 2]; s.throwsLeft = 0; Y.Act['skill-cancel'](); }")
+        page.wait_for_timeout(200)
+        fit = page.evaluate("() => { const b = document.querySelector('#btn-throw'); return [b.textContent, b.scrollWidth <= b.clientWidth + 1]; }")
+        check(fit[1], f"📱 가로 {vw}x{vh}: 던지기 버튼 글이 버튼 안에 ({fit[0]})")
         if (vw, vh) == (800, 360):
             page.screenshot(path=str(OUT / "60-land-phone.png"))
         ctx.close()
