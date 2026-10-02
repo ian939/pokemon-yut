@@ -1262,6 +1262,27 @@ def scenario_save(browser, base, errors):
     a.wait_for_timeout(5200)
     check([c["id"] for c in server(code)["collection"]] == [133, 25, 7] and server(code)["bag"]["poke"] == 4 and server(code2)["collection"] == [], "지온이 기록이 바뀌면 지온이 코드에만 저절로 저장")
 
+    # 🥇 랭킹: 저장을 켠 프로필만, 저장 코드는 안 보임, 필터마다 순서
+    rk = fdb.data.get("yutrank") or {}
+    check(len(rk) == 2 and code not in rk and code2 not in rk and all("code" not in v and set(v) >= {"name", "mons", "legends", "wins"} for v in rk.values()),
+          f"🥇 랭킹 서버엔 이름·캐릭터·숫자만 (저장 코드 없음) — {len(rk)}명")
+    kid_r = next(v for v in rk.values() if v["name"] == "지온이")
+    check(kid_r["mons"] == 3 and kid_r["avatar"] == 133, f"지온이 랭킹 숫자 (포켓몬 {kid_r['mons']} · 전설 {kid_r['legends']} · 승리 {kid_r['wins']})")
+    fdb.data["yutrank"]["zzzzzzzzz1"] = {"name": "민준", "avatar": 25, "mons": 9, "legends": 2, "wins": 1, "updated": 1}
+    fdb.data["yutrank"]["zzzzzzzzz2"] = {"name": "서아", "avatar": 1, "mons": 1, "legends": 0, "wins": 7, "updated": 1}
+    a.click("[data-act=home]"); a.click("[data-act=rank]")
+    a.wait_for_selector(".rank-row", timeout=10000)
+    names = lambda: a.eval_on_selector_all(".rank-row .rk-name", "e => e.map(x => x.childNodes[0].textContent.trim())")
+    check(names()[:2] == ["민준", "지온이"] and "🥇" in a.inner_text(".rank-row.t1"), f"📕 포켓몬 수로 줄 세우기 {names()}")
+    check(len(a.query_selector_all(".rank-row.me")) == 2 and "엄마" in a.inner_text("#rank-note"), "우리 패드 프로필은 '우리' 표시 · 저장 안 켠 사람 안내")
+    a.click("[data-act=rank-by][data-by=wins]"); a.wait_for_timeout(200)
+    check(names()[0] == "서아", f"🏆 승리 수로 {names()}")
+    a.click("[data-act=rank-by][data-by=legends]"); a.wait_for_timeout(200)
+    check(names()[0] == "민준", f"👑 전설 수로 {names()}")
+    measure(a, "🥇 랭킹 화면")
+    a.screenshot(path=str(OUT / "s5-rank.png"))
+    a.click("[data-act=home]")
+
     # 다른 패드: 틀린 코드 → 지온이 코드(같은 프로필이 있음 → 글자 확인) → 하윤이 코드(없음 → 바로 생김)
     bctx, b = mk({"settings": {"study": False}})
     b.goto(base + q); b.wait_for_timeout(300)
@@ -1287,6 +1308,9 @@ def scenario_save(browser, base, errors):
     b.click("#save-fetch")
     b.wait_for_function(f"() => !!window.__yut.Store.data.profiles['{hid}']", timeout=10000)
     check(ev(b, "d.order.length") == 7 and ev(b, f"P['{hid}'].name") == "하윤이", "없는 프로필(하윤이)은 바로 생김")
+    b.evaluate("() => { const S = window.__yut.Store; S.data.profiles.kid.bag.poke = 9; S.save(); }")
+    b.wait_for_timeout(5200)
+    check(len([v for v in fdb.data["yutrank"].values() if v["name"] == "지온이"]) == 1, "다른 패드에서 불러와 저장해도 랭킹엔 지온이 한 줄 (같은 랭킹 번호)")
     b.screenshot(path=str(OUT / "s3-save-load.png"))
 
     # 두 패드의 지온이: 잡은 포켓몬은 합치고, 볼은 나중에 저장한 쪽

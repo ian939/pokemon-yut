@@ -649,6 +649,21 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .coin-ov.landed .ct-say { animation: popIn .3s ease-out; }
 @media (prefers-reduced-motion: reduce) { .coin-ov .ct-spin { animation: none !important; } }
 .save-code { margin: 10px auto; gap: 6px; }
+.rank-by { justify-content: center; margin-bottom: 10px; }
+.rank-by .chip { min-height: 48px; font-size: 17px; }
+.rank-list { display: grid; gap: 8px; }
+.rank-msg { text-align: center; font-weight: 800; padding: 18px 8px; }
+.rank-row { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 6px 12px 6px 8px; box-shadow: 0 4px 0 var(--ink); }
+.rank-row.top { background: #fff8de; }
+.rank-row.t1 { box-shadow: 0 4px 0 var(--ink), 0 0 0 3px #ffd23f; }
+.rank-row.me { border-color: var(--red); }
+.rk-no { flex: 0 0 auto; width: 44px; text-align: center; font-family: var(--pixel); font-weight: 700; font-size: 22px; }
+.rank-row.top .rk-no { font-size: 32px; line-height: 1; }
+.rk-av { position: relative; flex: 0 0 auto; width: 52px; height: 52px; }
+.rk-name { flex: 1 1 auto; min-width: 0; font-family: var(--pixel); font-weight: 700; font-size: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-me { font-style: normal; font-family: var(--font); font-size: 12px; font-weight: 900; color: #fff; background: var(--red); border-radius: 8px; padding: 1px 6px; vertical-align: middle; }
+.rk-val { flex: 0 0 auto; font-weight: 800; }
+.rk-val strong { font-family: var(--pixel); font-size: var(--t2); margin-right: 2px; }
 .av { position: relative; display: inline-block; flex: 0 0 auto; width: 30px; height: 30px; vertical-align: middle; }
 .tn .av.tn-av { width: 28px; height: 28px; margin-right: 2px; }
 .chip.prof-chip { display: inline-flex; align-items: center; gap: 4px; padding-left: 6px; }
@@ -932,7 +947,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-02a";
+const APP_VERSION = "2026-10-02b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -976,7 +991,7 @@ function normProfile(p, id) {
   o.stats = Object.assign(newStats(), st);
   ["family", "rocket", "net"].forEach(k => { o.stats[k] = Object.assign({ win: 0, lose: 0 }, st[k] && typeof st[k] === "object" && "win" in st[k] ? st[k] : {}); });
   o.study = p.study && typeof p.study === "object" ? p.study : {};
-  o.cloud = p.cloud && p.cloud.code ? p.cloud : null;
+  o.cloud = p.cloud && p.cloud.code ? p.cloud : null; // { code, at, sent, rid }
   return o;
 }
 const avHtml = (id, cls) => '<span class="av' + (cls ? " " + cls : "") + '">' + spr(id) + "</span>";
@@ -1454,6 +1469,7 @@ Screens.home = sec => {
         '<button class="btn ghost" data-act="bag">🎒 가방</button>' +
         '<button class="btn ghost" data-act="skilldex">✨ 기술 도감</button>' +
         '<button class="btn ghost" data-act="stats">🏆 전적</button>' +
+        '<button class="btn ghost" data-act="rank">🥇 랭킹</button>' +
         '<button class="btn ghost" data-act="profiles" id="prof-btn">👤 프로필</button>' +
         '<button class="btn ghost" data-act="sound" id="sound-btn">' + soundLabel() + "</button>" +
       "</div>" +
@@ -3973,7 +3989,7 @@ const Cloud = {
   },
   get(code) { return this.req(code); },
   put(code, body) { return this.req(code, { method: "PUT", body: JSON.stringify(body), keepalive: true }); },
-  pick(p) { const o = { id: p.id }; PROF_KEYS.forEach(k => { o[k] = p[k]; }); return o; },
+  pick(p) { const o = { id: p.id }; PROF_KEYS.forEach(k => { o[k] = p[k]; }); if (p.cloud && p.cloud.rid) o.rid = p.cloud.rid; return o; }, // rid: 🥇 랭킹 번호 — 패드를 바꿔도 같은 줄
   parse(room) { try { const x = JSON.parse(room.dataJ); return x && typeof x === "object" && x.id && x.name ? x : null; } catch (e) { return null; } },
 };
 const hashStr = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h; };
@@ -3988,7 +4004,9 @@ function mergeCollection(a, b) {
 function applyCloud(x, replace, code, at) {
   const P = Store.data.profiles, old = P[x.id];
   const o = normProfile(Object.assign({}, x, { collection: replace || !old ? x.collection : mergeCollection(old.collection, x.collection) }), x.id);
-  o.cloud = { code, at, sent: hashStr(JSON.stringify(Cloud.pick(normProfile(x, x.id)))) };
+  o.cloud = { code, at, rid: x.rid || (old && old.cloud && old.cloud.rid) || null };
+  const nx = normProfile(x, x.id); nx.cloud = { rid: o.cloud.rid }; // 서버에 있는 그대로 — 합쳐서 달라졌으면 다시 올린다
+  o.cloud.sent = hashStr(JSON.stringify(Cloud.pick(nx)));
   P[x.id] = o;
   if (Store.data.order.indexOf(x.id) < 0) Store.data.order.push(x.id);
   Store.save();
@@ -4002,6 +4020,7 @@ function cloudSchedule(now) {
 }
 async function pushOne(p) {
   const c = p.cloud;
+  Rank.rid(p); // 랭킹 번호가 없으면 만들어서 저장에 같이
   try {
     const room = await Cloud.get(c.code);
     if (room && (room.updated || 0) > (c.at || 0)) { // 그사이 다른 패드가 저장했으면 잡은 포켓몬은 합친다
@@ -4011,6 +4030,7 @@ async function pushOne(p) {
     const j = JSON.stringify(Cloud.pick(p)), at = Date.now();
     await Cloud.put(c.code, { v: 2, updated: at, dataJ: j });
     Object.assign(c, { at, sent: hashStr(j), err: null });
+    await Rank.push(p); // 🥇 랭킹 숫자도 같이 (저장 코드와는 다른 번호로)
   } catch (e) {
     c.err = e.message === "denied" ? "denied" : "net";
     if (e.message !== "denied") setTimeout(() => cloudSchedule(true), 30000); // 인터넷이 돌아오면 다시
@@ -4061,6 +4081,87 @@ function renderSaveInfo() {
   box.innerHTML = c.err === "denied" ? esc(DENIED)
     : c.err === "net" ? "📶 인터넷이 끊겨서 아직 못 올렸어요. 연결되면 저절로 저장해요"
     : Cloud.busy || Cloud.timer ? "💾 저장하는 중…" : "✅ 마지막 저장: " + agoText(c.at);
+}
+
+/* ================================================================
+   🥇 랭킹 (사용자 확정 2026-10-02: 모두 — 💾 저장 코드를 켠 프로필끼리, 친구네 포함)
+   서버 yutrank/{랭킹 번호 10글자} = { name, avatar, mons, legends, wins, updated }
+   — 저장 코드는 넣지 않는다 (랭킹 목록은 누구나 읽으니까, 코드가 보이면 남이 기록을 불러갈 수 있음)
+   필터: 📕 잡은 포켓몬 수 · 👑 전설 수 · 🏆 이긴 수 (가족 + 로켓단 + 친구 대결)
+================================================================ */
+const RANK_BY = [
+  { k: "mons", label: "📕 포켓몬", unit: "마리" },
+  { k: "legends", label: "👑 전설", unit: "마리" },
+  { k: "wins", label: "🏆 승리", unit: "번" },
+];
+const rankOf = p => ({
+  name: p.name, avatar: p.avatar,
+  mons: (p.collection || []).length,
+  legends: (p.collection || []).filter(x => isLegend(x.id)).length,
+  wins: ["family", "rocket", "net"].reduce((t, k) => t + (((p.stats || {})[k] || {}).win || 0), 0),
+  updated: Date.now(),
+});
+const Rank = {
+  url(rid) { return NET_DB + "/yutrank" + (rid ? "/" + rid : "") + ".json"; },
+  rid(p) { // 랭킹 번호 (처음 저장할 때 만든다)
+    if (!p.cloud) return null;
+    if (!p.cloud.rid) { const a = "abcdefghijklmnopqrstuvwxyz0123456789"; p.cloud.rid = Array.from({ length: 10 }, () => a[Math.floor(Math.random() * a.length)]).join(""); }
+    return p.cloud.rid;
+  },
+  async push(p) {
+    const rid = this.rid(p);
+    if (!rid) return;
+    try { const r = await fetch(this.url(rid), { method: "PUT", body: JSON.stringify(rankOf(p)), keepalive: true }); p.cloud.rankErr = r.ok ? null : r.status; }
+    catch (e) { p.cloud.rankErr = "net"; }
+  },
+  remove(p) { if (p && p.cloud && p.cloud.rid) fetch(this.url(p.cloud.rid), { method: "DELETE", keepalive: true }).catch(() => {}); },
+  async list() {
+    const r = await fetch(this.url() + "?t=" + Date.now(), { cache: "no-store" });
+    if (r.status === 401 || r.status === 403) throw new Error("denied");
+    if (!r.ok) throw new Error("net");
+    const o = (await r.json()) || {};
+    return Object.keys(o).map(rid => Object.assign({ rid }, o[rid])).filter(x => x && x.name && typeof x.mons === "number");
+  },
+};
+let rankRows = null, rankErr = null;
+Screens.rank = sec => {
+  if (!Setup.rankBy) Setup.rankBy = "mons";
+  sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>🥇 랭킹</h2><span class="side"></span></header>' +
+    '<div class="scroll"><div class="card">' +
+      '<div class="chips rank-by">' + RANK_BY.map(x => '<button class="chip' + (Setup.rankBy === x.k ? " on" : "") + '" data-act="rank-by" data-by="' + x.k + '">' + x.label + "</button>").join("") + "</div>" +
+      '<div id="rank-list" class="rank-list"><p class="rank-msg">🥇 랭킹을 불러오는 중…</p></div>' +
+      '<p class="note" id="rank-note"></p>' +
+    "</div></div>";
+  rankRows = null; rankErr = null;
+  (async () => {
+    const mine = cloudProfs();
+    await Promise.all(mine.map(p => Rank.push(p))); // 내 숫자를 먼저 새로
+    Store.save();
+    try { rankRows = await Rank.list(); } catch (e) { rankErr = e.message; }
+    if (current === "rank") renderRank();
+  })();
+};
+function renderRank() {
+  const box = $("#rank-list"), note = $("#rank-note");
+  if (!box) return;
+  $$(".rank-by .chip").forEach(c => c.classList.toggle("on", c.dataset.by === Setup.rankBy));
+  const off = Store.data.order.map(id => Store.data.profiles[id]).filter(p => !p.cloud);
+  if (note) note.innerHTML = off.length ? "💾 저장 코드를 켜면 랭킹에 나와요 — 아직 안 켠 사람: " + off.map(p => esc(p.name)).join(", ") + ' <button class="btn" data-act="profiles">👤 프로필로</button>' : "";
+  if (rankErr) { box.innerHTML = '<p class="rank-msg">' + (rankErr === "denied" ? "⚠️ 랭킹 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 <b>yutrank</b> 를 넣어 주세요" : "📶 인터넷을 확인하고 다시 들어와 주세요") + "</p>"; return; }
+  if (!rankRows) return;
+  const by = Setup.rankBy, info = RANK_BY.find(x => x.k === by);
+  const mine = new Set(cloudProfs().map(p => p.cloud.rid));
+  const rows = rankRows.slice().sort((a, b) => (b[by] - a[by]) || (b.mons - a.mons) || (b.wins - a.wins) || ((a.updated || 0) - (b.updated || 0))).slice(0, 50);
+  if (!rows.length) { box.innerHTML = '<p class="rank-msg">아직 아무도 없어요. 👤 프로필에서 💾 저장을 켜면 첫 번째로!</p>'; return; }
+  let place = 0, last = null;
+  box.innerHTML = rows.map((x, i) => {
+    if (x[by] !== last) { place = i + 1; last = x[by]; } // 같은 숫자는 같은 등수
+    const top = place <= 3 && (x[by] || 0) > 0; // 0이면 메달 없이
+    const medal = !top ? place + "" : place === 1 ? "🥇" : place === 2 ? "🥈" : "🥉";
+    const av = Number(x.avatar) >= 1 && Number(x.avatar) <= 1025 ? Number(x.avatar) : 25;
+    return '<div class="rank-row' + (top ? " top t" + place : "") + (mine.has(x.rid) ? " me" : "") + '"><span class="rk-no">' + medal + '</span><span class="rk-av">' + spr(av) + "</span>" +
+      '<b class="rk-name">' + esc(String(x.name).slice(0, 12)) + (mine.has(x.rid) ? ' <i class="rk-me">우리</i>' : "") + '</b><span class="rk-val"><strong>' + (x[by] || 0) + "</strong>" + info.unit + "</span></div>";
+  }).join("");
 }
 
 /* ---------- 👤 프로필 화면 ---------- */
@@ -4120,6 +4221,7 @@ function profDel(id) {
   if (D2.order.length <= 1) { toast("프로필이 하나는 있어야 해요", 1800); return; }
   typedConfirm("지우기", esc(p.name) + "의 포켓몬 " + p.collection.length + "마리 · 볼 " + bagCount(p.bag) + "개 · 전적이 <b>이 패드에서 사라져요.</b>" +
     (p.cloud ? "<br>💾 서버 기록은 남아서 코드 <b>" + esc(p.cloud.code) + "</b>로 다시 불러올 수 있어요." : ""), "지우기", () => {
+    Rank.remove(p);
     delete D2.profiles[id];
     D2.order = D2.order.filter(x => x !== id);
     ["t0", "t1"].forEach(k => { if (D2.settings[k] === id) D2.settings[k] = D2.order.find(x => x !== D2.settings[k === "t0" ? "t1" : "t0"]) || D2.order[0]; if (Setup[k] === id) Setup[k] = D2.settings[k]; });
@@ -4611,6 +4713,8 @@ const Act = {
   "open-box": openBox,
   "money-quiz": moneyBonus,
   "stats": openStats,
+  "rank": () => showScreen("rank"),
+  "rank-by": el => { Setup.rankBy = el.dataset.by; SFX.tap(); renderRank(); },
   "profiles": () => showScreen("profiles"),
   "prof-new": el => openProfEdit(null, el.dataset.field || null),
   "prof-edit": el => openProfEdit(el.dataset.id),
@@ -4624,7 +4728,7 @@ const Act = {
   "save": () => showScreen("profiles"),
   "save-on": el => saveOn(el.dataset.id),
   "save-now": el => { const p = Store.data.profiles[el.dataset.id]; if (p && p.cloud) { p.cloud.sent = null; cloudSchedule(true); } setTimeout(renderSaveInfo, 50); SFX.tap(); },
-  "save-off": el => { const p = Store.data.profiles[el.dataset.id]; if (p) p.cloud = null; Store.save(); closeModal(); toast("저장을 껐어요. 서버 기록은 그대로라 코드로 다시 불러올 수 있어요", 2600); showScreen("profiles"); },
+  "save-off": el => { const p = Store.data.profiles[el.dataset.id]; if (p) { Rank.remove(p); p.cloud = null; } Store.save(); closeModal(); toast("저장을 껐어요. 서버 기록은 그대로라 코드로 다시 불러올 수 있어요", 2600); showScreen("profiles"); },
   "save-load": openSaveLoad,
   "save-key": el => saveKey(el.dataset.k),
   "save-fetch": saveFetch,
