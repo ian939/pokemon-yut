@@ -649,6 +649,30 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .coin-ov.landed .ct-say { animation: popIn .3s ease-out; }
 @media (prefers-reduced-motion: reduce) { .coin-ov .ct-spin { animation: none !important; } }
 .save-code { margin: 10px auto; gap: 6px; }
+.av { position: relative; display: inline-block; flex: 0 0 auto; width: 30px; height: 30px; vertical-align: middle; }
+.tn .av.tn-av { width: 28px; height: 28px; margin-right: 2px; }
+.chip.prof-chip { display: inline-flex; align-items: center; gap: 4px; padding-left: 6px; }
+.chip.add-prof { font-weight: 800; }
+.pcard .who .av { width: 100%; height: 100%; }
+.unit .badge-t.av-t { background: #fff; overflow: hidden; }
+.prof-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 4px 0 10px; }
+.prof-list { display: grid; gap: 10px; margin: 10px 0; }
+.prof-card { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 8px 10px; box-shadow: 0 4px 0 var(--ink); flex-wrap: wrap; }
+.pc-av { position: relative; flex: 0 0 auto; width: 64px; height: 64px; background: var(--paper-2); border: 2px solid var(--ink); border-radius: 12px; }
+.pc-body { flex: 1 1 160px; min-width: 0; display: grid; gap: 2px; }
+.pc-body b { font-family: var(--pixel); font-size: var(--t2); font-weight: 700; }
+.pc-body small { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.pc-code { font-style: normal; font-size: 13px; font-weight: 900; color: #2fa35a; }
+.pc-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.pc-btns .btn { min-height: 46px; padding: 4px 12px; }
+.pe-h { margin: 10px 0 6px; font-size: 16px; }
+.pe-h small { font-weight: 700; color: var(--ink-soft); font-size: 13px; }
+#prof-name { width: 100%; font-size: 20px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 12px; font-family: var(--font); }
+.av-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; max-height: min(42vh, 360px); overflow-y: auto; padding: 4px; }
+.av-pick { display: grid; justify-items: center; gap: 2px; min-height: 92px; padding: 4px 2px; background: var(--paper-2); border: 3px solid var(--ink); border-radius: 12px; font: inherit; cursor: pointer; }
+.av-pick .pic { position: relative; width: 56px; height: 56px; }
+.av-pick b { font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.av-pick.on { background: #fff3c4; box-shadow: 0 0 0 3px #ffd23f; }
 .save-code b { width: 44px; }
 .save-photo { font-weight: 900; color: #c0392b; }
 .save-info { min-height: 1.4em; font-weight: 800; }
@@ -908,7 +932,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-09-30a";
+const APP_VERSION = "2026-10-02a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -934,6 +958,28 @@ const MEMBERS = [
   { key: "kid", name: "🧒 지온이" }, { key: "mom", name: "👩 엄마" }, { key: "dad", name: "👨 아빠" },
   { key: "aunt", name: "👱‍♀️ 이모" }, { key: "grandma", name: "👵 할머니" }, { key: "grandpa", name: "👴 할아버지" },
 ];
+// 👤 프로필 기본 캐릭터 = 스타팅 포켓몬 (내 포켓몬 중에서 바꿀 수 있다)
+const DEFAULT_AV = { kid: 7, mom: 1, dad: 4, aunt: 152, grandma: 155, grandpa: 158 };
+const newStats = () => ({ games: 0, family: { win: 0, lose: 0 }, rocket: { win: 0, lose: 0 }, net: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 });
+const newBag = () => ({ poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }); // 처음 선물 몬스터볼 3개
+function blankProfile(id, name, avatar) { return { id, name, avatar, collection: [], bag: newBag(), stats: newStats(), study: {}, cloud: null }; }
+function normProfile(p, id) {
+  const o = blankProfile(id, "", 25);
+  if (!p || typeof p !== "object") p = {};
+  o.name = String(p.name || "").trim().slice(0, 8) || "친구";
+  o.avatar = Number(p.avatar) >= 1 && Number(p.avatar) <= 1025 ? Number(p.avatar) : 25;
+  Object.assign(o.bag, p.bag || {});
+  Object.keys(o.bag).forEach(k => { o.bag[k] = Math.max(0, Math.floor(Number(o.bag[k]) || 0)); });
+  const seen = {};
+  o.collection = (Array.isArray(p.collection) ? p.collection : []).filter(x => x && x.id >= 1 && x.id <= 1025 && !seen[x.id] && (seen[x.id] = 1));
+  const st = p.stats || {};
+  o.stats = Object.assign(newStats(), st);
+  ["family", "rocket", "net"].forEach(k => { o.stats[k] = Object.assign({ win: 0, lose: 0 }, st[k] && typeof st[k] === "object" && "win" in st[k] ? st[k] : {}); });
+  o.study = p.study && typeof p.study === "object" ? p.study : {};
+  o.cloud = p.cloud && p.cloud.code ? p.cloud : null;
+  return o;
+}
+const avHtml = (id, cls) => '<span class="av' + (cls ? " " + cls : "") + '">' + spr(id) + "</span>";
 const TEAM_COLORS = ["#e5484d", "#2f6fd6"]; // 오방색 적(첫 팀) · 청(두 번째 팀)
 const ROCKET_TEAM = { key: "rocket", name: "😈 로켓단", color: "#7a4fb5" };
 // ✨ 기술 36개 (v8, 타입마다 2개) — 화면에 보이는 한 줄 설명 (규칙은 yut-rules.js 의 SKILLS)
@@ -1013,13 +1059,13 @@ function josa(word, pair) {
 }
 
 const nameOf = id => D.names[id - 1] || "???";
-const collectionIds = () => Store.data.collection.map(x => x.id);
+const collectionIds = pid => ((Store.prof(pid) || {}).collection || []).map(x => x.id); // 👤 프로필의 보관함 (없으면 지금 프로필)
 // 스타팅 포켓몬 — 1~9세대 첫 파트너 27마리. 처음에는 이것만 고를 수 있고, ❓ 풀숲에서 잡을 때마다 명단이 늘어난다
 const STARTERS = [1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501, 650, 653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912];
-const caughtOnly = () => collectionIds().filter(id => STARTERS.indexOf(id) < 0); // 잡은 순서대로
-const rosterIds = () => STARTERS.concat(caughtOnly());                          // 고를 수 있는 포켓몬
-const ownedSet = () => new Set(rosterIds());
-const bagTotal = () => Yut.Rewards.BALLS.reduce((t, b) => t + (Store.data.bag[b] || 0), 0);
+const caughtOnly = pid => collectionIds(pid).filter(id => STARTERS.indexOf(id) < 0); // 잡은 순서대로
+const rosterIds = pid => STARTERS.concat(caughtOnly(pid));                            // 고를 수 있는 포켓몬
+const ownedSet = pid => new Set(rosterIds(pid));
+const bagTotal = pid => Yut.Rewards.BALLS.reduce((t, b) => t + (((Store.prof(pid) || {}).bag || {})[b] || 0), 0);
 const typesOf = id => String(D.types[id - 1] || "노말").split("·");
 const moveOf = id => D.moves[id] || D.typeMove[typesOf(id)[0]] || "몸통박치기";
 const fxOf = id => D.typeFx[typesOf(id)[0]] || "💥";
@@ -1059,45 +1105,70 @@ const Store = {
       version: 1,
       sound: true,
       settings: { pieces: 4, backdo: true, cpu: "easy", t0: "kid", t1: "mom", battle: true, skills: true, study: true },
-      stats: { games: 0, family: {}, rocket: { win: 0, lose: 0 }, net: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 },
-      lastPicks: {},      // { kid: [ids], mom: [ids] } — 다음 판에 미리 채워 둠
-      bag: { poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }, // 윷놀이 볼 (잉글리시몬 볼과 따로) — 처음 선물 몬스터볼 3개
-      collection: [],     // 윷놀이 보관함 [{ id, t, from }] — ❓ 풀숲에서 잡은 포켓몬, 다음 판부터 말로
-      seenSkills: [],     // 기술 도감: 판에서 본 기술
-      study: {},          // 🎓 공부 기록 { clock: { level, up, down, right, total }, money: {…} } — 어려움 자동 오르내림
+      lastPicks: {},      // { 프로필 id: [ids] } — 다음 판에 미리 채워 둠
+      profiles: null,     // 👤 { id: { id, name, avatar, collection, bag, stats, study, cloud } } — 사람마다 따로 (v2026-10-02)
+      order: [],          // 프로필 순서
+      seenSkills: [],     // 기술 도감: 판에서 본 기술 (패드 하나에 같이)
       game: null,         // 진행 중인 판
       lastGame: null,     // 끝난 판 (한 판 더)
     };
   },
   load() {
     const d = this.defaults();
+    let raw = null;
     try {
-      const raw = JSON.parse(localStorage.getItem(this.KEY));
+      raw = JSON.parse(localStorage.getItem(this.KEY));
       if (raw && typeof raw === "object") {
         Object.assign(d, raw);
         delete d.familyDex; // 옛 버전(잉글리시몬 가족 도감 읽기)이 남긴 것
         d.settings = Object.assign(this.defaults().settings, raw.settings || {});
-        d.stats = Object.assign(this.defaults().stats, raw.stats || {});
-        d.stats.rocket = Object.assign({ win: 0, lose: 0 }, d.stats.rocket || {});
-        d.bag = Object.assign(this.defaults().bag, raw.bag || {});
-        Object.keys(d.bag).forEach(k => { d.bag[k] = Math.max(0, Math.floor(Number(d.bag[k]) || 0)); });
-        const seen = {};
-        d.collection = (Array.isArray(raw.collection) ? raw.collection : []).filter(x => x && x.id >= 1 && x.id <= 1025 && !seen[x.id] && (seen[x.id] = 1));
         d.seenSkills = (Array.isArray(raw.seenSkills) ? raw.seenSkills : []).filter(k => Yut.SKILLS[k]);
-        d.study = raw.study && typeof raw.study === "object" ? raw.study : {};
+        d.lastPicks = raw.lastPicks && typeof raw.lastPicks === "object" ? raw.lastPicks : {};
       }
-    } catch (e) { /* 망가진 저장은 새로 시작 */ }
+    } catch (e) { raw = null; /* 망가진 저장은 새로 시작 */ }
+    // 👤 프로필: 처음이면 가족 6명을 만들고, 예전 기록(패드에 하나로 모은 것)은 🧒 지온이 것으로
+    if (!d.profiles || typeof d.profiles !== "object" || !Object.keys(d.profiles).length) {
+      d.profiles = {};
+      MEMBERS.forEach(m => { d.profiles[m.key] = blankProfile(m.key, plain(m.name), DEFAULT_AV[m.key] || 25); });
+      if (raw && typeof raw === "object") {
+        const k = d.profiles.kid, st = raw.stats || {};
+        if (Array.isArray(raw.collection)) k.collection = raw.collection;
+        if (raw.bag) k.bag = raw.bag;
+        if (raw.study) k.study = raw.study;
+        if (raw.cloud) k.cloud = raw.cloud;
+        Object.assign(k.stats, { games: st.games || 0, rocket: st.rocket || k.stats.rocket, net: st.net || k.stats.net, boxes: st.boxes || 0, wildSeen: st.wildSeen || 0, wildCaught: st.wildCaught || 0 });
+        Object.keys(st.family || {}).forEach(key => { if (d.profiles[key]) d.profiles[key].stats.family.win = Number(st.family[key]) || 0; });
+        if (raw.lastPicks && raw.lastPicks.guest && !d.lastPicks.kid) d.lastPicks.kid = raw.lastPicks.guest;
+      }
+      d.order = MEMBERS.map(m => m.key);
+    }
+    ["collection", "bag", "stats", "study", "cloud", "netName"].forEach(k => { delete d[k]; });
+    Object.keys(d.profiles).forEach(id => { d.profiles[id] = normProfile(d.profiles[id], id); });
+    d.order = (Array.isArray(d.order) ? d.order : []).filter((id, i, a) => d.profiles[id] && a.indexOf(id) === i);
+    Object.keys(d.profiles).forEach(id => { if (d.order.indexOf(id) < 0) d.order.push(id); });
+    if (!d.profiles[d.settings.t0]) d.settings.t0 = d.order[0];
+    if (!d.profiles[d.settings.t1] || d.settings.t1 === d.settings.t0) d.settings.t1 = d.order.find(id => id !== d.settings.t0) || d.order[0];
     d.game = Yut.upgrade(d.game); d.lastGame = Yut.upgrade(d.lastGame); // 기술 전(v1) 판은 기술 없이 이어서
     if (d.game && !Yut.validate(d.game)) d.game = null;
     if (d.lastGame && !Yut.validate(d.lastGame)) d.lastGame = null;
     [d.game, d.lastGame].forEach(g => g && g.teams.forEach((t, ti) => {
       if (t.cpu) { t.name = ROCKET_TEAM.name; t.color = ROCKET_TEAM.color; return; }
-      const m = MEMBERS.find(x => x.key === t.key);
-      if (m) t.name = m.name;
+      const p = d.profiles[t.key];
+      if (p) { t.name = p.name; t.avatar = p.avatar; }
       t.color = TEAM_COLORS[ti] || t.color;
     }));
+    // 예전 코드가 쓰던 Store.data.collection · bag · stats · study · cloud 는 "지금 프로필"(Store.cur)을 가리킨다 (저장 글자에는 안 들어감)
+    ["collection", "bag", "stats", "study", "cloud"].forEach(k => Object.defineProperty(d, k, {
+      configurable: true, enumerable: false,
+      get: () => { const p = Store.prof(); return p ? p[k] : undefined; },
+      set: v => { const p = Store.prof(); if (p) p[k] = v; },
+    }));
     this.data = d;
+    if (!this.cur || !d.profiles[this.cur]) this.cur = d.settings.t0;
   },
+  cur: null, // 지금 쓰는 프로필 id (풀숲에서 잡은 팀 · 상자를 받는 팀 · 가방 창에서 고른 사람)
+  prof(id) { const P = this.data && this.data.profiles; if (!P) return null; return P[id || this.cur] || P[this.data.settings.t0] || P[this.data.order[0]] || null; },
+  use(id) { if (id && this.data.profiles[id]) this.cur = id; return this.prof(); },
   save() {
     try { cloudSchedule(); } catch (e) { /* 아직 준비 전 */ }
     try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); }
@@ -1383,7 +1454,7 @@ Screens.home = sec => {
         '<button class="btn ghost" data-act="bag">🎒 가방</button>' +
         '<button class="btn ghost" data-act="skilldex">✨ 기술 도감</button>' +
         '<button class="btn ghost" data-act="stats">🏆 전적</button>' +
-        '<button class="btn ghost" data-act="save" id="save-btn">💾 저장' + (Store.data.cloud && Store.data.cloud.code ? " ✓" : "") + "</button>" +
+        '<button class="btn ghost" data-act="profiles" id="prof-btn">👤 프로필</button>' +
         '<button class="btn ghost" data-act="sound" id="sound-btn">' + soundLabel() + "</button>" +
       "</div>" +
     "</div>" +
@@ -1394,17 +1465,19 @@ Screens.home = sec => {
 
 /* ---------- 준비 ---------- */
 const Setup = { mode: "family", t0: "kid", t1: "mom", cpu: "easy", pieces: 4, backdo: true, battle: true, skills: true, study: true, timer: 20, ti: 0, picks: [[], []], rocket: [] };
-const memberOf = key => key === "rocket" ? ROCKET_TEAM : (MEMBERS.find(m => m.key === key) || MEMBERS[0]);
+// 팀 = 👤 프로필 (이름 · 캐릭터 포켓몬)
+const memberOf = key => { if (key === "rocket") return ROCKET_TEAM; const p = Store.prof(key); return { key: p.id, name: p.name, avatar: p.avatar }; };
 const teamKey = ti => ti === 0 ? Setup.t0 : (Setup.mode === "family" ? Setup.t1 : "rocket");
-function chipHtml(field, value, label, color, disabled) {
+function chipHtml(field, value, label, color, disabled, pre) {
   const on = Setup[field] === value;
-  return '<button class="chip' + (on ? " on" : "") + (color ? "" : " plain") + '" data-act="set" data-field="' + field + '" data-value="' + esc(JSON.stringify(value)) + '"' +
-    (color ? ' style="--c:' + color + '"' : "") + (disabled ? " disabled" : "") + ">" + esc(label) + "</button>";
+  return '<button class="chip' + (on ? " on" : "") + (color ? "" : " plain") + (pre ? " prof-chip" : "") + '" data-act="set" data-field="' + field + '" data-value="' + esc(JSON.stringify(value)) + '"' +
+    (color ? ' style="--c:' + color + '"' : "") + (disabled ? " disabled" : "") + ">" + (pre || "") + esc(label) + "</button>";
 }
 function memberChips(field) {
   const other = field === "t0" ? Setup.t1 : Setup.t0;
   const color = field === "t0" ? TEAM_COLORS[0] : TEAM_COLORS[1];
-  return MEMBERS.map(m => chipHtml(field, m.key, m.name, color, Setup.mode === "family" && m.key === other)).join("");
+  return Store.data.order.map(id => { const p = Store.data.profiles[id]; return chipHtml(field, id, p.name, color, Setup.mode === "family" && id === other, avHtml(p.avatar)); }).join("") +
+    '<button class="chip plain add-prof" data-act="prof-new" data-field="' + field + '">➕ 새 프로필</button>';
 }
 Screens.setup = sec => {
   const fam = Setup.mode === "family", net = Setup.mode === "net";
@@ -1455,7 +1528,7 @@ function takenBy(id) {
   const ti = Setup.ti;
   const other = Setup.mode === "rocket" ? Setup.rocket.slice(0, Setup.pieces) : Setup.picks[1 - ti];
   if (other.indexOf(id) < 0 && !sameFamily(other, id)) return null;
-  return Setup.mode === "rocket" ? ROCKET_TEAM : Setup.mode === "net" ? { name: Setup.net.names[1 - ti] } : memberOf(teamKey(1 - ti));
+  return Setup.mode === "rocket" ? ROCKET_TEAM : Setup.mode === "net" ? { name: Setup.net.names[1 - ti], avatar: (Setup.net.avatars || [])[1 - ti] } : memberOf(teamKey(1 - ti));
 }
 function cardHtml(id) {
   const mine = Setup.picks[Setup.ti];
@@ -1464,12 +1537,13 @@ function cardHtml(id) {
   const dots = L.path.length > 1 || L.more
     ? '<span class="dots">' + L.path.map(p => '<i class="' + (p === id ? "me" : "") + '"></i>').join("") + (L.more ? "<i></i>" : "") + "</span>" : "";
   return '<button class="pcard r-' + rarityOf(id) + (mine.indexOf(id) >= 0 ? " on" : "") + (t ? " taken" : "") + (!t && mine.indexOf(id) < 0 && sameFamily(mine, id) ? " fam" : "") + '" data-act="pick" data-id="' + id + '"' + (t ? " disabled" : "") + ">" +
-    dots + (t ? '<span class="who">' + esc(emojiOf(t.name)) + "</span>" : "") +
+    dots + (t ? '<span class="who">' + (t.avatar ? avHtml(t.avatar) : esc(emojiOf(t.name))) + "</span>" : "") +
     '<span class="pic">' + spr(id, false, true) + '</span><span class="nm">' + esc(nameOf(id)) + "</span></button>";
 }
 Screens.pick = sec => {
   const ti = Setup.ti;
   const member = Setup.mode === "net" ? { name: Setup.net.names[ti] } : memberOf(teamKey(ti));
+  Store.use(pickPid(ti)); // 이 팀 프로필의 포켓몬에서 고른다
   sec.style.setProperty("--tc", TEAM_COLORS[ti]);
   const last = Setup.mode === "rocket" || Setup.mode === "net" || ti === 1;
   const caught = caughtOnly(); // 잡은 순서대로 (먼저 잡은 것부터)
@@ -1502,8 +1576,10 @@ function updatePick() {
     c.classList.toggle("fam", !on && !c.classList.contains("taken") && sameFamily(mine, id));
   });
 }
+// 고르는 팀의 프로필: 친구 대결은 이 패드의 내 프로필(Setup.t0), 아니면 그 팀
+const pickPid = ti => Setup.mode === "net" ? Setup.t0 : teamKey(ti);
 function validPicks(list, ti) {
-  const avail = ownedSet();
+  const avail = ownedSet(pickPid(ti));
   const other = Setup.mode === "rocket" ? Setup.rocket.slice(0, Setup.pieces) : Setup.picks[1 - ti];
   const out = [];
   (list || []).forEach(id => { if (avail.has(id) && other.indexOf(id) < 0 && !sameFamily(other, id) && out.indexOf(id) < 0 && !sameFamily(out, id)) out.push(id); });
@@ -1514,7 +1590,7 @@ function autoPick() {
   const other = Setup.mode === "rocket" ? Setup.rocket.slice(0, Setup.pieces) : Setup.picks[1 - ti];
   const free = id => mine.indexOf(id) < 0 && other.indexOf(id) < 0 && !sameFamily(other, id) && !sameFamily(mine, id);
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const pool = shuffle(rosterIds().filter(free));
+  const pool = shuffle(rosterIds(pickPid(ti)).filter(free));
   while (mine.length < Setup.pieces && pool.length) { const id = pool.shift(); if (free(id)) mine.push(id); }
 }
 
@@ -1617,7 +1693,7 @@ function unitInner(state, order, team) {
     order.slice(1, 3).map((p, k) => '<span class="behind b' + (k + 1) + '">' + spr(Yut.formOf(state, p), true) + "</span>").reverse().join("") +
     '<span class="front">' + spr(Yut.formOf(state, order[0]), true) + "</span>" +
     (order.length > 1 ? '<span class="badge-n">×' + order.length + "</span>" : "") +
-    '<span class="badge-t">' + esc(emojiOf(team.name)) + "</span>";
+    (team.avatar ? '<span class="badge-t av-t">' + spr(team.avatar) + "</span>" : '<span class="badge-t">' + esc(emojiOf(team.name)) + "</span>");
 }
 function unitEl(state, ti, node, pieces) {
   const t = state.teams[ti];
@@ -1646,7 +1722,7 @@ function renderPanel() {
     const ps = G.s.pieces.map((p, i) => [p, i]).filter(x => x[0].team === ti);
     const done = ps.filter(x => x[0].state === "done").length;
     return '<div class="tcard' + (G.s.turn === ti && G.s.phase !== "over" ? " active" : "") + '" style="--tc:' + t.color + '">' +
-      '<div class="tn"><i></i>' + esc(t.name) + teamFxHtml(ti) + "<em>골인 " + done + "/" + ps.length + "</em></div>" +
+      '<div class="tn"><i></i>' + (t.avatar ? avHtml(t.avatar, "tn-av") : "") + esc(t.name) + teamFxHtml(ti) + "<em>골인 " + done + "/" + ps.length + "</em></div>" +
       '<div class="pchips">' + ps.map(x => {
         const p = x[0], i = x[1], id = Yut.formOf(G.s, i);
         return '<button class="pchip ' + p.state + '" data-act="chip" data-piece="' + i + '" aria-label="' + esc(nameOf(id) + (p.skill ? " · " + skillName(p.skill) : "")) + '">' + spr(id) +
@@ -1714,7 +1790,7 @@ function renderSpots() {
 }
 function renderBagChip() {
   const n = $("#bag-n");
-  if (n) n.textContent = bagTotal();
+  if (n) n.textContent = bagTotal(gamePid());
 }
 function renderAll() {
   renderSpots();
@@ -1735,32 +1811,34 @@ function persist() {
     if (!s.recorded) {
       s.recorded = true;
       const w = s.teams[s.winner];
+      // 👤 기록·상자는 그 팀 프로필에 (로켓단 대결 = 사람 팀, 친구 대결 = 이 패드의 내 프로필, 가족 대결 = 두 팀 다)
+      const rp = s.settings.mode === "net" ? (G.net && G.net.pid) : s.settings.mode === "rocket" ? (s.teams.find(t => !t.cpu) || {}).key : null;
+      if (rp) Store.use(rp);
       const st = Store.data.stats;
-      st.games = (st.games || 0) + 1;
+      if (s.settings.mode !== "family") st.games = (st.games || 0) + 1;
       if (s.settings.mode === "rocket") { if (w.cpu) st.rocket.lose++; else st.rocket.win++; }
       else if (s.settings.mode === "net" && G.net) {
         const mine = s.winner === G.net.me;
-        st.net = st.net || { win: 0, lose: 0 };
         if (mine) st.net.win++; else st.net.lose++;
         const balls = mine ? Yut.Rewards.rollBox(Yut.Rewards.BOX_SIZE, Math.random) : ["poke"];
         balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
-        s.reward = { balls, opened: false, lose: !mine };
+        s.reward = { balls, opened: false, lose: !mine, to: rp };
         st.boxes = (st.boxes || 0) + 1;
         Store.data.net = null; // 끝난 친구 대결은 이어하기에서 빼기
       }
-      else st.family[w.key] = (st.family[w.key] || 0) + 1;
+      else s.teams.forEach((t, ti) => { const p = Store.data.profiles[t.key]; if (!p) return; p.stats.games++; if (ti === s.winner) p.stats.family.win++; else p.stats.family.lose++; });
       if (s.settings.mode === "rocket" && !w.cpu) {
         const forced = (Q.get("box") || "").split(",").filter(b => Yut.Rewards.BALL_INFO[b]); // 테스트용 ?box=master,poke,great
         const hard = s.settings.cpuLevel === "hard"; // 💀 어려움: 볼 4개 + 좋은 볼이 더 잘
         const balls = forced.length ? forced : Yut.Rewards.rollBox(hard ? Yut.Rewards.BOX_SIZE_HARD : Yut.Rewards.BOX_SIZE, Math.random, hard ? Yut.Rewards.BOX_ODDS_HARD : null);
         balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
-        s.reward = { balls, opened: false, hard };
+        s.reward = { balls, opened: false, hard, to: rp };
         st.boxes = (st.boxes || 0) + 1;
       } else if (s.settings.mode === "rocket" && w.cpu) {
         // 로켓단이 이겨도 위로 상자: 몬스터볼 1개 (+ 돈 문제로 하나 더) — 져도 속상하지 않게 (사용자 요청 2026-09-26)
         const balls = ["poke"];
         balls.forEach(b => { Store.data.bag[b] = (Store.data.bag[b] || 0) + 1; });
-        s.reward = { balls, opened: false, lose: true };
+        s.reward = { balls, opened: false, lose: true, to: rp };
         st.boxes = (st.boxes || 0) + 1;
       }
     }
@@ -2382,7 +2460,11 @@ function battle(e, prev) {
 
 /* ---------- ❓ 풀숲: 야생 포켓몬 — 가방의 볼로 잡는다 (v2) ---------- */
 const FORCE_CATCH = Q.get("catch"); // 테스트용: ?catch=1 늘 성공 / ?catch=0 늘 실패
+// 👤 판의 팀 → 이 패드의 프로필 (친구 대결: 내 팀만 · 로켓단: 없음)
+const teamPid = ti => { const t = G.s.teams[ti]; if (!t || t.cpu) return null; if (netOn()) return ti === G.net.me ? G.net.pid : null; return Store.data.profiles[t.key] ? t.key : null; };
+const gamePid = () => { if (!G.s) return Store.data.settings.t0; if (netOn()) return G.net.pid; const h = teamPid(G.s.turn) || G.s.teams.map((t, i) => teamPid(i)).find(Boolean); return h || Store.data.settings.t0; };
 async function animWild(e) {
+  if (teamPid(e.team)) Store.use(teamPid(e.team)); // 잡은 포켓몬·볼·시계 기록은 그 팀 프로필에
   const spotEl = $('#spots .spot[data-node="' + e.node + '"]');
   if (spotEl) spotEl.classList.add("shake");
   if (netOn() && e.team !== G.net.me) { // 🏠 친구 팀의 조우는 친구 패드에서
@@ -2691,12 +2773,19 @@ async function openBox() {
   if (btns) btns.classList.remove("hidden");
 }
 /* ---------- 🎒 가방 — 볼 5종 + 윷놀이 보관함 ---------- */
-function openBag() {
+// 👤 가방·전적 창 위의 프로필 고르기
+function profTabs(act, pid) {
+  return '<div class="prof-tabs">' + Store.data.order.map(id => { const p = Store.data.profiles[id];
+    return '<button class="chip prof-chip' + (id === pid ? " on" : "") + '" data-act="' + act + '" data-id="' + esc(id) + '">' + avHtml(p.avatar) + esc(p.name) + "</button>"; }).join("") + "</div>";
+}
+function openBag(pid) {
   const R = Yut.Rewards, inGame = current === "game";
   if (inGame) { G.paused = true; clearTimeout(G.cpuTimer); }
+  Store.use(typeof pid === "string" ? pid : inGame ? gamePid() : Store.data.settings.t0);
+  pid = Store.cur;
   const col = Store.data.collection.slice(); // 잡은 순서대로
   showModal(
-    "<h2>🎒 가방</h2>" +
+    "<h2>🎒 " + esc(Store.prof().name) + "의 가방</h2>" + (inGame && netOn() ? "" : profTabs("bag-prof", pid)) +
     '<div class="bag-list">' + R.BALLS.map(b => '<div class="' + ((Store.data.bag[b] || 0) ? "" : "zero") + '"><img src="assets/items/' + R.BALL_INFO[b].img + '.png" alt=""><span>' + R.BALL_INFO[b].name +
       "</span><b>×" + (Store.data.bag[b] || 0) + "</b><em>" + (b === "master" ? "100%" : Math.round(R.catchRate(b, "l") * 100) + "~" + Math.round(R.catchRate(b, "c") * 100) + "%") + "</em></div>").join("") + "</div>" +
     '<p class="catch-note">잡을 확률 (몬스터볼): <b>일반 80 · 레어 70 · 유니크 60 · 전설 40%</b><br>좋은 볼일수록 +5% · 놓칠 때마다 +10% · 마스터볼은 100%</p>' +
@@ -2744,7 +2833,7 @@ function startGame(teams, opts) {
   if (opts.mode === "net") s.settings.timer = opts.timer == null ? 20 : Number(opts.timer) || 0; // ⏱ 친구 대결 차례 타이머 (0 = 없음)
   s.settings.study = opts.study !== false; // 🎓 공부 문제 (화면 쪽 설정)
   G.s = s;
-  G.net = opts.net ? { code: opts.net.code, me: opts.net.me, seq: 0, queue: [], running: false, remoteBusy: false, note: null } : null;
+  G.net = opts.net ? { code: opts.net.code, me: opts.net.me, seq: 0, queue: [], running: false, remoteBusy: false, note: null, pid: opts.net.pid || Setup.t0 } : null;
   persist();
   netSend([], false); // 친구 대결: 판을 서버에 올린다 → 방 만든 집 패드도 윷판으로
   showScreen("game");
@@ -2756,8 +2845,8 @@ function coinFirst() {
 }
 function startFromSetup() {
   const fam = Setup.mode === "family";
-  const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
-  if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
+  const teams = [{ key: Setup.t0, name: memberOf(Setup.t0).name, avatar: memberOf(Setup.t0).avatar, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() }];
+  if (fam) teams.push({ key: Setup.t1, name: memberOf(Setup.t1).name, avatar: memberOf(Setup.t1).avatar, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() });
   else teams.push({ key: "rocket", name: ROCKET_TEAM.name, color: ROCKET_TEAM.color, cpu: true, picks: Setup.rocket.slice(0, Setup.pieces) });
   Store.data.settings = { pieces: Setup.pieces, backdo: Setup.backdo, cpu: Setup.cpu, t0: Setup.t0, t1: Setup.t1, battle: Setup.battle, skills: Setup.skills, study: Setup.study };
   Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice();
@@ -2768,7 +2857,9 @@ function startFromSetup() {
 function rematch() {
   const last = G.s && G.s.phase === "over" ? G.s : Store.data.lastGame;
   if (!last) { showScreen("home"); return; }
-  const teams = last.teams.map(t => ({ key: t.key, name: t.name, color: t.color, cpu: t.cpu, picks: t.cpu ? rocketRoster(last.settings.pieces, rosterIds()) : t.picks.slice() })); // 로켓단은 판마다 새로
+  const human = last.teams.find(t => !t.cpu);
+  const teams = last.teams.map(t => { const m = t.cpu ? null : (Store.data.profiles[t.key] ? memberOf(t.key) : null);
+    return { key: t.key, name: m ? m.name : t.name, avatar: m ? m.avatar : t.avatar, color: t.color, cpu: t.cpu, picks: t.cpu ? rocketRoster(last.settings.pieces, rosterIds(human && human.key)) : t.picks.slice() }; }); // 로켓단은 판마다 새로
   startGame(teams, { pieces: last.settings.pieces, backdo: last.settings.backdo, mode: last.settings.mode, cpuLevel: last.settings.cpuLevel, battle: last.settings.battle !== false,
     skills: last.settings.skills !== false, study: last.settings.study !== false, first: coinFirst() }); // 🪙 한 판 더도 동전 던지기로
 }
@@ -3511,7 +3602,7 @@ async function clockQuizOnce(step) {
 function rollSpot(e, boosted) {
   const sp = (G.s.spots || []).find(x => x.node === e.node);
   if (sp && sp.id) { e.id = sp.id; return e.id; }
-  const other = (G.s.spots || []).map(x => x.id).filter(Boolean), owned = ownedSet();
+  const other = (G.s.spots || []).map(x => x.id).filter(Boolean), owned = ownedSet(teamPid(e.team) || gamePid());
   let id, tries = 0;
   do { id = Yut.Rewards.rollWild(WILD_POOLS, owned, Math.random, boosted ? Yut.Rewards.WILD_ODDS_BOOST : null); } while (other.indexOf(id) >= 0 && ++tries < 10);
   if (sp) sp.id = id;
@@ -3555,6 +3646,7 @@ async function moneyBonus() {
   const rw = G.s && G.s.reward;
   if (!rw || !rw.opened || rw.bonus || G.moneyBusy) return;
   G.moneyBusy = true;
+  Store.use(rw.to); // 👤 상자를 받은 프로필의 공부 기록·가방
   let ball = null;
   for (let step = 1; step <= QUIZ_TRIES && !ball; step++) {
     if (await moneyQuizOnce(step)) ball = step === 1 ? Yut.Rewards.rollBox(1, Math.random, rw.hard ? Yut.Rewards.BOX_ODDS_HARD : null)[0] : "poke"; // 첫 문제에 맞히면 상자 확률(어려움이면 좋은 볼), 그다음은 몬스터볼
@@ -3585,7 +3677,7 @@ function coinToss() {
   if (!G.s) return Promise.resolve();
   return new Promise(res => {
     const T = G.s.teams, win = G.s.turn;
-    const lead = ti => { const i = G.s.pieces.findIndex(p => p.team === ti); return i >= 0 ? Yut.formOf(G.s, i) : 25; };
+    const lead = ti => { if (T[ti].avatar) return T[ti].avatar; const i = G.s.pieces.findIndex(p => p.team === ti); return i >= 0 ? Yut.formOf(G.s, i) : 25; }; // 👤 프로필 캐릭터 (없으면 첫 포켓몬)
     const face = f => '<img src="assets/ui/coin-' + f + '.png" alt="" draggable="false">';
     // 배틀 이름판 모양: 팀 색 띠 · 동전 면 · 팀 이름 · 그 팀 첫 포켓몬
     const plate = ti => '<div class="ct-plate p' + ti + '" style="--tc:' + T[ti].color + '"><span class="ct-mon">' + spr(lead(ti), true) + "</span>" +
@@ -3863,12 +3955,13 @@ const Net = {
 const netOn = () => !!(G.net && G.s && G.s.settings.mode === "net");
 
 /* ================================================================
-   💾 저장 코드 — 내 기록을 서버에 (사용자 확정 2026-09-29)
-   코드 숫자 6자리 · 한 번 켜면 저절로 저장 · 새 패드에서 코드로 불러오기(이 패드 기록은 바뀜, 글자 입력 확인)
-   패드 두 대: 잡은 포켓몬은 합치고, 볼·전적·공부 기록·설정은 나중에 저장된 쪽
-   서버 yutsaves/{코드} = { v, updated, dataJ } — dataJ 는 JSON 글자 (Firebase 가 빈 배열을 지워서). 하고 있던 판은 안 올린다
+   👤 프로필 + 💾 저장 코드 (사용자 확정 2026-10-02)
+   사람마다 이름 · 캐릭터(내 포켓몬 중 하나) · 잡은 포켓몬 · 볼 · 전적 · 공부 기록을 따로, 저장 코드도 프로필마다 하나 (숫자 6자리)
+   한 번 켜면 저절로 저장 · 다른 패드에서 코드로 불러오면 그 프로필이 생긴다(같은 프로필이 있으면 "불러오기"를 써서 바꾸기)
+   같은 프로필을 패드 두 대에서: 잡은 포켓몬은 합치고, 볼·전적·공부 기록은 나중에 저장된 쪽
+   서버 yutsaves/{코드} = { v: 2, updated, dataJ } — dataJ 는 프로필 JSON 글자 (Firebase 가 빈 배열을 지워서). 하고 있던 판은 안 올린다
 ================================================================ */
-const SAVE_KEYS = ["collection", "bag", "stats", "seenSkills", "study", "settings", "lastPicks"];
+const PROF_KEYS = ["name", "avatar", "collection", "bag", "stats", "study"];
 const Cloud = {
   timer: null, busy: false, again: false, pulled: 0,
   url(code) { return NET_DB + "/yutsaves/" + code + ".json"; },
@@ -3880,102 +3973,183 @@ const Cloud = {
   },
   get(code) { return this.req(code); },
   put(code, body) { return this.req(code, { method: "PUT", body: JSON.stringify(body), keepalive: true }); },
-  pick(d) { const o = {}; SAVE_KEYS.forEach(k => { o[k] = d[k]; }); return o; },
-  parse(room) { try { const x = JSON.parse(room.dataJ); return x && typeof x === "object" ? x : null; } catch (e) { return null; } },
+  pick(p) { const o = { id: p.id }; PROF_KEYS.forEach(k => { o[k] = p[k]; }); return o; },
+  parse(room) { try { const x = JSON.parse(room.dataJ); return x && typeof x === "object" && x.id && x.name ? x : null; } catch (e) { return null; } },
 };
 const hashStr = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h; };
+const profHash = p => hashStr(JSON.stringify(Cloud.pick(p)));
 // 잡은 포켓몬은 합친다 — 같은 포켓몬은 먼저 잡은 때로, 잡은 순서대로
 function mergeCollection(a, b) {
   const by = {};
   [].concat(a || [], b || []).forEach(x => { if (!x || !(x.id >= 1 && x.id <= 1025)) return; if (!by[x.id] || (x.t || 0) < (by[x.id].t || 0)) by[x.id] = x; });
   return Object.values(by).sort((p, q) => (p.t || 0) - (q.t || 0));
 }
-// 받은 기록을 이 패드에: replace = 불러오기(이 패드 것은 버림) · 아니면 잡은 포켓몬만 합치고 나머지는 받은 것
+// 받은 프로필을 이 패드에: replace = 이 패드 것을 버리고 · 아니면 잡은 포켓몬만 합치고 나머지는 받은 것
 function applyCloud(x, replace, code, at) {
-  const d = Store.data;
-  SAVE_KEYS.forEach(k => { if (k !== "collection" && x[k] !== undefined) d[k] = x[k]; });
-  d.collection = replace ? mergeCollection(x.collection) : mergeCollection(d.collection, x.collection);
-  d.cloud = { code, at, sent: hashStr(JSON.stringify(Cloud.pick(x))) };
+  const P = Store.data.profiles, old = P[x.id];
+  const o = normProfile(Object.assign({}, x, { collection: replace || !old ? x.collection : mergeCollection(old.collection, x.collection) }), x.id);
+  o.cloud = { code, at, sent: hashStr(JSON.stringify(Cloud.pick(normProfile(x, x.id)))) };
+  P[x.id] = o;
+  if (Store.data.order.indexOf(x.id) < 0) Store.data.order.push(x.id);
   Store.save();
-  Store.load(); // 망가진 값 정리 (볼 개수·포켓몬 번호)
+  return o;
 }
+const cloudProfs = () => Store.data && Store.data.profiles ? Object.values(Store.data.profiles).filter(p => p.cloud && p.cloud.code) : [];
 function cloudSchedule(now) {
-  const c = Store.data && Store.data.cloud;
-  if (!c || !c.code) return;
-  if (hashStr(JSON.stringify(Cloud.pick(Store.data))) === c.sent) return; // 바뀐 게 없음
+  if (!cloudProfs().some(p => profHash(p) !== p.cloud.sent)) return; // 바뀐 게 없음
   clearTimeout(Cloud.timer);
   Cloud.timer = setTimeout(cloudPush, now ? 0 : 4000);
 }
-async function cloudPush() {
-  Cloud.timer = null;
-  const c = Store.data.cloud;
-  if (!c || !c.code) return;
-  if (Cloud.busy) { Cloud.again = true; return; }
-  Cloud.busy = true;
+async function pushOne(p) {
+  const c = p.cloud;
   try {
     const room = await Cloud.get(c.code);
     if (room && (room.updated || 0) > (c.at || 0)) { // 그사이 다른 패드가 저장했으면 잡은 포켓몬은 합친다
       const x = Cloud.parse(room);
-      if (x) Store.data.collection = mergeCollection(Store.data.collection, x.collection);
+      if (x) p.collection = mergeCollection(p.collection, x.collection);
     }
-    const j = JSON.stringify(Cloud.pick(Store.data)), at = Date.now();
-    await Cloud.put(c.code, { v: 1, updated: at, dataJ: j });
-    Object.assign(Store.data.cloud, { at, sent: hashStr(j), err: null });
-    Store.save();
+    const j = JSON.stringify(Cloud.pick(p)), at = Date.now();
+    await Cloud.put(c.code, { v: 2, updated: at, dataJ: j });
+    Object.assign(c, { at, sent: hashStr(j), err: null });
   } catch (e) {
-    Store.data.cloud.err = e.message === "denied" ? "denied" : "net";
+    c.err = e.message === "denied" ? "denied" : "net";
     if (e.message !== "denied") setTimeout(() => cloudSchedule(true), 30000); // 인터넷이 돌아오면 다시
   }
+}
+async function cloudPush() {
+  Cloud.timer = null;
+  if (Cloud.busy) { Cloud.again = true; return; }
+  Cloud.busy = true;
+  for (const p of cloudProfs()) if (profHash(p) !== p.cloud.sent) await pushOne(p);
+  Store.save();
   Cloud.busy = false;
   if (Cloud.again) { Cloud.again = false; cloudSchedule(true); }
   renderSaveInfo();
 }
 async function cloudPull() {
-  const c = Store.data.cloud;
-  if (!c || !c.code || Cloud.busy || Date.now() - Cloud.pulled < 15000) return;
+  if (Cloud.busy || Date.now() - Cloud.pulled < 15000) return;
+  const list = cloudProfs();
+  if (!list.length) return;
   Cloud.pulled = Date.now();
-  try {
-    const room = await Cloud.get(c.code);
-    if (!room || (room.updated || 0) <= (c.at || 0)) return;
-    const x = Cloud.parse(room);
-    if (!x) return;
-    const mine = Store.data.collection.length;
-    applyCloud(x, false, c.code, room.updated);
-    if (Store.data.collection.length > mine) toast("💾 다른 패드에서 잡은 포켓몬도 가져왔어요!", 2200);
-  } catch (e) { /* 다음에 */ }
+  let changed = false;
+  for (const p of list) {
+    try {
+      const room = await Cloud.get(p.cloud.code);
+      if (!room || (room.updated || 0) <= (p.cloud.at || 0)) continue;
+      const x = Cloud.parse(room);
+      if (!x || x.id !== p.id) continue;
+      const mine = p.collection.length;
+      const o = applyCloud(x, false, p.cloud.code, room.updated);
+      changed = true;
+      if (o.collection.length > mine) toast("💾 " + o.name + ": 다른 패드에서 잡은 포켓몬도 가져왔어요!", 2200);
+    } catch (e) { /* 다음에 */ }
+  }
+  if (changed && current === "profiles" && !$("#overlay").classList.contains("show")) showScreen("profiles"); // 창이 열려 있으면 그대로
 }
 window.addEventListener("online", () => cloudSchedule(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && Cloud.timer) { clearTimeout(Cloud.timer); cloudPush(); } });
 const agoText = t => { if (!t) return "아직"; const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? "방금" : m < 60 ? m + "분 전" : m < 1440 ? Math.floor(m / 60) + "시간 전" : Math.floor(m / 1440) + "일 전"; };
 const codeBoxes = (code, id) => '<div class="net-code save-code"' + (id ? ' id="' + id + '"' : "") + ">" + [0, 1, 2, 3, 4, 5].map(k => "<b>" + esc((code || "")[k] || "") + "</b>").join("") + "</div>";
 const bagCount = b => Yut.Rewards.BALLS.reduce((t, k) => t + ((b || {})[k] || 0), 0);
-const gamesOf = st => (st && st.games) || 0;
+const profLine = p => "📕 포켓몬 " + (p.collection || []).length + "마리 · 🎒 볼 " + bagCount(p.bag) + "개 · 🏆 " + ((p.stats || {}).games || 0) + "판";
+const DENIED = "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 yutsaves 를 넣어 주세요";
 function renderSaveInfo() {
-  const box = $("#save-info"), c = Store.data.cloud;
-  if (!box || !c) return;
-  box.innerHTML = c.err === "denied" ? "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 <b>yutsaves</b> 를 넣어 주세요"
+  const box = $("#save-info");
+  if (!box) return;
+  const p = Store.data.profiles[box.dataset.id], c = p && p.cloud;
+  if (!c) return;
+  box.innerHTML = c.err === "denied" ? esc(DENIED)
     : c.err === "net" ? "📶 인터넷이 끊겨서 아직 못 올렸어요. 연결되면 저절로 저장해요"
     : Cloud.busy || Cloud.timer ? "💾 저장하는 중…" : "✅ 마지막 저장: " + agoText(c.at);
 }
-function openSave(fresh) {
-  const c = Store.data.cloud, d = Store.data;
-  if (c && c.code) {
-    showModal("<h2>💾 저장 켜짐</h2><p>잡은 포켓몬 · 볼 · 전적 · 공부 기록이 <b>저절로</b> 저장돼요. 다른 패드에서 이 코드를 누르면 그대로!</p>" +
-      codeBoxes(c.code) +
+
+/* ---------- 👤 프로필 화면 ---------- */
+Screens.profiles = sec => {
+  const D2 = Store.data;
+  sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>👤 프로필</h2><span class="side"></span></header>' +
+    '<div class="scroll"><div class="card">' +
+      '<p class="note">사람마다 <b>이름</b>과 <b>캐릭터 포켓몬</b>을 정해요. 잡은 포켓몬 · 볼 · 전적은 사람마다 따로 모여요. 💾 저장 코드를 만들면 다른 패드에서도 그대로!</p>' +
+      '<div class="prof-list">' + D2.order.map(id => {
+        const p = D2.profiles[id];
+        return '<div class="prof-card" data-id="' + esc(id) + '"><span class="pc-av">' + spr(p.avatar) + '</span><div class="pc-body"><b>' + esc(p.name) + "</b><small>" + esc(profLine(p)) + "</small>" +
+          (p.cloud ? '<em class="pc-code">💾 ' + esc(p.cloud.code) + "</em>" : "") + '</div><div class="pc-btns">' +
+          '<button class="btn" data-act="prof-edit" data-id="' + esc(id) + '">✏️ 꾸미기</button>' +
+          '<button class="btn' + (p.cloud ? " green" : "") + '" data-act="prof-save" data-id="' + esc(id) + '">💾 ' + (p.cloud ? "저장 ✓" : "저장") + "</button>" +
+          '<button class="btn" data-act="prof-del" data-id="' + esc(id) + '" aria-label="지우기">🗑️</button></div></div>';
+      }).join("") + "</div>" +
+      '<div class="btns save-btns"><button class="btn big green" data-act="prof-new">➕ 새 프로필</button><button class="btn big" data-act="save-load">📥 코드로 불러오기</button></div>' +
+    "</div></div>";
+  cloudPull();
+};
+// ✏️ 꾸미기 / ➕ 새 프로필 — 이름 + 캐릭터 (그 사람의 포켓몬 중에서: 스타팅 27 + 잡은 포켓몬)
+function openProfEdit(id, field) {
+  const p = id ? Store.data.profiles[id] : null;
+  G.profEdit = { id: id || null, av: p ? p.avatar : STARTERS[Math.floor(Math.random() * STARTERS.length)], field: field || null };
+  const list = p ? rosterIds(id) : STARTERS.slice();
+  showModal("<h2>" + (p ? "✏️ " + esc(p.name) + " 꾸미기" : "➕ 새 프로필") + "</h2>" +
+    '<h3 class="pe-h">이름</h3><input id="prof-name" maxlength="8" placeholder="예: 하윤이" value="' + esc(p ? p.name : "") + '" autocomplete="off">' +
+    '<h3 class="pe-h">캐릭터 포켓몬 <small>' + (p ? "내 포켓몬 " + list.length + "마리 중에서" : "스타팅 포켓몬 중에서 — 잡으면 더 늘어나요") + "</small></h3>" +
+    '<div class="av-grid">' + list.map(x => '<button class="av-pick' + (x === G.profEdit.av ? " on" : "") + '" data-act="av-pick" data-id="' + x + '"><span class="pic">' + spr(x, false, true) + "</span><b>" + esc(nameOf(x)) + "</b></button>").join("") + "</div>" +
+    '<p class="net-err" id="prof-err"></p>' +
+    '<div class="btns save-btns"><button class="btn big green" data-act="prof-ok">좋아요!</button><button class="btn" data-act="close-modal">취소</button></div>');
+  if (!p) setTimeout(() => { const i = $("#prof-name"); if (i) i.focus(); }, 60);
+}
+function profOk() {
+  const E = G.profEdit, err = $("#prof-err");
+  const name = (($("#prof-name") || {}).value || "").trim().slice(0, 8);
+  if (!name) { err.textContent = "이름을 써 주세요"; return; }
+  const D2 = Store.data;
+  let id = E.id;
+  if (id) Object.assign(D2.profiles[id], { name, avatar: E.av });
+  else {
+    id = "p" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+    D2.profiles[id] = blankProfile(id, name, E.av);
+    D2.order.push(id);
+  }
+  Store.save();
+  closeModal();
+  SFX.catchOk();
+  toast((E.id ? "✏️ " : "👤 ") + name + (E.id ? " 프로필을 바꿨어요" : " 프로필을 만들었어요!"), 1800);
+  if (E.field === "join") { Setup.t0 = id; showScreen("netjoin"); }
+  else if (E.field) { Setup[E.field] = id; showScreen("setup"); }
+  else showScreen(current === "profiles" ? "profiles" : current);
+}
+function profDel(id) {
+  const D2 = Store.data, p = D2.profiles[id];
+  if (!p) return;
+  if (D2.order.length <= 1) { toast("프로필이 하나는 있어야 해요", 1800); return; }
+  typedConfirm("지우기", esc(p.name) + "의 포켓몬 " + p.collection.length + "마리 · 볼 " + bagCount(p.bag) + "개 · 전적이 <b>이 패드에서 사라져요.</b>" +
+    (p.cloud ? "<br>💾 서버 기록은 남아서 코드 <b>" + esc(p.cloud.code) + "</b>로 다시 불러올 수 있어요." : ""), "지우기", () => {
+    delete D2.profiles[id];
+    D2.order = D2.order.filter(x => x !== id);
+    ["t0", "t1"].forEach(k => { if (D2.settings[k] === id) D2.settings[k] = D2.order.find(x => x !== D2.settings[k === "t0" ? "t1" : "t0"]) || D2.order[0]; if (Setup[k] === id) Setup[k] = D2.settings[k]; });
+    if (Store.cur === id) Store.cur = D2.settings.t0;
+    Store.save();
+    toast(p.name + " 프로필을 지웠어요", 1800);
+    showScreen("profiles");
+  });
+}
+// 💾 프로필 저장 코드 창
+function openSave(id, fresh) {
+  const p = Store.data.profiles[id];
+  if (!p) return;
+  if (p.cloud) {
+    showModal("<h2>💾 " + esc(p.name) + "의 저장 코드</h2><p>" + esc(p.name) + "의 잡은 포켓몬 · 볼 · 전적 · 공부 기록이 <b>저절로</b> 저장돼요. 다른 패드에서 이 코드를 누르면 그대로!</p>" +
+      codeBoxes(p.cloud.code) +
       (fresh ? '<p class="save-photo">📸 부모님께 이 코드를 <b>사진 찍어</b> 달라고 해요!</p>' : "") +
-      '<p class="save-info" id="save-info"></p>' +
-      '<p class="pi-note">📕 포켓몬 ' + d.collection.length + "마리 · 🎒 볼 " + bagCount(d.bag) + "개 · 🏆 " + gamesOf(d.stats) + "판</p>" +
-      '<div class="btns save-btns"><button class="btn big green" data-act="save-now">💾 지금 저장</button><button class="btn" data-act="save-load">📥 다른 코드 불러오기</button>' +
-      '<button class="btn" data-act="save-off">저장 끄기</button><button class="btn" data-act="close-modal">닫기</button></div>');
+      '<p class="save-info" id="save-info" data-id="' + esc(id) + '"></p>' +
+      '<p class="pi-note">' + esc(profLine(p)) + "</p>" +
+      '<div class="btns save-btns"><button class="btn big green" data-act="save-now" data-id="' + esc(id) + '">💾 지금 저장</button>' +
+      '<button class="btn" data-act="save-off" data-id="' + esc(id) + '">저장 끄기</button><button class="btn" data-act="close-modal">닫기</button></div>');
     renderSaveInfo();
     return;
   }
-  showModal("<h2>💾 내 기록 저장</h2><p>코드를 만들면 <b>잡은 포켓몬 · 볼 · 전적 · 공부 기록</b>이 서버에 저절로 저장돼요.<br>패드를 바꾸거나 기록이 지워져도 코드만 누르면 그대로 돌아와요!</p>" +
+  showModal("<h2>💾 " + esc(p.name) + " 저장하기</h2><p>코드를 만들면 <b>" + esc(p.name) + "의 잡은 포켓몬 · 볼 · 전적 · 공부 기록</b>이 서버에 저절로 저장돼요.<br>패드를 바꾸거나 기록이 지워져도 코드만 누르면 그대로 돌아와요!</p>" +
     '<p class="net-err" id="save-err"></p>' +
-    '<div class="btns save-btns"><button class="btn big green" data-act="save-on" id="save-on">💾 저장 켜기 (코드 만들기)</button><button class="btn" data-act="save-load">📥 코드로 불러오기</button><button class="btn" data-act="close-modal">닫기</button></div>');
+    '<div class="btns save-btns"><button class="btn big green" data-act="save-on" data-id="' + esc(id) + '" id="save-on">💾 저장 켜기 (코드 만들기)</button><button class="btn" data-act="close-modal">닫기</button></div>');
 }
-async function saveOn() {
-  const btn = $("#save-on"), err = $("#save-err");
+async function saveOn(id) {
+  const btn = $("#save-on"), err = $("#save-err"), p = Store.data.profiles[id];
   if (btn) btn.disabled = true;
   try {
     let code = null;
@@ -3984,22 +4158,21 @@ async function saveOn() {
       if (!(await Cloud.get(c))) code = c;
     }
     if (!code) throw new Error("no code");
-    Store.data.cloud = { code, at: 0, sent: null };
-    Cloud.busy = false;
-    await cloudPush();
-    if (Store.data.cloud.err === "denied") throw new Error("denied");
+    p.cloud = { code, at: 0, sent: null };
+    await pushOne(p);
+    if (p.cloud.err === "denied") throw new Error("denied");
+    Store.save();
     SFX.catchOk();
-    const sb = $("#save-btn");
-    if (sb) sb.textContent = "💾 저장 ✓";
     TTS.say("저장을 켰어요! 부모님께 코드를 사진 찍어 달라고 해요");
-    openSave(true);
+    if (current === "profiles") showScreen("profiles");
+    openSave(id, true);
   } catch (e) {
-    if (Store.data.cloud && !Store.data.cloud.at) { Store.data.cloud = null; Store.save(); }
-    if (err) err.textContent = e.message === "denied" ? "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 yutsaves 를 넣어 주세요" : "📶 인터넷을 확인하고 다시 눌러 주세요";
+    if (p.cloud && !p.cloud.at) { p.cloud = null; Store.save(); }
+    if (err) err.textContent = e.message === "denied" ? DENIED : "📶 인터넷을 확인하고 다시 눌러 주세요";
     if (btn) btn.disabled = false;
   }
 }
-// 📥 코드로 불러오기 — 숫자판 6자리
+// 📥 코드로 불러오기 — 숫자판 6자리 → 그 프로필이 이 패드에 생긴다
 function openSaveLoad() {
   Setup.saveIn = "";
   showModal("<h2>📥 코드로 불러오기</h2><p>저장할 때 받은 코드 6자리를 눌러요</p>" + codeBoxes("", "save-in") +
@@ -4021,23 +4194,25 @@ async function saveFetch() {
     const room = await Cloud.get(code);
     const x = room && Cloud.parse(room);
     if (!x) { err.textContent = "그런 저장이 없어요. 코드를 다시 확인해 주세요"; btn.disabled = false; return; }
-    const d = Store.data;
+    const done = replaced => {
+      const o = applyCloud(x, true, code, room.updated || Date.now());
+      SFX.catchOk();
+      toast("📥 " + o.name + " 프로필을 " + (replaced ? "바꿨어요" : "불러왔어요") + "! 포켓몬 " + o.collection.length + "마리", 2400);
+      showScreen("profiles");
+    };
+    const old = Store.data.profiles[x.id];
+    if (!old) { closeModal(); done(false); return; }
     typedConfirm("불러오기",
-      "저장된 기록: 📕 포켓몬 " + ((x.collection || []).length) + "마리 · 🎒 볼 " + bagCount(x.bag) + "개 · 🏆 " + gamesOf(x.stats) + "판<br>" +
-      "지금 이 패드의 기록(포켓몬 " + d.collection.length + "마리 · 볼 " + bagCount(d.bag) + "개)은 <b>사라지고</b> 저장된 기록으로 바뀌어요.",
-      "불러오기", () => {
-        applyCloud(x, true, code, room.updated || Date.now());
-        SFX.catchOk();
-        toast("📥 불러왔어요! 포켓몬 " + Store.data.collection.length + "마리", 2400);
-        showScreen("home");
-      });
+      "저장된 " + esc(x.name) + ": 📕 포켓몬 " + ((x.collection || []).length) + "마리 · 🎒 볼 " + bagCount(x.bag) + "개<br>" +
+      "이 패드의 " + esc(old.name) + " 기록(포켓몬 " + old.collection.length + "마리 · 볼 " + bagCount(old.bag) + "개)은 <b>사라지고</b> 저장된 기록으로 바뀌어요.",
+      "불러오기", () => done(true));
   } catch (e) {
-    err.textContent = e.message === "denied" ? "⚠️ 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 yutsaves 를 넣어 주세요" : "📶 인터넷을 확인하고 다시 눌러 주세요";
+    err.textContent = e.message === "denied" ? DENIED : "📶 인터넷을 확인하고 다시 눌러 주세요";
     btn.disabled = false;
   }
 }
 const netParse = j => { try { return typeof j === "string" ? JSON.parse(j) : null; } catch (e) { return null; } };
-function netSave() { if (G.net) { Store.data.net = G.s && G.s.phase === "over" ? null : { code: G.net.code, me: G.net.me, seq: G.net.seq }; Store.save(); } } // 끝난 판은 이어하기에서 빼기
+function netSave() { if (G.net) { Store.data.net = G.s && G.s.phase === "over" ? null : { code: G.net.code, me: G.net.me, seq: G.net.seq, pid: G.net.pid }; Store.save(); } } // 끝난 판은 이어하기에서 빼기
 // 내 동작을 올린다 — busy: 아직 연출·조우·선물 고르기 중 (상대는 기다린다)
 let netChain = Promise.resolve();
 function netSend(events, busy) {
@@ -4218,13 +4393,13 @@ async function netCreate() {
       if (!old || Date.now() - (old.created || 0) > ROOM_TTL || old.status === "over") code = c;
     }
     if (!code) throw new Error("no code");
-    const host = memberOf(Setup.t0).name;
-    await Net.put(code, { v: 1, created: Date.now(), updated: Date.now(), host: { name: host }, guest: null, status: "wait", seq: 0,
+    const host = memberOf(Setup.t0).name, hostAv = memberOf(Setup.t0).avatar;
+    await Net.put(code, { v: 1, created: Date.now(), updated: Date.now(), host: { name: host, avatar: hostAv }, guest: null, status: "wait", seq: 0,
       settings: { pieces: Setup.pieces, backdo: Setup.backdo, skills: Setup.skills, battle: Setup.battle, timer: Setup.timer } });
     Store.data.settings = Object.assign(Store.data.settings, { pieces: Setup.pieces, backdo: Setup.backdo, t0: Setup.t0, battle: Setup.battle, skills: Setup.skills, study: Setup.study });
-    Store.data.net = { code, me: 0, seq: 0 };
+    Store.data.net = { code, me: 0, seq: 0, pid: Setup.t0 };
     Store.save();
-    Setup.net = { code, me: 0, names: [host, ""] };
+    Setup.net = { code, me: 0, names: [host, ""], avatars: [hostAv, null] };
     showScreen("netwait");
   } catch (e) {
     console.error(e);
@@ -4247,12 +4422,13 @@ Screens.netwait = sec => {
     if (!room || current !== "netwait") return;
     if (host && stage === "join" && room.guest && room.guest.name) {
       N.names[1] = room.guest.name;
+      N.avatars = [N.avatars ? N.avatars[0] : null, room.guest.avatar || null];
       SFX.again(); toast("🏠 " + room.guest.name + "가 들어왔어요!", 2000);
       Setup.ti = 0; Setup.picks = [validPicks(Store.data.lastPicks[Setup.t0], 0), []];
       showScreen("pick");
     } else if (!host && stage === "host-pick" && room.status === "pick-guest") {
       Setup.picks = [room.picks && room.picks[0] || [], []];
-      Setup.ti = 1; Setup.picks[1] = validPicks(Store.data.lastPicks.guest, 1);
+      Setup.ti = 1; Setup.picks[1] = validPicks(Store.data.lastPicks[Setup.t0], 1);
       showScreen("pick");
     } else if (room.status === "play" && room.stateJ) {
       netEnterGame(room);
@@ -4261,7 +4437,7 @@ Screens.netwait = sec => {
 };
 function netEnterGame(room) {
   const N = Setup.net;
-  G.net = { code: N.code, me: N.me, seq: room.seq || 0, queue: [], running: false, remoteBusy: false, note: null };
+  G.net = { code: N.code, me: N.me, seq: room.seq || 0, queue: [], running: false, remoteBusy: false, note: null, pid: Setup.t0 };
   G.s = fillV8(netParse(room.stateJ));
   G.s.intro = true; // 시작 연출은 각자 패드에서
   persist(); netSave();
@@ -4269,18 +4445,19 @@ function netEnterGame(room) {
 }
 // 🔢 코드로 들어가기 — 큰 숫자판 + 이름 쓰기
 Screens.netjoin = sec => {
-  const N = Setup.join || (Setup.join = { code: "", name: Store.data.netName || "" });
+  const N = Setup.join || (Setup.join = { code: "" });
+  if (!Store.data.profiles[Setup.t0]) Setup.t0 = Store.data.order[0];
   sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="new-net" aria-label="뒤로">←</button><h2>🔢 코드로 들어가기</h2><span class="side"></span></header>' +
     '<div class="scroll"><div class="card net-card">' +
       '<div class="net-code in" id="net-in">' + [0, 1, 2, 3].map(k => "<b>" + esc(N.code[k] || "") + "</b>").join("") + "</div>" +
       '<div class="keypad">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => '<button class="btn" data-act="net-key" data-k="' + d + '">' + d + "</button>").join("") +
         '<button class="btn" data-act="net-key" data-k="del">⌫</button><button class="btn" data-act="net-key" data-k="0">0</button><span></span></div>' +
-      '<h3>우리 팀 이름</h3><input id="net-name" maxlength="8" placeholder="예: 하윤이네" value="' + esc(N.name) + '" autocomplete="off">' +
+      '<h3>누가 할까요? 👤</h3><div class="chips" id="net-prof">' + Store.data.order.map(id => { const p = Store.data.profiles[id];
+        return '<button class="chip prof-chip' + (id === Setup.t0 ? " on" : "") + '" style="--c:' + TEAM_COLORS[1] + '" data-act="join-prof" data-id="' + esc(id) + '">' + avHtml(p.avatar) + esc(p.name) + "</button>"; }).join("") +
+        '<button class="chip plain add-prof" data-act="prof-new" data-field="join">➕ 새 프로필</button></div>' +
       '<p class="net-err" id="net-err"></p>' +
       '<button class="btn big green" data-act="net-go" id="net-go">🏠 들어가기</button>' +
     "</div></div>";
-  const inp = $("#net-name");
-  inp.addEventListener("input", () => { N.name = inp.value; });
 };
 function netKey(k) {
   const N = Setup.join;
@@ -4290,19 +4467,18 @@ function netKey(k) {
 }
 async function netJoin() {
   const N = Setup.join, err = $("#net-err");
-  const name = (($("#net-name") || {}).value || "").trim().slice(0, 8);
+  const me = memberOf(Setup.t0), name = me.name;
   if (N.code.length !== 4) { err.textContent = "코드 4자리를 눌러 주세요"; return; }
-  if (!name) { err.textContent = "우리 팀 이름을 써 주세요"; return; }
   $("#net-go").disabled = true;
   try {
     const room = await Net.get(N.code);
     const bad = !room ? "그런 방이 없어요. 코드를 다시 확인해 주세요" : Date.now() - (room.created || 0) > ROOM_TTL || room.status === "over" ? "끝났거나 오래된 방이에요" : room.guest ? "벌써 친구가 들어온 방이에요" : "";
     if (bad) { err.textContent = bad; $("#net-go").disabled = false; return; }
-    const gname = "🏠 " + name;
-    await Net.patch(N.code, { guest: { name: gname }, status: "pick-host", updated: Date.now() });
-    Store.data.netName = name; Store.data.net = { code: N.code, me: 1, seq: 0 }; Store.save();
+    const gname = name;
+    await Net.patch(N.code, { guest: { name: gname, avatar: me.avatar }, status: "pick-host", updated: Date.now() });
+    Store.data.net = { code: N.code, me: 1, seq: 0, pid: Setup.t0 }; Store.save();
     Object.assign(Setup, { mode: "net", pieces: room.settings.pieces, backdo: room.settings.backdo, skills: room.settings.skills !== false, battle: room.settings.battle !== false, timer: room.settings.timer == null ? 20 : room.settings.timer });
-    Setup.net = { code: N.code, me: 1, names: [room.host.name, gname], stage: "host-pick" };
+    Setup.net = { code: N.code, me: 1, names: [room.host.name, gname], avatars: [room.host.avatar || null, me.avatar], stage: "host-pick" };
     showScreen("netwait");
   } catch (e) {
     console.error(e);
@@ -4320,12 +4496,13 @@ async function netPickDone() {
       N.stage = "guest-pick";
       showScreen("netwait");
     } else {
-      Store.data.lastPicks.guest = Setup.picks[1].slice(); Store.save();
+      Store.data.lastPicks[Setup.t0] = Setup.picks[1].slice(); Store.save();
+      const av = N.avatars || [];
       const teams = [
-        { key: "net0", name: N.names[0], color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() },
-        { key: "net1", name: N.names[1], color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() }];
+        { key: "net0", name: N.names[0], avatar: av[0] || null, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() },
+        { key: "net1", name: N.names[1], avatar: av[1] || null, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() }];
       const first = coinFirst();
-      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, timer: Setup.timer, net: { code: N.code, me: 1 } });
+      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, timer: Setup.timer, net: { code: N.code, me: 1, pid: Setup.t0 } });
     }
   } catch (e) { console.error(e); toast("📶 올리지 못했어요. 인터넷을 확인하고 다시 눌러 주세요", 2600); }
 }
@@ -4394,12 +4571,12 @@ function openRules() {
     '<div class="btns"><button class="btn big green" data-act="close-modal">알겠어요!</button></div>'
   );
 }
-function openStats() {
+function openStats(pid) {
+  Store.use(typeof pid === "string" ? pid : Store.data.settings.t0);
   const st = Store.data.stats;
-  const fam = MEMBERS.filter(m => st.family[m.key]).map(m => "<div><span>" + esc(m.name) + "</span><span>" + st.family[m.key] + "승</span></div>").join("");
   showModal(
-    "<h2>🏆 전적</h2>" +
-    "<p>가족 대결</p>" + '<div class="stats-list">' + (fam || "<div><span>아직 기록이 없어요</span><span></span></div>") + "</div>" +
+    "<h2>🏆 " + esc(Store.prof().name) + "의 전적</h2>" + profTabs("stats-prof", Store.cur) +
+    "<p>가족 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.family.win + '번</span></div><div><span>😅 졌어요</span><span>' + st.family.lose + "번</span></div></div>" +
     "<p>로켓단 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + st.rocket.win + '번</span></div><div><span>😼 로켓단이 이겼어요</span><span>' + st.rocket.lose + "번</span></div></div>" +
     "<p>🏠 친구 대결</p>" + '<div class="stats-list"><div><span>😊 이겼어요</span><span>' + ((st.net || {}).win || 0) + '번</span></div><div><span>😅 친구네가 이겼어요</span><span>' + ((st.net || {}).lose || 0) + "번</span></div></div>" +
     "<p>모두 " + (st.games || 0) + "판</p>" +
@@ -4434,10 +4611,20 @@ const Act = {
   "open-box": openBox,
   "money-quiz": moneyBonus,
   "stats": openStats,
-  "save": () => openSave(false),
-  "save-on": saveOn,
-  "save-now": () => { Store.data.cloud.sent = null; cloudSchedule(true); setTimeout(renderSaveInfo, 50); SFX.tap(); },
-  "save-off": () => { Store.data.cloud = null; Store.save(); closeModal(); toast("저장을 껐어요. 서버 기록은 그대로라 코드로 다시 불러올 수 있어요", 2600); showScreen("home"); },
+  "profiles": () => showScreen("profiles"),
+  "prof-new": el => openProfEdit(null, el.dataset.field || null),
+  "prof-edit": el => openProfEdit(el.dataset.id),
+  "prof-del": el => profDel(el.dataset.id),
+  "prof-save": el => openSave(el.dataset.id, false),
+  "prof-ok": profOk,
+  "av-pick": el => { G.profEdit.av = Number(el.dataset.id); $$(".av-pick").forEach(b => b.classList.toggle("on", b === el)); SFX.tap(); },
+  "join-prof": el => { Setup.t0 = el.dataset.id; $$("#net-prof .prof-chip").forEach(b => b.classList.toggle("on", b === el)); SFX.tap(); },
+  "bag-prof": el => openBag(el.dataset.id),
+  "stats-prof": el => openStats(el.dataset.id),
+  "save": () => showScreen("profiles"),
+  "save-on": el => saveOn(el.dataset.id),
+  "save-now": el => { const p = Store.data.profiles[el.dataset.id]; if (p && p.cloud) { p.cloud.sent = null; cloudSchedule(true); } setTimeout(renderSaveInfo, 50); SFX.tap(); },
+  "save-off": el => { const p = Store.data.profiles[el.dataset.id]; if (p) p.cloud = null; Store.save(); closeModal(); toast("저장을 껐어요. 서버 기록은 그대로라 코드로 다시 불러올 수 있어요", 2600); showScreen("profiles"); },
   "save-load": openSaveLoad,
   "save-key": el => saveKey(el.dataset.k),
   "save-fetch": saveFetch,
@@ -4452,8 +4639,9 @@ const Act = {
     SFX.tap();
   },
   "to-pick": () => {
+    if (Setup.mode === "family" && Setup.t0 === Setup.t1) { toast("두 팀은 다른 사람으로 골라 주세요", 1800); return; }
     Setup.ti = 0;
-    Setup.rocket = rocketRoster(4, rosterIds());
+    Setup.rocket = rocketRoster(4, rosterIds(Setup.t0));
     Setup.picks = [[], []];
     Setup.picks[0] = validPicks(Store.data.lastPicks[Setup.t0], 0);
     if (Setup.mode === "family") Setup.picks[1] = validPicks(Store.data.lastPicks[Setup.t1], 1);
@@ -4495,8 +4683,8 @@ const Act = {
   "pause-giveup": () => typedConfirm("판 그만두기", "이 판을 지우면 되돌릴 수 없어요.", "그만", () => {
     Store.data.game = null; Store.data.net = null; Store.save(); G.s = null; G.net = null; G.paused = false; showScreen("home"); toast("판을 정리했어요");
   }),
-  "stats-clear": () => typedConfirm("전적 지우기", "전적을 모두 지우면 되돌릴 수 없어요.", "지우기", () => {
-    Store.data.stats = Store.defaults().stats; Store.save(); toast("전적을 지웠어요");
+  "stats-clear": () => typedConfirm("전적 지우기", esc(Store.prof().name) + "의 전적을 모두 지우면 되돌릴 수 없어요.", "지우기", () => {
+    Store.data.stats = newStats(); Store.save(); toast(Store.prof().name + "의 전적을 지웠어요");
   }),
   "rematch": rematch,
   "win-home": () => showScreen("home"),

@@ -1121,7 +1121,7 @@
       srng: ((seed ^ 0x5ca1ab1e) >>> 0) || 1, // 기술 뽑기 난수 — 윷 던지기 흐름과 따로
       settings: { pieces: n, backdo: o.backdo !== false, mode: o.mode || "family", cpuLevel: o.cpuLevel || "normal", battle: o.battle !== false, skills: o.skills !== false }, // battle: 배틀 장면 보기 (화면 쪽 설정)
       teams: o.teams.map(t => ({
-        name: t.name, color: t.color, cpu: !!t.cpu, key: t.key || null,
+        name: t.name, color: t.color, cpu: !!t.cpu, key: t.key || null, avatar: Number(t.avatar) || null, // 👤 팀 캐릭터 포켓몬 (화면 표시용)
         picks: t.picks.slice(0, n),
         // 진화 경로: 화면 쪽이 정해 넘기면 그대로 (사람 팀은 마지막 모습까지), 없으면 고른 모습까지
         paths: Array.isArray(t.paths) && t.paths.length >= n ? t.paths.slice(0, n) : t.picks.slice(0, n).map(id => evoPath(id, evoFrom)),
