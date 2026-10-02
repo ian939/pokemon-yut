@@ -1395,6 +1395,26 @@ def scenario_save(browser, base, errors):
     cctx.close()
     fdb.stop()
 
+def scenario_land(browser, base, errors):
+    """안드로이드 가로 화면(주소창·버튼줄 때문에 낮음): 윷 멍석이 늘 보이고, 패널이 위쪽 줄을 덮지 않음 (2026-10-02 사용자 제보: 가로에서 윷이 안 보임)."""
+    for vw, vh in ((740, 340), (800, 360), (915, 380), (1024, 560), (1180, 650), (1280, 690)):
+        ctx = browser.new_context(viewport={"width": vw, "height": vh}, has_touch=True, is_mobile=True)
+        ctx.add_init_script("localStorage.setItem('engmon_yut_v1', JSON.stringify({ settings: { study: false } }));")
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
+        page.goto(base + "?fast=1&seed=2&spots=none"); page.wait_for_timeout(300)
+        page.click("text=가족 대결"); page.click("[data-act=set][data-field=pieces][data-value='4']")
+        page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        wait_idle(page)
+        r = page.evaluate("""() => { const m = document.querySelector('.mat').getBoundingClientRect(), p = document.querySelector('.panel').getBoundingClientRect(),
+            b = document.querySelector('.game .bar').getBoundingClientRect(), t = document.querySelector('#btn-throw').getBoundingClientRect();
+          return { mat: m.height > 30 && m.top >= 0 && m.bottom <= innerHeight + 1, bar: p.top >= b.bottom - 1, thr: t.height >= 44 && t.bottom <= innerHeight + 1 }; }""")
+        check(r["mat"] and r["bar"] and r["thr"], f"📱 가로 {vw}x{vh}: 윷 멍석 보임 · 던지기 버튼 보임 · 위쪽 줄 안 덮음 {r}")
+        if (vw, vh) == (800, 360):
+            page.screenshot(path=str(OUT / "60-land-phone.png"))
+        ctx.close()
+
+
 def scenario_net(browser, base, errors):
     """v7: 🏠 친구 대결 — 가짜 Firebase + 브라우저 창 두 개로 방 만들기 → 코드로 들어가기 → 고르기 → 번갈아 두기 → 끝(각자 상자)."""
     sys.path.insert(0, str(ROOT / "tools"))
@@ -1631,6 +1651,8 @@ def main():
             check(not errors, "콘솔 오류 없음" + ("" if not errors else " → " + " | ".join(errors[:5])))
             httpd.shutdown()
             sys.exit(1 if fails else 0)
+        if "--live-net" not in sys.argv:
+            scenario_land(browser, base, errors)
         scenario_net(browser, base, errors)
         if "--live-net" not in sys.argv:
             scenario_save(browser, base, errors)

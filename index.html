@@ -193,7 +193,16 @@ img { -webkit-user-drag: none; }
 .game.land.tight .pending { min-height: 36px; }
 .game.land.tight .btn.throw { min-height: 56px; }
 .game.land.tight .hint { min-height: calc(var(--t1) * 1.45 * 2 + 20px); }
-.game.land.tighter .mat { display: none; } /* 결과는 결과 팝업으로 보이니 멍석은 빼도 된다 */
+/* 더 낮으면(안드로이드 가로 — 주소창·아래 버튼줄 때문에 높이가 낮다) 멍석을 숨기지 않고 작게 줄여 던지기 버튼 옆에 나란히 (사용자 요청 2026-10-02: 가로에서 윷이 안 보임) */
+.game.land.tighter .throw-zone { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; justify-items: stretch; }
+.game.land.tighter .mat { width: clamp(96px, 11vw, 140px); grid-row: span 2; justify-self: center; }
+.game.land.tighter .pending { min-height: 30px; }
+.game.land.tighter .hint { grid-column: 1 / -1; }
+/* 폰 가로(높이 400px 안팎): 그래도 넘치면 던지기 칸(멍석 · 버튼 · 안내)을 맨 위에 두고, 팀 카드는 그 아래에서 밀어 본다 — 위쪽 줄을 덮지 않게 */
+.game.land.tightest .panel { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 4px; }
+.game.land.tightest .throw-zone { order: -1; flex: none; padding: 8px 10px; }
+.game.land.tightest .hint { min-height: 0; max-height: calc(var(--t1) * 1.45 * 2 + 16px); padding-top: 6px; padding-bottom: 6px; }
+.game.land.tightest .teams { flex: none; }
 /* 가로: 안내 칸은 3줄까지 — 판을 잴 때는 3줄로 재서, 긴 알림이 떠도 패널이 넘쳐 위쪽 줄(가방)을 덮지 않게 */
 .game.land .hint { max-height: calc(var(--t1) * 1.45 * 3 + 20px); overflow: hidden; }
 .game.land .hint.measure { height: calc(var(--t1) * 1.45 * 3 + 20px); }
@@ -953,7 +962,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-02e";
+const APP_VERSION = "2026-10-02f";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1678,7 +1687,7 @@ function fitBoard() {
   sec.classList.toggle("port", !land);
   document.body.classList.toggle("game-land", land);
   let bs;
-  sec.classList.remove("tight", "tighter");
+  sec.classList.remove("tight", "tighter", "tightest");
   if (land) {
     const panelW = Math.min(400, Math.max(290, W * 0.33));
     bs = Math.min(H - 64 - 28, W - panelW - 46);
@@ -1687,6 +1696,7 @@ function fitBoard() {
     if (hintEl) hintEl.classList.add("measure");
     if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tight");
     if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tighter");
+    if (panel && panel.scrollHeight > panel.clientHeight + 1) sec.classList.add("tightest"); // 폰 가로: 던지기 칸을 위로, 팀 카드는 아래에서 밀어 보기
     if (hintEl) hintEl.classList.remove("measure");
   } else {
     const panel = sec.querySelector(".panel");
@@ -1781,12 +1791,20 @@ function setSticks(sticks) {
     el.classList.toggle("mark", mark && i === 0);
   });
 }
+// 글자가 칸보다 길면 글자 크기를 한 칸씩 줄인다 (잘리지 않게)
+function fitText(el, min) {
+  if (!el) return;
+  el.style.fontSize = "";
+  let fs = parseFloat(getComputedStyle(el).fontSize) || 16;
+  while (el.scrollWidth > el.clientWidth + 1 && fs > (min || 11)) { fs -= 1; el.style.fontSize = fs + "px"; }
+}
 function renderTop() {
   const t = G.s.teams[G.s.turn];
   const pill = $("#turn-pill");
   if (pill) pill.innerHTML = G.s.phase === "over"
     ? '<span style="--tc:' + G.s.teams[G.s.winner].color + '">🎉 ' + esc(window.innerWidth < 520 ? plain(G.s.teams[G.s.winner].name) : G.s.teams[G.s.winner].name + " 승리!") + "</span>" // 폰: "🎉 지온이" (잘리지 않게)
     : '<span style="--tc:' + t.color + '">' + esc(t.name) + (window.innerWidth < 520 ? "" : " 차례") + "</span>"; // 폰: 이름만 (잘리지 않게)
+  if (pill) fitText(pill.firstElementChild, 12); // 이름이 길면(8글자까지) 글자를 줄여서 다 보이게
   const btn = $("#btn-throw");
   if (!btn) return;
   const human = humanTurn();
