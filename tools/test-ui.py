@@ -1228,7 +1228,7 @@ def scenario_save(browser, base, errors):
 
     actx, a = mk({"collection": [{"id": 133, "t": 1}, {"id": 25, "t": 2}], "bag": {"poke": 5, "great": 1, "ultra": 0, "luxury": 0, "master": 0}, "stats": {"games": 4, "family": {"kid": 2}, "rocket": {"win": 1, "lose": 0}}})
     a.goto(base + q); a.wait_for_timeout(300)
-    check(ev(a, "P.kid.collection.map(x => x.id).join(',')") == "133,25" and ev(a, "P.kid.bag.poke") == 5 and ev(a, "P.kid.stats.family.win") == 2 and ev(a, "d.order.length") == 6,
+    check(ev(a, "P.kid.collection.map(x => x.id).join(',')") == "133,25" and ev(a, "P.kid.bag.poke") == 5 and ev(a, "P.kid.stats.family.win") == 2 and ev(a, "P.kid.name") == "꿈꾸는아이" and ev(a, "d.order.length") == 6,
           "👤 예전 기록(패드 하나)은 🧒 지온이 프로필로 · 가족 6명 프로필")
     a.click("[data-act=profiles]")
     a.wait_for_selector(".prof-card")
@@ -1260,7 +1260,7 @@ def scenario_save(browser, base, errors):
     a.wait_for_timeout(500)
     measure(a, "💾 저장 코드 창")
     x = server(code)
-    check(x and x["id"] == "kid" and x["name"] == "지온이" and x["avatar"] == 133 and [c["id"] for c in x["collection"]] == [133, 25] and x["bag"]["poke"] == 5, "서버에 지온이 프로필(이름 · 캐릭터 · 포켓몬 · 볼)")
+    check(x and x["id"] == "kid" and x["name"] == "꿈꾸는아이" and x["avatar"] == 133 and [c["id"] for c in x["collection"]] == [133, 25] and x["bag"]["poke"] == 5, "서버에 지온이 프로필(이름 · 캐릭터 · 포켓몬 · 볼)")
     a.click("[data-act=close-modal]")
     check(code in a.inner_text(".prof-card[data-id=kid]"), "프로필 카드에 💾 코드")
     a.click(f"[data-act=prof-save][data-id='{hid}']"); a.click("[data-act=save-on]")
@@ -1277,14 +1277,14 @@ def scenario_save(browser, base, errors):
     rk = fdb.data.get("yutrank") or {}
     check(len(rk) == 2 and code not in rk and code2 not in rk and all("code" not in v and set(v) >= {"name", "mons", "legends", "wins"} for v in rk.values()),
           f"🥇 랭킹 서버엔 이름·캐릭터·숫자만 (저장 코드 없음) — {len(rk)}명")
-    kid_r = next(v for v in rk.values() if v["name"] == "지온이")
+    kid_r = next(v for v in rk.values() if v["name"] == "꿈꾸는아이")
     check(kid_r["mons"] == 3 and kid_r["avatar"] == 133, f"지온이 랭킹 숫자 (포켓몬 {kid_r['mons']} · 전설 {kid_r['legends']} · 승리 {kid_r['wins']})")
     fdb.data["yutrank"]["zzzzzzzzz1"] = {"name": "민준", "avatar": 25, "mons": 9, "legends": 2, "wins": 1, "updated": 1}
     fdb.data["yutrank"]["zzzzzzzzz2"] = {"name": "서아", "avatar": 1, "mons": 1, "legends": 0, "wins": 7, "updated": 1}
     a.click("[data-act=home]"); a.click("[data-act=rank]")
     a.wait_for_selector(".rank-row", timeout=10000)
     names = lambda: a.eval_on_selector_all(".rank-row .rk-name", "e => e.map(x => x.childNodes[0].textContent.trim())")
-    check(names()[:2] == ["민준", "지온이"] and "🥇" in a.inner_text(".rank-row.t1"), f"📕 포켓몬 수로 줄 세우기 {names()}")
+    check(names()[:2] == ["민준", "꿈꾸는아이"] and "🥇" in a.inner_text(".rank-row.t1"), f"📕 포켓몬 수로 줄 세우기 {names()}")
     check(len(a.query_selector_all(".rank-row.me")) == 2 and "엄마" not in a.inner_text("#rank-list") + a.inner_text("#rank-note") and "저장 코드를 켜면" in a.inner_text("#rank-note"),
           "우리 패드 프로필은 '우리' 표시 · 등록 안 한 사람은 이름도 안 보임")
     a.click("[data-act=rank-by][data-by=wins]"); a.wait_for_timeout(200)
@@ -1322,7 +1322,7 @@ def scenario_save(browser, base, errors):
     check(ev(b, "d.order.length") == 7 and ev(b, f"P['{hid}'].name") == "하윤이", "없는 프로필(하윤이)은 바로 생김")
     b.evaluate("() => { const S = window.__yut.Store; S.data.profiles.kid.bag.poke = 9; S.save(); }")
     b.wait_for_timeout(5200)
-    check(len([v for v in fdb.data["yutrank"].values() if v["name"] == "지온이"]) == 1, "다른 패드에서 불러와 저장해도 랭킹엔 지온이 한 줄 (같은 랭킹 번호)")
+    check(len([v for v in fdb.data["yutrank"].values() if v["name"] == "꿈꾸는아이"]) == 1, "다른 패드에서 불러와 저장해도 랭킹엔 한 줄 (같은 랭킹 번호)")
     b.screenshot(path=str(OUT / "s3-save-load.png"))
 
     # 두 패드의 지온이: 잡은 포켓몬은 합치고, 볼은 나중에 저장한 쪽
@@ -1347,7 +1347,7 @@ def scenario_save(browser, base, errors):
     # 👤 새 패드: 프로필은 지온이 하나 → 가족 대결 두 번째 팀은 ➕ 새 프로필로
     nctx, n = mk({})
     n.goto(base + "?fast=1&fam=0"); n.wait_for_timeout(300)
-    check(ev(n, "d.order.join(',')") == "kid" and ev(n, "P.kid.name") == "지온이", "👤 처음엔 프로필 하나 (지온이)")
+    check(ev(n, "d.order.join(',')") == "kid" and ev(n, "P.kid.name") == "꿈꾸는아이", "👤 처음엔 프로필 하나 (꿈꾸는아이)")
     n.click("text=가족 대결")
     check("새 프로필" in n.inner_text(".card") and n.query_selector("[data-act=set][data-field=t1].on") is None, "가족 대결: 두 번째 팀이 없으면 ➕ 새 프로필 안내")
     n.click("[data-act=to-pick]"); n.wait_for_timeout(200)
@@ -1452,7 +1452,7 @@ def scenario_net(browser, base, errors):
     guest.click("#net-go")
     # 방 만든 집: 친구가 들어오면 고르기
     host.wait_for_selector(".pcard", timeout=15000)
-    check("지온이" in host.inner_text(".bar h2"), "친구가 들어오면 방 만든 집부터 포켓몬 고르기")
+    check("꿈꾸는아이" in host.inner_text(".bar h2"), "친구가 들어오면 방 만든 집부터 포켓몬 고르기")
     host.click("[data-act=pick-auto]"); host.click("#pick-next")
     guest.wait_for_selector(".pcard", timeout=15000)
     taken = len(guest.query_selector_all(".pcard.taken"))

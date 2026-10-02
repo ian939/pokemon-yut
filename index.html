@@ -953,7 +953,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-02d";
+const APP_VERSION = "2026-10-02e";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -980,6 +980,7 @@ const MEMBERS = [
   { key: "aunt", name: "👱‍♀️ 이모" }, { key: "grandma", name: "👵 할머니" }, { key: "grandpa", name: "👴 할아버지" },
 ];
 // 👤 프로필 기본 캐릭터 = 스타팅 포켓몬 (내 포켓몬 중에서 바꿀 수 있다)
+const DEFAULT_NAME = "꿈꾸는아이"; // 처음 만들어지는 프로필 이름 (사용자 요청 2026-10-02) — ✏️ 꾸미기에서 바꾼다
 const DEFAULT_AV = { kid: 7, mom: 1, dad: 4, aunt: 152, grandma: 155, grandpa: 158 };
 const newStats = () => ({ games: 0, family: { win: 0, lose: 0 }, rocket: { win: 0, lose: 0 }, net: { win: 0, lose: 0 }, boxes: 0, wildSeen: 0, wildCaught: 0 });
 const newBag = () => ({ poke: 3, great: 0, ultra: 0, luxury: 0, master: 0 }); // 처음 선물 몬스터볼 3개
@@ -1147,13 +1148,13 @@ const Store = {
         d.lastPicks = raw.lastPicks && typeof raw.lastPicks === "object" ? raw.lastPicks : {};
       }
     } catch (e) { raw = null; /* 망가진 저장은 새로 시작 */ }
-    // 👤 프로필: 처음이면 🧒 지온이 하나만 (사용자 요청 2026-10-02 — 더 필요하면 ➕ 새 프로필), 예전 기록(패드에 하나로 모은 것)은 지온이 것으로
+    // 👤 프로필: 처음이면 하나만 — 이름 '꿈꾸는아이' (사용자 요청 2026-10-02, 더 필요하면 ➕ 새 프로필), 예전 기록(패드에 하나로 모은 것)은 이 프로필 것으로
     // 이 패드 기록에 가족 대결 이긴 사람이 있으면 그 사람 프로필도 만든다 (기록이 사라지지 않게). 시험용 ?fam=1 = 가족 6명
     if (!d.profiles || typeof d.profiles !== "object" || !Object.keys(d.profiles).length) {
       d.profiles = {};
       const famWins = (raw && raw.stats && raw.stats.family) || {};
       MEMBERS.filter(m => m.key === "kid" || Q.get("fam") === "1" || Number(famWins[m.key]) > 0)
-        .forEach(m => { d.profiles[m.key] = blankProfile(m.key, plain(m.name), DEFAULT_AV[m.key] || 25); });
+        .forEach(m => { d.profiles[m.key] = blankProfile(m.key, m.key === "kid" ? DEFAULT_NAME : plain(m.name), DEFAULT_AV[m.key] || 25); });
       d.trim1 = true; // 새로 만든 프로필은 아래 "안 쓴 기본 프로필 치우기"를 하지 않는다
       if (raw && typeof raw === "object") {
         const k = d.profiles.kid, st = raw.stats || {};
