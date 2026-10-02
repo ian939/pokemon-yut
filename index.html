@@ -953,7 +953,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-02c";
+const APP_VERSION = "2026-10-02d";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1147,10 +1147,14 @@ const Store = {
         d.lastPicks = raw.lastPicks && typeof raw.lastPicks === "object" ? raw.lastPicks : {};
       }
     } catch (e) { raw = null; /* 망가진 저장은 새로 시작 */ }
-    // 👤 프로필: 처음이면 가족 6명을 만들고, 예전 기록(패드에 하나로 모은 것)은 🧒 지온이 것으로
+    // 👤 프로필: 처음이면 🧒 지온이 하나만 (사용자 요청 2026-10-02 — 더 필요하면 ➕ 새 프로필), 예전 기록(패드에 하나로 모은 것)은 지온이 것으로
+    // 이 패드 기록에 가족 대결 이긴 사람이 있으면 그 사람 프로필도 만든다 (기록이 사라지지 않게). 시험용 ?fam=1 = 가족 6명
     if (!d.profiles || typeof d.profiles !== "object" || !Object.keys(d.profiles).length) {
       d.profiles = {};
-      MEMBERS.forEach(m => { d.profiles[m.key] = blankProfile(m.key, plain(m.name), DEFAULT_AV[m.key] || 25); });
+      const famWins = (raw && raw.stats && raw.stats.family) || {};
+      MEMBERS.filter(m => m.key === "kid" || Q.get("fam") === "1" || Number(famWins[m.key]) > 0)
+        .forEach(m => { d.profiles[m.key] = blankProfile(m.key, plain(m.name), DEFAULT_AV[m.key] || 25); });
+      d.trim1 = true; // 새로 만든 프로필은 아래 "안 쓴 기본 프로필 치우기"를 하지 않는다
       if (raw && typeof raw === "object") {
         const k = d.profiles.kid, st = raw.stats || {};
         if (Array.isArray(raw.collection)) k.collection = raw.collection;
@@ -1161,14 +1165,28 @@ const Store = {
         Object.keys(st.family || {}).forEach(key => { if (d.profiles[key]) d.profiles[key].stats.family.win = Number(st.family[key]) || 0; });
         if (raw.lastPicks && raw.lastPicks.guest && !d.lastPicks.kid) d.lastPicks.kid = raw.lastPicks.guest;
       }
-      d.order = MEMBERS.map(m => m.key);
+      d.order = MEMBERS.map(m => m.key).filter(k => d.profiles[k]);
+    }
+    // 예전 버전이 만든 가족 6명 중 한 번도 안 쓴 프로필은 한 번만 치운다 (이름 그대로 · 포켓몬 0 · 판 0 · 저장 안 함 · 볼 그대로 · 공부 기록 없음 · 판에 없음)
+    if (!d.trim1) {
+      const inGame = new Set([d.game, d.lastGame].filter(Boolean).flatMap(g => (g.teams || []).map(t => t.key)));
+      MEMBERS.forEach(m => {
+        const p = d.profiles[m.key];
+        if (!p || m.key === "kid" || inGame.has(m.key)) return;
+        const st = p.stats || {}, bag = p.bag || {};
+        const untouched = p.name === plain(m.name) && !(p.collection || []).length && !(st.games || 0) && !p.cloud && !Object.keys(p.study || {}).length &&
+          ["family", "rocket", "net"].every(k => !((st[k] || {}).win || (st[k] || {}).lose)) &&
+          (bag.poke || 0) === 3 && !(bag.great || bag.ultra || bag.luxury || bag.master);
+        if (untouched) delete d.profiles[m.key];
+      });
+      d.trim1 = true;
     }
     ["collection", "bag", "stats", "study", "cloud", "netName"].forEach(k => { delete d[k]; });
     Object.keys(d.profiles).forEach(id => { d.profiles[id] = normProfile(d.profiles[id], id); });
     d.order = (Array.isArray(d.order) ? d.order : []).filter((id, i, a) => d.profiles[id] && a.indexOf(id) === i);
     Object.keys(d.profiles).forEach(id => { if (d.order.indexOf(id) < 0) d.order.push(id); });
     if (!d.profiles[d.settings.t0]) d.settings.t0 = d.order[0];
-    if (!d.profiles[d.settings.t1] || d.settings.t1 === d.settings.t0) d.settings.t1 = d.order.find(id => id !== d.settings.t0) || d.order[0];
+    if (!d.profiles[d.settings.t1] || d.settings.t1 === d.settings.t0) d.settings.t1 = d.order.find(id => id !== d.settings.t0) || null; // 프로필이 하나면 두 번째 팀은 비워 둔다
     d.game = Yut.upgrade(d.game); d.lastGame = Yut.upgrade(d.lastGame); // 기술 전(v1) 판은 기술 없이 이어서
     if (d.game && !Yut.validate(d.game)) d.game = null;
     if (d.lastGame && !Yut.validate(d.lastGame)) d.lastGame = null;
@@ -1505,7 +1523,7 @@ Screens.setup = sec => {
     '<div class="scroll"><div class="card">' +
       "<h3>" + (fam ? "첫 번째 팀" : "우리 팀") + '</h3><div class="chips">' + memberChips("t0") + "</div>" +
       (net ? '<p class="note">🏠 친구네 팀은 친구 패드에서 이름을 써서 들어와요. 판 설정은 방을 만든 집이 정해요.</p>'
-      : fam ? '<h3>두 번째 팀</h3><div class="chips">' + memberChips("t1") + "</div>"
+      : fam ? '<h3>두 번째 팀</h3><div class="chips">' + memberChips("t1") + "</div>" + (Store.data.order.length < 2 ? '<p class="note">👤 같이 할 사람의 프로필을 <b>➕ 새 프로필</b>로 만들어 주세요</p>' : "")
            : '<h3>로켓단 세기</h3><div class="chips">' + chipHtml("cpu", "easy", "🌱 쉬움") + chipHtml("cpu", "normal", "🔥 보통") + chipHtml("cpu", "hard", "💀 어려움") + "</div>" +
              '<p class="note">' + (Setup.cpu === "hard" ? "💀 로켓단이 늘 가장 좋은 수를 두고 기술도 아끼지 않아요. 이기면 🎁 볼 4개 + 좋은 볼이 더 잘 나와요!" : Setup.cpu === "normal" ? "🔥 로켓단이 절반은 똑똑하게 둬요. 이기면 🎁 볼 3개" : "🌱 로켓단이 아무 데나 둬요. 이기면 🎁 볼 3개") + "</p>") +
       '<h3>말 개수</h3><div class="chips">' + [2, 3, 4].map(n => chipHtml("pieces", n, n + "개")).join("") + "</div>" +
@@ -4151,7 +4169,7 @@ function renderRank() {
   if (!box) return;
   $$(".rank-by .chip").forEach(c => c.classList.toggle("on", c.dataset.by === Setup.rankBy));
   const off = Store.data.order.map(id => Store.data.profiles[id]).filter(p => !p.cloud);
-  if (note) note.innerHTML = off.length ? "💾 저장 코드를 켜면 랭킹에 나와요 — 아직 안 켠 사람: " + off.map(p => esc(p.name)).join(", ") + ' <button class="btn" data-act="profiles">👤 프로필로</button>' : "";
+  if (note) note.innerHTML = off.length ? '💾 👤 프로필에서 저장 코드를 켜면 랭킹에 나와요 <button class="btn" data-act="profiles">👤 프로필로</button>' : ""; // 등록 안 한 사람 이름은 안 보인다 (사용자 요청 2026-10-02)
   if (rankErr) { box.innerHTML = '<p class="rank-msg">' + (rankErr === "denied" ? "⚠️ 랭킹 서버가 아직 준비 안 됐어요 — 부모님이 Firebase 규칙에 <b>yutrank</b> 를 넣어 주세요" : "📶 인터넷을 확인하고 다시 들어와 주세요") + "</p>"; return; }
   if (!rankRows) return;
   const by = Setup.rankBy, info = RANK_BY.find(x => x.k === by);
@@ -4694,7 +4712,7 @@ const Act = {
     G.net = G.s.settings.mode === "net" && Store.data.net ? Object.assign({ queue: [], running: false, remoteBusy: false, note: null }, Store.data.net) : null;
     showScreen("game");
   },
-  "new-family": () => { Setup.mode = "family"; showScreen("setup"); },
+  "new-family": () => { Setup.mode = "family"; if (!Store.data.profiles[Setup.t1] || Setup.t1 === Setup.t0) Setup.t1 = Store.data.order.find(id => id !== Setup.t0) || null; showScreen("setup"); },
   "new-rocket": () => { Setup.mode = "rocket"; showScreen("setup"); },
   "new-net": () => { Setup.mode = "net"; Setup.net = null; showScreen("net"); },
   "net-host": () => { Setup.mode = "net"; showScreen("setup"); },
@@ -4739,6 +4757,7 @@ const Act = {
     SFX.tap();
   },
   "to-pick": () => {
+    if (Setup.mode === "family" && (!Setup.t1 || !Store.data.profiles[Setup.t1])) { toast("두 번째 팀이 없어요 — ➕ 새 프로필로 만들어 주세요", 2200); return; }
     if (Setup.mode === "family" && Setup.t0 === Setup.t1) { toast("두 팀은 다른 사람으로 골라 주세요", 1800); return; }
     Setup.ti = 0;
     Setup.rocket = rocketRoster(4, rosterIds(Setup.t0));
@@ -4823,7 +4842,7 @@ Object.assign(Setup, {
   pieces: Store.data.settings.pieces, backdo: Store.data.settings.backdo, battle: Store.data.settings.battle !== false,
   skills: Store.data.settings.skills !== false, study: Store.data.settings.study !== false,
 });
-if (Setup.t0 === Setup.t1) Setup.t1 = Setup.t0 === "mom" ? "kid" : "mom";
+if (Setup.t0 === Setup.t1) Setup.t1 = Store.data.order.find(id => id !== Setup.t0) || null;
 TTS.init();
 Art.load();
 showScreen("home");

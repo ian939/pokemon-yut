@@ -22,7 +22,15 @@ import sys
 import threading
 import time
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Page
+
+# 👤 처음엔 프로필이 하나뿐 — 가족 대결 시험은 예전처럼 가족 6명으로 (?fam=1). 하나뿐인 경우는 scenario_save 에서 ?fam=0 으로 따로 본다
+_goto = Page.goto
+def _goto_fam(self, url, **kw):
+    if "/index.html" in url and "fam=" not in url and "127.0.0.1" in url:
+        url += ("&" if "?" in url else "?") + "fam=1"
+    return _goto(self, url, **kw)
+Page.goto = _goto_fam
 
 for s in (sys.stdout, sys.stderr):
     try:
@@ -1277,7 +1285,8 @@ def scenario_save(browser, base, errors):
     a.wait_for_selector(".rank-row", timeout=10000)
     names = lambda: a.eval_on_selector_all(".rank-row .rk-name", "e => e.map(x => x.childNodes[0].textContent.trim())")
     check(names()[:2] == ["민준", "지온이"] and "🥇" in a.inner_text(".rank-row.t1"), f"📕 포켓몬 수로 줄 세우기 {names()}")
-    check(len(a.query_selector_all(".rank-row.me")) == 2 and "엄마" in a.inner_text("#rank-note"), "우리 패드 프로필은 '우리' 표시 · 저장 안 켠 사람 안내")
+    check(len(a.query_selector_all(".rank-row.me")) == 2 and "엄마" not in a.inner_text("#rank-list") + a.inner_text("#rank-note") and "저장 코드를 켜면" in a.inner_text("#rank-note"),
+          "우리 패드 프로필은 '우리' 표시 · 등록 안 한 사람은 이름도 안 보임")
     a.click("[data-act=rank-by][data-by=wins]"); a.wait_for_timeout(200)
     check(names()[0] == "서아", f"🏆 승리 수로 {names()}")
     a.click("[data-act=rank-by][data-by=legends]"); a.wait_for_timeout(200)
@@ -1334,6 +1343,32 @@ def scenario_save(browser, base, errors):
     b.wait_for_timeout(300)
     check(ev(b, f"!P['{hid}'] && d.order.length === 6"), "프로필 지우기 (글자를 써야)")
     actx.close(); bctx.close()
+
+    # 👤 새 패드: 프로필은 지온이 하나 → 가족 대결 두 번째 팀은 ➕ 새 프로필로
+    nctx, n = mk({})
+    n.goto(base + "?fast=1&fam=0"); n.wait_for_timeout(300)
+    check(ev(n, "d.order.join(',')") == "kid" and ev(n, "P.kid.name") == "지온이", "👤 처음엔 프로필 하나 (지온이)")
+    n.click("text=가족 대결")
+    check("새 프로필" in n.inner_text(".card") and n.query_selector("[data-act=set][data-field=t1].on") is None, "가족 대결: 두 번째 팀이 없으면 ➕ 새 프로필 안내")
+    n.click("[data-act=to-pick]"); n.wait_for_timeout(200)
+    check(n.query_selector(".pcard") is None, "두 번째 팀 없이는 고르기로 안 넘어감")
+    n.click("[data-act=prof-new][data-field=t1]"); n.wait_for_selector("#prof-name")
+    n.fill("#prof-name", "엄마"); n.click("[data-act=prof-ok]"); n.wait_for_timeout(300)
+    check(n.query_selector("[data-act=set][data-field=t1].on") is not None and "엄마" in n.inner_text("[data-act=set][data-field=t1].on"), "➕ 새 프로필로 만들면 두 번째 팀으로 바로 골라짐")
+    n.click("[data-act=to-pick]"); n.wait_for_selector(".pcard", timeout=5000)
+    check(True, "두 번째 팀이 생기면 고르기로")
+    nctx.close()
+    # 예전 버전 패드: 안 쓴 가족 프로필은 치우고, 쓴 프로필은 그대로
+    old6 = {"profiles": {k: {"id": k, "name": nm, "avatar": 1, "collection": [], "bag": {"poke": 3}, "stats": {}, "study": {}} for k, nm in
+            [("kid", "지온이"), ("mom", "엄마"), ("dad", "아빠"), ("aunt", "이모"), ("grandma", "할머니"), ("grandpa", "할아버지")]}, "order": ["kid", "mom", "dad", "aunt", "grandma", "grandpa"]}
+    old6["profiles"]["dad"]["stats"] = {"games": 2, "family": {"win": 1, "lose": 1}}
+    old6["profiles"]["aunt"]["name"] = "고모"
+    tctx, t = mk(old6)
+    t.goto(base + "?fast=1&fam=0"); t.wait_for_timeout(300)
+    check(ev(t, "d.order.join(',')") == "kid,dad,aunt", f"안 쓴 기본 프로필만 치움 (판을 한 아빠 · 이름을 바꾼 고모는 그대로) → {ev(t, 'd.order.join(",")')}")
+    t.reload(); t.wait_for_timeout(300)
+    check(ev(t, "d.order.length") == 3, "치우기는 한 번만")
+    tctx.close()
 
     # 가족 대결: 팀 = 프로필, 상자·잡은 포켓몬은 그 팀 프로필에
     cctx, c = mk({"settings": {"study": False}})
