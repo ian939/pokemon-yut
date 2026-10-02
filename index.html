@@ -785,6 +785,13 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .cash.b1k { width: 70px; height: 36px; border-radius: 6px; background: #d3e4fb; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px #2f6fd6, 0 3px 0 rgba(38,49,71,.3); color: #1f4a95; }
 .cash.coin { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #cfd6de 60%, #9aa4b1); color: #3b4452; }
 .cash.coin i { display: none; }
+.bonus-mon { display: grid; justify-items: center; gap: 4px; background: var(--paper); border: 4px solid var(--ink); border-radius: 16px; padding: 8px 16px 10px; box-shadow: var(--win), 0 4px 0 var(--ink); animation: popIn .35s cubic-bezier(.2,1.6,.4,1) both; }
+.bonus-mon.r-l { border-color: var(--gold); box-shadow: 0 0 0 3px #fff, 0 0 22px 6px rgba(245,184,46,.8); }
+.bm-pic { position: relative; width: 96px; height: 96px; }
+.bonus-mon b { font-family: var(--pixel); font-size: var(--t2); font-weight: 700; }
+.bonus-mon em { font-style: normal; font-size: 14px; font-weight: 800; color: var(--ink-soft); }
+.bonus-catch { display: grid; place-items: center; height: 120px; }
+.bc-ball { width: 56px; height: 56px; image-rendering: pixelated; transform-origin: 50% 90%; }
 .bonus-zone { margin: 0 0 14px; display: grid; justify-items: center; gap: 8px; }
 .bonus-zone .btn { width: min(420px, 100%); }
 .pchip .pips.skp i.on { background: var(--violet); }
@@ -966,7 +973,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-03b";
+const APP_VERSION = "2026-10-03c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1545,7 +1552,7 @@ Screens.setup = sec => {
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
       '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 10칸 가면 기술을 하나 배워요! 🎲 기술은 확률로 성공 — 일반 60% · 레어 70% · 유니크 80% · 👑 전설 90% (상대에게 거는 기술은 상성 ±10%). 말마다 한 판에 한 번." : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
       '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
-      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단을 이기면 💰 돈 문제로 볼 하나 더! (맞힐수록 문제가 어려워져요)" : "문제 없이 놀아요.") + "</p>" +
+      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단 대결이 끝나면 💰 돈 문제를 맞혀서 포켓몬을 잡아요! (두 문제까지)" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
       (net ? '<h3>⏱ 차례 타이머</h3><div class="chips">' + chipHtml("timer", 20, "20초") + chipHtml("timer", 10, "10초") + chipHtml("timer", 0, "없음") + "</div>" +
         '<p class="note">' + (Setup.timer ? "내 차례에 " + Setup.timer + "초 안에 안 하면 저절로 던지고 가장 좋은 칸으로 가요 (친구가 오래 기다리지 않게). ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)" : "시간 제한 없이 해요. ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)") + "</p>" : "") +
@@ -3655,6 +3662,7 @@ function clockExplain(h, m) {
 }
 // ❓ 풀숲: 시계를 맞히면 이번 조우만 희귀도 30·30·20·20 → true
 const QUIZ_TRIES = 3; // 틀리면 풀이를 보고 다음 문제로 — 세 문제까지 (사용자 요청 2026-09-27: 교육 효과)
+const MONEY_TRIES = 2; // 💰 돈 문제는 두 문제까지 — 맞히면 포켓몬을 무작위로 잡는다 (사용자 요청 2026-10-03)
 async function clockQuiz() {
   for (let step = 1; step <= QUIZ_TRIES; step++) if (await clockQuizOnce(step)) return true;
   return false;
@@ -3703,10 +3711,10 @@ async function moneyQuizOnce(step) {
   const q = Yut.Study.money(lv, Math.random, forced);
   const r = await quizWindow({
     kind: "money", level: forced ? 2 : lv, step,
-    title: step === 1 ? "🎁 상자 바닥에 뭔가 더 있다! 💰 돈 문제를 풀면 <b>볼 하나 더</b>!"
-      : step === 2 ? "💰 두 번째 문제! 맞히면 <b>몬스터볼</b> 하나 더" : "💰 마지막 세 번째 문제! 힘내요!",
+    title: step === 1 ? "🎁 상자 바닥에 뭔가 더 있다! 💰 돈 문제를 맞히면 <b>포켓몬을 잡아요</b>!"
+      : "💰 마지막 두 번째 문제! 맞히면 <b>포켓몬</b>을 잡아요",
     body: moneyHtml(q.counts), question: "모두 얼마일까요?",
-    say: step === 1 ? "돈 문제를 풀면 볼 하나 더! 모두 얼마일까요?" : (step === 2 ? "두 번째 문제! " : "마지막 문제! ") + "모두 얼마일까요?",
+    say: step === 1 ? "돈 문제를 맞히면 포켓몬을 잡아요! 모두 얼마일까요?" : "마지막 두 번째 문제! 모두 얼마일까요?",
     choices: q.choices.map(Yut.Study.won), answer: q.answer,
     okText: "정답! " + Yut.Study.won(q.total) + " (" + Yut.Study.koNum(q.total) + " 원)",
     explain: () => moneyExplain(q),
@@ -3716,32 +3724,46 @@ async function moneyQuizOnce(step) {
 }
 function bonusHtml(rw) {
   if (!rw || !rw.opened || !G.s || !studyFlag()) return "";
+  if (rw.bonus && rw.bonus.mon) { // 🎉 잡은 포켓몬 카드 (새로고침해도 그대로)
+    const id = rw.bonus.mon, rar = rarityOf(id);
+    return '<div class="bonus-zone" id="bonus-zone"><div class="bonus-mon r-' + rar + '"><span class="bm-pic">' + spr(id) + "</span>" +
+      "<b>🎉 " + esc(josa(nameOf(id), "을/를")) + " 잡았다!</b><em>" + (rw.bonus.isNew ? '<i class="bp-tag new">NEW!</i> ' : "") + '<i class="bp-tag r-' + rar + '">' + RARITY_KO[rar] + "</i> 보관함에 넣었어요</em></div></div>";
+  }
   if (rw.bonus) return '<div class="bonus-zone" id="bonus-zone"><p class="box-hint">' + (rw.bonus.ball ? "💰 돈 문제 보너스!" : "💰 돈 문제 — 다음엔 꼭!") + "</p></div>";
-  return '<div class="bonus-zone" id="bonus-zone"><button class="btn big gold cursor" data-act="money-quiz">💰 돈 문제 풀고 볼 하나 더!</button></div>';
+  return '<div class="bonus-zone" id="bonus-zone"><button class="btn big gold cursor" data-act="money-quiz">💰 돈 문제 풀고 포켓몬 잡기!</button></div>';
 }
+// 💰 돈 문제 (사용자 요청 2026-10-03): 두 문제까지, 맞히면 포켓몬 한 마리를 무작위로 잡는다 (풀숲처럼 희귀도 50·30·10·10, 절반은 아직 없는 포켓몬 먼저)
+// 시험용 ?bonusmon=번호
 async function moneyBonus() {
   const rw = G.s && G.s.reward;
   if (!rw || !rw.opened || rw.bonus || G.moneyBusy) return;
   G.moneyBusy = true;
-  Store.use(rw.to); // 👤 상자를 받은 프로필의 공부 기록·가방
-  let ball = null;
-  for (let step = 1; step <= QUIZ_TRIES && !ball; step++) {
-    if (await moneyQuizOnce(step)) ball = step === 1 ? Yut.Rewards.rollBox(1, Math.random, rw.hard ? Yut.Rewards.BOX_ODDS_HARD : null)[0] : "poke"; // 첫 문제에 맞히면 상자 확률(어려움이면 좋은 볼), 그다음은 몬스터볼
+  Store.use(rw.to); // 👤 상자를 받은 프로필의 공부 기록·보관함
+  let ok = false;
+  for (let step = 1; step <= MONEY_TRIES && !ok; step++) ok = await moneyQuizOnce(step);
+  let mon = null, isNew = false;
+  if (ok) {
+    const forced = Number(Q.get("bonusmon"));
+    mon = forced >= 1 && forced <= 1025 ? forced : Yut.Rewards.rollWild(WILD_POOLS, ownedSet(rw.to), Math.random);
+    isNew = !Store.data.collection.some(x => x.id === mon) && STARTERS.indexOf(mon) < 0;
+    if (!Store.data.collection.some(x => x.id === mon)) Store.data.collection.push({ id: mon, t: Date.now(), from: "money" });
   }
   // 결과를 먼저 저장 (새로고침해도 두 번 안 받게)
-  rw.bonus = { ball };
-  if (ball) Store.data.bag[ball] = (Store.data.bag[ball] || 0) + 1;
+  rw.bonus = { mon, isNew };
   Store.data.lastGame = G.s;
   Store.save();
   G.moneyBusy = false;
   const zone = $("#bonus-zone");
-  if (zone) zone.outerHTML = bonusHtml(rw);
-  if (ball) {
-    const list = $("#box-balls");
-    if (list) list.insertAdjacentHTML("beforeend", ballChip(ball, true));
-    SFX.catchOk(); confetti(30);
-    TTS.say(Yut.Rewards.BALL_INFO[ball].name + " 하나 더! 가방에 넣었어요");
+  if (mon && zone) { // 몬스터볼이 흔들흔들 → 팡! 포켓몬
+    zone.innerHTML = '<div class="bonus-catch"><img class="bc-ball" src="assets/items/poke-ball.png" alt=""></div>';
+    SFX.throwBall();
+    const ball = $(".bc-ball", zone);
+    if (ball && ball.animate) await new Promise(r => { const an = ball.animate([{ transform: "rotate(0)" }, { transform: "rotate(-24deg)" }, { transform: "rotate(20deg)" }, { transform: "rotate(-14deg)" }, { transform: "rotate(0)" }], { duration: 900 * SPEED, iterations: 1 }); an.onfinish = r; an.oncancel = r; });
+    SFX.catchOk(); confetti(30); Cry.play(mon);
   }
+  const z2 = $("#bonus-zone");
+  if (z2) z2.outerHTML = bonusHtml(rw);
+  if (mon) TTS.say(josa(nameOf(mon), "을/를") + " 잡았다! 보관함에 넣었어요");
   const btns = $(".win-btns");
   if (btns) btns.classList.remove("hidden");
 }
@@ -4730,7 +4752,7 @@ function openRules() {
       "<li>🪙 시작할 때 <b>동전</b>을 던져서 먼저 할 팀을 정해요 — 앞면(Heads)·뒷면(Tails)</li>" +
       "<li>📖 <b>기술</b>은 <b>10칸</b> 가면 배워요 (모든 포켓몬 같아요). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
       "<li>🎲 기술은 <b>확률로 성공</b>해요 — 일반 <b>60%</b> · 레어 <b>70%</b> · 유니크 <b>80%</b> · 👑 전설 <b>90%</b> (스타팅 포켓몬은 레어). 상대 말에 거는 기술은 타입 상성이 좋으면 <b>+10%</b>, 나쁘면 <b>−10%</b>. 실패하면 그 기술은 사라져요!</li>" +
-      "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 💰 로켓단 대결이 끝나면 <b>돈 문제</b>로 볼 하나 더!</li>" +
+      "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 💰 로켓단 대결이 끝나면 <b>돈 문제</b>를 맞혀서 포켓몬을 한 마리 잡아요 (두 문제까지)!</li>" +
       "<li>🎯 잡을 확률(몬스터볼): 일반 80 · 레어 70 · 유니크 60 · 전설 40% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
       "<li>😼 로켓단도 풀숲에서 그물로 포켓몬을 잡아 가요. 먼저 가서 잡아요!</li>" +
