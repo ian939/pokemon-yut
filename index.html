@@ -790,6 +790,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .cs-say { position: absolute; left: calc(50% + clamp(36px, 7vh, 54px)); top: 8%; max-width: 44%; max-height: 84%; overflow: hidden; margin: 0; padding: 4px 10px; background: #fff; border: 3px solid var(--ink); border-radius: 12px; font-family: var(--pixel); font-weight: 700; font-size: 15px; line-height: 1.3; box-shadow: 0 3px 0 var(--ink); }
 @media (max-width: 520px) { .cs-say { font-size: 13px; max-width: 46%; padding: 3px 8px; word-break: normal; overflow-wrap: normal; } }
 .cs-say::before { content: ""; position: absolute; left: -10px; bottom: 8px; border: 7px solid transparent; border-right-color: var(--ink); }
+.upd-btn { order: -1; }
 .qz-odds { display: inline-block; font-family: var(--font); font-size: 13px; font-weight: 800; color: #8a5a00; background: #fff3c4; border-radius: 8px; padding: 1px 8px; }
 .bg-odds { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink-soft); }
 .bonus-gift { display: grid; justify-items: center; gap: 6px; background: var(--paper); border: 4px solid var(--ink); border-radius: 16px; padding: 10px 14px 12px; box-shadow: var(--win), 0 4px 0 var(--ink); animation: popIn .35s cubic-bezier(.2,1.6,.4,1) both; }
@@ -995,7 +996,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-04a";
+const APP_VERSION = "2026-10-04b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -4966,21 +4967,36 @@ document.addEventListener("click", e => {
 /* ================================================================
    새 버전 알림 — 패드가 옛 파일을 붙들고 있으면 알려 준다
 ================================================================ */
-let updateChecked = false;
-async function checkUpdate() {
-  if (updateChecked || !navigator.onLine || !/^https?:$/.test(location.protocol)) return; // file:// 은 건너뜀
-  updateChecked = true;
-  try {
-    const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) return;
-    const m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(await r.text());
-    if (!m || m[1] === APP_VERSION) return;
-    showModal(
-      '<h2>🎁 새 버전이 나왔어요!</h2><p>지금 <b>v' + esc(APP_VERSION) + "</b> 을 쓰고 있어요.<br>새 버전 <b>v" + esc(m[1]) + "</b> 으로 바꿔 볼까요?</p>" +
-      '<div class="btns"><button class="btn big green" data-act="app-update">🔄 새 버전으로 바꾸기</button><button class="btn" data-act="close-modal">나중에</button></div>'
-    );
-  } catch (e) { /* 오프라인이면 조용히 */ }
+// 2026-10-04 보강: 처음 한 번만 보던 것을 → 앱으로 돌아올 때마다 · 10분마다 · 인터넷이 다시 될 때 확인 (탭을 계속 열어 두는 패드도 알 수 있게)
+// 새 버전이 있으면 처음 화면에서만 알림 창 (판 중에는 방해하지 않음), "나중에" 해도 처음 화면에 "🎁 새 버전으로 바꾸기" 버튼이 남는다
+const Update = { at: 0, ver: null, told: null };
+async function checkUpdate(force) {
+  if (!navigator.onLine || !/^https?:$/.test(location.protocol)) return; // file:// 은 건너뜀
+  if (!Update.ver && (force || Date.now() - Update.at > 60000)) {
+    Update.at = Date.now();
+    try {
+      const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+      if (r.ok) { const m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(await r.text()); if (m && m[1] !== APP_VERSION) Update.ver = m[1]; }
+    } catch (e) { /* 오프라인이면 조용히 */ }
+  }
+  if (Update.ver) tellUpdate();
 }
+function tellUpdate() {
+  if (current !== "home") return; // 판 · 고르기 · 친구 대결 중에는 기다렸다가 처음 화면에서
+  const box = $(".menu-small");
+  if (box && !$("#upd-btn")) box.insertAdjacentHTML("afterbegin", '<button class="btn gold upd-btn" id="upd-btn" data-act="app-update">🎁 새 버전으로 바꾸기</button>');
+  const f = $(".ver");
+  if (f) f.textContent = "v" + APP_VERSION + " → 새 버전 v" + Update.ver;
+  if (Update.told === Update.ver || $("#overlay").classList.contains("show")) return;
+  Update.told = Update.ver;
+  showModal(
+    '<h2>🎁 새 버전이 나왔어요!</h2><p>지금 <b>v' + esc(APP_VERSION) + "</b> 을 쓰고 있어요.<br>새 버전 <b>v" + esc(Update.ver) + "</b> 으로 바꿔 볼까요?<br><small>하던 판 · 잡은 포켓몬은 그대로 남아요</small></p>" +
+    '<div class="btns"><button class="btn big green" data-act="app-update">🔄 새 버전으로 바꾸기</button><button class="btn" data-act="close-modal">나중에</button></div>'
+  );
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
+window.addEventListener("online", () => checkUpdate(true));
+setInterval(() => checkUpdate(), 10 * 60000);
 
 /* ================================================================
    시작

@@ -1682,10 +1682,13 @@ def scenario_net(browser, base, errors):
     guest.wait_for_timeout(1500)
     for k in range(8):
         if not (act(host) or act(guest)): host.wait_for_timeout(250)
-    host.wait_for_timeout(2500)
-    a = host.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.step])) + window.__yut.G.s.turn")
-    b = guest.evaluate("() => JSON.stringify(window.__yut.G.s.pieces.map(p => [p.state, p.step])) + window.__yut.G.s.turn")
-    check(a == b, "이어한 뒤에도 두 패드의 판이 같음")
+    snap = "() => { const G = window.__yut.G; return G.busy || G.net.running || G.net.remoteBusy || G.net.queue.length ? null : JSON.stringify(G.s.pieces.map(p => [p.state, p.step])) + G.s.turn + '/' + G.net.seq; }"
+    a = b = None
+    for _ in range(60):  # ⏱ 타이머가 저절로 둘 수 있어서 두 패드가 쉬고 있을 때 비교
+        host.wait_for_timeout(250)
+        a, b = host.evaluate(snap), guest.evaluate(snap)
+        if a and a == b: break
+    check(a is not None and a == b, "이어한 뒤에도 두 패드의 판이 같음")
     hctx.close(); gctx.close()
     if fdb: fdb.stop()
 
@@ -1821,6 +1824,16 @@ def main():
         page.wait_for_timeout(1200)
         check(page.query_selector("text=새 버전이 나왔어요") is not None, "서버 파일이 새 버전이면 알림이 뜸")
         page.screenshot(path=str(OUT / "20-update.png"))
+        page.click("[data-act=close-modal]")
+        check(page.query_selector("#upd-btn") is not None and "새 버전" in page.inner_text(".ver"), "'나중에' 해도 처음 화면에 🎁 새 버전으로 바꾸기 버튼이 남음")
+        # 판 중에는 알림 창을 띄우지 않고, 처음 화면으로 오면 알려 줌 (탭을 계속 열어 둔 패드)
+        page.evaluate("() => { Update.ver = null; Update.told = null; }")
+        page.click("text=가족 대결"); page.click("[data-act=to-pick]"); page.click("[data-act=pick-auto]"); page.click("#pick-next"); page.click("[data-act=pick-auto]"); page.click("#pick-next")
+        wait_idle(page)
+        page.evaluate("() => checkUpdate(true)"); page.wait_for_timeout(800)
+        check(page.query_selector("text=새 버전이 나왔어요") is None, "판 중에는 새 버전 알림 창이 안 뜸 (놀이 방해 안 함)")
+        page.click("[data-act=pause]"); page.click("[data-act=pause-home]"); page.wait_for_timeout(800)
+        check(page.query_selector("text=새 버전이 나왔어요") is not None, "판을 나와 처음 화면에 오면 새 버전 알림")
         page.unroute(re.compile(r".*/index\.html\?v=\d+$"))
         ctx.close()
 
