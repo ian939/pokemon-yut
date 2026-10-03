@@ -790,6 +790,8 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .cs-say { position: absolute; left: calc(50% + clamp(36px, 7vh, 54px)); top: 8%; max-width: 44%; max-height: 84%; overflow: hidden; margin: 0; padding: 4px 10px; background: #fff; border: 3px solid var(--ink); border-radius: 12px; font-family: var(--pixel); font-weight: 700; font-size: 15px; line-height: 1.3; box-shadow: 0 3px 0 var(--ink); }
 @media (max-width: 520px) { .cs-say { font-size: 13px; max-width: 46%; padding: 3px 8px; word-break: normal; overflow-wrap: normal; } }
 .cs-say::before { content: ""; position: absolute; left: -10px; bottom: 8px; border: 7px solid transparent; border-right-color: var(--ink); }
+.qz-odds { display: inline-block; font-family: var(--font); font-size: 13px; font-weight: 800; color: #8a5a00; background: #fff3c4; border-radius: 8px; padding: 1px 8px; }
+.bg-odds { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink-soft); }
 .bonus-gift { display: grid; justify-items: center; gap: 6px; background: var(--paper); border: 4px solid var(--ink); border-radius: 16px; padding: 10px 14px 12px; box-shadow: var(--win), 0 4px 0 var(--ink); animation: popIn .35s cubic-bezier(.2,1.6,.4,1) both; }
 .bg-say { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 800; font-size: 15px; text-align: left; }
 .bg-helper { position: relative; flex: 0 0 auto; width: 48px; height: 48px; }
@@ -993,7 +995,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-03e";
+const APP_VERSION = "2026-10-04a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1572,7 +1574,7 @@ Screens.setup = sec => {
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
       '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 10칸 가면 기술을 하나 배워요! 🎲 기술은 확률로 성공 — 일반 60% · 레어 70% · 유니크 80% · 👑 전설 90% (상대에게 거는 기술은 상성 ±10%). 말마다 한 판에 한 번." : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
       '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
-      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단 대결이 끝나면 🏥 포켓몬센터에서 계산을 돕고 몬스터볼을 받아요 — 안에 포켓몬이! (두 문제까지)" : "문제 없이 놀아요.") + "</p>" +
+      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단 대결이 끝나면 🏥 포켓몬센터에서 세 손님 계산(천 · 만 · 십만 원)을 돕고 몬스터볼을 받아요 — 맞힐수록 유니크·전설이 잘 나와요!" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
       (net ? '<h3>⏱ 차례 타이머</h3><div class="chips">' + chipHtml("timer", 20, "20초") + chipHtml("timer", 10, "10초") + chipHtml("timer", 0, "없음") + "</div>" +
         '<p class="note">' + (Setup.timer ? "내 차례에 " + Setup.timer + "초 안에 안 하면 저절로 던지고 가장 좋은 칸으로 가요 (친구가 오래 기다리지 않게). ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)" : "시간 제한 없이 해요. ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)") + "</p>" : "") +
@@ -2823,7 +2825,7 @@ async function showWin(ti) {
     '<div class="win-team">' + finals.map((id, k) =>
       '<div class="w" style="--i:' + k + '"><img src="' + artUrl(id) + '" alt="" onerror="artFail(this,' + id + ')"><b>' + esc(nameOf(id)) + "</b></div>").join("") + "</div>" +
     boxHtml(s.reward) + bonusHtml(s.reward) +
-    '<div class="win-btns' + (s.reward && (!s.reward.opened || (studyFlag() && !s.reward.bonus)) ? " hidden" : "") + '">' + (netOn() ? "" : '<button class="btn big gold" data-act="rematch">🔁 한 판 더</button>') + '<button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
+    '<div class="win-btns' + (s.reward && (!s.reward.opened || (studyFlag() && !s.reward.bonus)) ? " hidden" : "") + '">' + (netOn() ? '<button class="btn big gold" data-act="net-rematch">🔁 같은 친구와 한 판 더</button>' : '<button class="btn big gold" data-act="rematch">🔁 한 판 더</button>') + '<button class="btn big" data-act="win-home">🏠 처음으로</button></div></div>';
   document.body.appendChild(o);
 }
 /* ---------- 🎁 보물상자 — 볼은 이긴 순간 이미 가방에 들어갔다. 여기서는 열어서 보여 주기만 ---------- */
@@ -2935,7 +2937,7 @@ function startGame(teams, opts) {
   if (opts.mode === "net") s.settings.timer = opts.timer == null ? 20 : Number(opts.timer) || 0; // ⏱ 친구 대결 차례 타이머 (0 = 없음)
   s.settings.study = opts.study !== false; // 🎓 공부 문제 (화면 쪽 설정)
   G.s = s;
-  G.net = opts.net ? { code: opts.net.code, me: opts.net.me, seq: 0, queue: [], running: false, remoteBusy: false, note: null, pid: opts.net.pid || Setup.t0 } : null;
+  G.net = opts.net ? { code: opts.net.code, me: opts.net.me, seq: 0, queue: [], running: false, remoteBusy: false, note: null, pid: opts.net.pid || Setup.t0, round: opts.net.round || 0, first: opts.net.first || 0 } : null;
   persist();
   netSend([], false); // 친구 대결: 판을 서버에 올린다 → 방 만든 집 패드도 윷판으로
   showScreen("game");
@@ -3683,7 +3685,10 @@ function clockExplain(h, m) {
 }
 // ❓ 풀숲: 시계를 맞히면 이번 조우만 희귀도 30·30·20·20 → true
 const QUIZ_TRIES = 3; // 틀리면 풀이를 보고 다음 문제로 — 세 문제까지 (사용자 요청 2026-09-27: 교육 효과)
-const MONEY_TRIES = 2; // 💰 돈 문제는 두 문제까지 — 맞히면 포켓몬을 무작위로 잡는다 (사용자 요청 2026-10-03)
+// 🏥 금액 문제 (사용자 확정 2026-10-04): 세 문제 — 천 원 · 만 원 · 십만 원 단위. 끝나면 럭키가 몬스터볼을 준다
+// 맞힐 때마다 볼 안 포켓몬의 유니크·전설 확률 +3 · +3 · +4% (일반·레어는 그만큼 −) → 다 맞히면 일반 40 · 레어 20 · 유니크 20 · 전설 20
+const MONEY_QS = 3, MONEY_BOOST = [3, 3, 4];
+const moneyOdds = right => { const b = MONEY_BOOST.slice(0, right).reduce((t, x) => t + x, 0); const W = Yut.Rewards.WILD_ODDS; return { c: W.c - b, r: W.r - b, u: W.u + b, l: W.l + b }; };
 async function clockQuiz() {
   for (let step = 1; step <= QUIZ_TRIES; step++) if (await clockQuizOnce(step)) return true;
   return false;
@@ -3724,19 +3729,19 @@ function moneyExplain(q) {
 }
 // 💰 돈 문제 단계는 문제마다 무작위 1·2·3 (사용자 요청 2026-09-27 — 천·백만 나오지 않게, 만·십만도 자주)
 const moneyLevel = () => 1 + Math.floor(Math.random() * 3);
-async function moneyQuizOnce(step) {
-  const lv = moneyLevel();
+async function moneyQuizOnce(step, right) {
+  const lv = Math.min(3, step); // 1 = 천 원 단위 · 2 = 만 원 단위 · 3 = 십만 원 단위
   const retry = step > 1;
   const f = (Q.get("money") || "").split(",").map(Number);
   const forced = !retry && f.length === 4 && f.every(x => x >= 0 && x <= 9) ? { 100000: f[0], 10000: f[1], 1000: f[2], 100: f[3] } : null;
   const q = Yut.Study.money(lv, Math.random, forced);
   const r = await quizWindow({
-    kind: "money", level: forced ? 2 : lv, step, of: MONEY_TRIES,
-    scene: centerScene(step === 1 ? "계산을 도와줄래요? 모두 얼마예요?" : "한 번만 더 도와줄래요?"),
-    title: step === 1 ? "🏥 포켓몬센터에 왔어요! 럭키의 <b>계산을 도와주면 몬스터볼</b>을 줘요"
-      : "🏥 마지막 두 번째 손님! 맞히면 <b>몬스터볼</b>을 줘요",
+    kind: "money", level: forced ? 2 : lv, step, of: MONEY_QS,
+    scene: centerScene(["천 원 손님이에요! 모두 얼마예요?", "이번엔 만 원 손님! 모두 얼마예요?", "마지막 십만 원 손님! 모두 얼마예요?"][step - 1] || "모두 얼마예요?"),
+    title: "🏥 포켓몬센터 손님 " + step + "/" + MONEY_QS + " — 맞히면 몬스터볼 속 <b>유니크·전설 +" + MONEY_BOOST[right] + "%</b>" +
+      ' <small class="qz-odds">지금 유니크 ' + moneyOdds(right).u + "% · 전설 " + moneyOdds(right).l + "%</small>",
     body: moneyHtml(q.counts), question: "모두 얼마일까요?",
-    say: step === 1 ? "포켓몬센터에 왔어요! 럭키의 계산을 도와주세요. 모두 얼마일까요?" : "한 번만 더 도와줄래요? 모두 얼마일까요?",
+    say: step === 1 ? "포켓몬센터에 왔어요! 럭키의 계산을 도와주세요. 모두 얼마일까요?" : step === 2 ? "이번엔 만 원 손님이에요. 모두 얼마일까요?" : "마지막 십만 원 손님! 모두 얼마일까요?",
     choices: q.choices.map(Yut.Study.won), answer: q.answer,
     okText: "정답! " + Yut.Study.won(q.total) + " (" + Yut.Study.koNum(q.total) + " 원) — 럭키: 고마워요! 💕",
     explain: () => moneyExplain(q),
@@ -3751,7 +3756,8 @@ function bonusHtml(rw) {
   if (!rw || !rw.opened || !G.s || !studyFlag()) return "";
   const B = rw.bonus;
   if (B && B.mon && B.opened === false) { // 🎁 받은 몬스터볼 — 눌러서 열기
-    return '<div class="bonus-zone" id="bonus-zone"><div class="bonus-gift"><p class="bg-say"><span class="bg-helper">' + spr(CENTER_HELPER) + "</span><span>🏥 럭키: 고마워요! 이 <b>몬스터볼</b>을 줄게요. 안에 누가 있을까?</span></p>" +
+    return '<div class="bonus-zone" id="bonus-zone"><div class="bonus-gift"><p class="bg-say"><span class="bg-helper">' + spr(CENTER_HELPER) + "</span><span>🏥 럭키: 고마워요! " + (B.right != null ? MONEY_QS + "문제 중 <b>" + B.right + "문제</b> 맞혀서 " : "") + "이 <b>몬스터볼</b>을 줄게요. 안에 누가 있을까?</span></p>" +
+      (B.odds ? '<p class="bg-odds">✨ 이 볼은 일반 ' + B.odds.c + "% · 레어 " + B.odds.r + "% · <b>유니크 " + B.odds.u + "% · 전설 " + B.odds.l + "%</b></p>" : "") +
       '<button class="bg-ball cursor" data-act="bonus-open" aria-label="몬스터볼 열기"><img src="assets/items/poke-ball.png" alt=""></button><b class="bg-tap">👆 눌러서 열어 봐요!</b></div></div>';
   }
   if (B && B.mon) { // 🎉 나온 포켓몬 카드 (새로고침해도 그대로)
@@ -3769,17 +3775,19 @@ async function moneyBonus() {
   if (!rw || !rw.opened || rw.bonus || G.moneyBusy) return;
   G.moneyBusy = true;
   Store.use(rw.to); // 👤 상자를 받은 프로필의 공부 기록·보관함
-  let ok = false;
-  for (let step = 1; step <= MONEY_TRIES && !ok; step++) ok = await moneyQuizOnce(step);
+  let right = 0;
+  for (let step = 1; step <= MONEY_QS; step++) if (await moneyQuizOnce(step, right)) right++;
+  const ok = true; // 세 문제가 끝나면 늘 몬스터볼 — 맞힌 만큼 유니크·전설 확률이 올라가 있다
+  const odds = moneyOdds(right);
   let mon = null, isNew = false;
   if (ok) {
     const forced = Number(Q.get("bonusmon"));
-    mon = forced >= 1 && forced <= 1025 ? forced : Yut.Rewards.rollWild(WILD_POOLS, ownedSet(rw.to), Math.random);
+    mon = forced >= 1 && forced <= 1025 ? forced : Yut.Rewards.rollWild(WILD_POOLS, ownedSet(rw.to), Math.random, odds);
     isNew = !Store.data.collection.some(x => x.id === mon) && STARTERS.indexOf(mon) < 0;
     if (!Store.data.collection.some(x => x.id === mon)) Store.data.collection.push({ id: mon, t: Date.now(), from: "center" });
   }
   // 결과를 먼저 저장 (새로고침해도 두 번 안 받게 — 볼은 열기 전이어도 보관함엔 들어가 있다)
-  rw.bonus = ok ? { mon, isNew, opened: false } : { mon: null };
+  rw.bonus = { mon, isNew, opened: false, right, odds };
   Store.data.lastGame = G.s;
   Store.save();
   G.moneyBusy = false;
@@ -4289,6 +4297,7 @@ function renderRank() {
     return '<div class="rank-row' + (top ? " top t" + place : "") + (mine.has(x.rid) ? " me" : "") + '"><span class="rk-no">' + medal + '</span><span class="rk-av">' + spr(av) + "</span>" +
       '<b class="rk-name">' + esc(String(x.name).slice(0, 12)) + (mine.has(x.rid) ? ' <i class="rk-me">우리</i>' : "") + '</b><span class="rk-val"><strong>' + (x[by] || 0) + "</strong>" + info.unit + "</span></div>";
   }).join("");
+  $$(".rk-name", box).forEach(e => fitText(e, 12)); // 이름이 길면 글자를 줄여 다 보이게
 }
 
 /* ---------- 👤 프로필 화면 ---------- */
@@ -4447,7 +4456,7 @@ async function saveFetch() {
   }
 }
 const netParse = j => { try { return typeof j === "string" ? JSON.parse(j) : null; } catch (e) { return null; } };
-function netSave() { if (G.net) { Store.data.net = G.s && G.s.phase === "over" ? null : { code: G.net.code, me: G.net.me, seq: G.net.seq, pid: G.net.pid }; Store.save(); } } // 끝난 판은 이어하기에서 빼기
+function netSave() { if (G.net) { Store.data.net = G.s && G.s.phase === "over" ? null : { code: G.net.code, me: G.net.me, seq: G.net.seq, pid: G.net.pid, round: G.net.round || 0, first: G.net.first || 0 }; Store.save(); } } // 끝난 판은 이어하기에서 빼기
 // 내 동작을 올린다 — busy: 아직 연출·조우·선물 고르기 중 (상대는 기다린다)
 let netChain = Promise.resolve();
 function netSend(events, busy) {
@@ -4469,6 +4478,7 @@ const giftMine = () => !!(netOn() && G.s.gifts && G.s.gifts.length && G.s.gifts[
 function onNetRoom(room) {
   if (!netOn() || current !== "game" || !room) return;
   onEmote(room.emote);
+  if ((room.round || 0) > (G.net.round || 0)) { netRematchEnter(room); return; } // 🔁 같은 친구와 한 판 더
   if ((room.seq || 0) <= G.net.seq) return;
   G.net.seq = room.seq;
   netSave();
@@ -4644,10 +4654,10 @@ async function netCreate() {
 }
 // 기다리기 화면 — 방 만든 집: 친구가 들어오기 · 친구가 고르기 / 들어간 집: 방 만든 집이 고르기
 Screens.netwait = sec => {
-  const N = Setup.net, host = N.me === 0;
+  const N = Setup.net, host = N.me === 0, first = N.first || 0; // first: 먼저 고르는 집 (판마다 번갈아)
   const stage = N.stage || "join";
   const msg = stage === "join" ? "친구를 기다려요… 🕐<br><small>친구네 패드에서 🏠 친구 대결 → 🔢 코드로 들어가기</small>"
-    : stage === "guest-pick" ? esc(N.names[1]) + "가 포켓몬을 고르는 중… 🕐" : esc(N.names[0]) + " 팀이 포켓몬을 고르는 중… 🕐";
+    : stage === "second-pick" ? esc(N.names[1 - first]) + "가 포켓몬을 고르는 중… 🕐" : esc(N.names[first]) + "가 먼저 포켓몬을 고르는 중… 🕐";
   sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="net-leave" aria-label="그만두기">←</button><h2>🏠 친구 대결</h2><span class="side"></span></header>' +
     '<div class="scroll"><div class="card net-card">' +
       (host ? '<p class="net-lab">친구에게 알려 줄 코드</p><div class="net-code">' + N.code.split("").map(d => "<b>" + d + "</b>").join("") + "</div>" : '<p class="net-lab">코드 ' + esc(N.code) + " · " + esc(N.names[0]) + " 팀의 방</p>") +
@@ -4661,18 +4671,19 @@ Screens.netwait = sec => {
       SFX.again(); toast("🏠 " + room.guest.name + "가 들어왔어요!", 2000);
       Setup.ti = 0; Setup.picks = [validPicks(Store.data.lastPicks[Setup.t0], 0), []];
       showScreen("pick");
-    } else if (!host && stage === "host-pick" && room.status === "pick-guest") {
-      Setup.picks = [room.picks && room.picks[0] || [], []];
-      Setup.ti = 1; Setup.picks[1] = validPicks(Store.data.lastPicks[Setup.t0], 1);
+    } else if (stage === "first-pick" && room.status === "pick-second" && room.picks && room.picks[first]) { // 먼저 고른 집이 끝냄 → 내 차례
+      const me = N.me;
+      Setup.picks = [[], []]; Setup.picks[first] = room.picks[first];
+      Setup.ti = me; Setup.picks[me] = validPicks(Store.data.lastPicks[Setup.t0], me);
       showScreen("pick");
-    } else if (room.status === "play" && room.stateJ) {
+    } else if (room.status === "play" && room.stateJ && (room.round || 0) === (N.round || 0)) {
       netEnterGame(room);
     }
   });
 };
 function netEnterGame(room) {
   const N = Setup.net;
-  G.net = { code: N.code, me: N.me, seq: room.seq || 0, queue: [], running: false, remoteBusy: false, note: null, pid: Setup.t0 };
+  G.net = { code: N.code, me: N.me, seq: room.seq || 0, queue: [], running: false, remoteBusy: false, note: null, pid: Setup.t0, round: N.round || 0, first: N.first || 0 };
   G.s = fillV8(netParse(room.stateJ));
   G.s.intro = true; // 시작 연출은 각자 패드에서
   persist(); netSave();
@@ -4710,10 +4721,10 @@ async function netJoin() {
     const bad = !room ? "그런 방이 없어요. 코드를 다시 확인해 주세요" : Date.now() - (room.created || 0) > ROOM_TTL || room.status === "over" ? "끝났거나 오래된 방이에요" : room.guest ? "벌써 친구가 들어온 방이에요" : "";
     if (bad) { err.textContent = bad; $("#net-go").disabled = false; return; }
     const gname = name;
-    await Net.patch(N.code, { guest: { name: gname, avatar: me.avatar }, status: "pick-host", updated: Date.now() });
+    await Net.patch(N.code, { guest: { name: gname, avatar: me.avatar }, status: "pick-first", first: 0, round: 0, updated: Date.now() });
     Store.data.net = { code: N.code, me: 1, seq: 0, pid: Setup.t0 }; Store.save();
     Object.assign(Setup, { mode: "net", pieces: room.settings.pieces, backdo: room.settings.backdo, skills: room.settings.skills !== false, battle: room.settings.battle !== false, timer: room.settings.timer == null ? 20 : room.settings.timer });
-    Setup.net = { code: N.code, me: 1, names: [room.host.name, gname], avatars: [room.host.avatar || null, me.avatar], stage: "host-pick" };
+    Setup.net = { code: N.code, me: 1, names: [room.host.name, gname], avatars: [room.host.avatar || null, me.avatar], stage: "first-pick", first: 0, round: 0 };
     showScreen("netwait");
   } catch (e) {
     console.error(e);
@@ -4723,23 +4734,55 @@ async function netJoin() {
 }
 // 고르기 끝 — 방 만든 집: 올리고 기다리기 / 들어간 집: 판을 만들어 올리기
 async function netPickDone() {
-  const N = Setup.net;
+  const N = Setup.net, first = N.first || 0;
   try {
-    if (N.me === 0) {
-      Store.data.lastPicks[Setup.t0] = Setup.picks[0].slice(); Store.save();
-      await Net.patch(N.code, { picks: { 0: Setup.picks[0] }, status: "pick-guest", updated: Date.now() });
-      N.stage = "guest-pick";
+    if (N.me === first) { // 먼저 고르는 집: 올리고 기다리기
+      Store.data.lastPicks[Setup.t0] = Setup.picks[N.me].slice(); Store.save();
+      await Net.patch(N.code, { picks: { [N.me]: Setup.picks[N.me] }, status: "pick-second", updated: Date.now() });
+      N.stage = "second-pick";
       showScreen("netwait");
-    } else {
-      Store.data.lastPicks[Setup.t0] = Setup.picks[1].slice(); Store.save();
+    } else { // 나중에 고르는 집: 판을 만들어 올리기
+      Store.data.lastPicks[Setup.t0] = Setup.picks[N.me].slice(); Store.save();
       const av = N.avatars || [];
       const teams = [
         { key: "net0", name: N.names[0], avatar: av[0] || null, color: TEAM_COLORS[0], cpu: false, picks: Setup.picks[0].slice() },
         { key: "net1", name: N.names[1], avatar: av[1] || null, color: TEAM_COLORS[1], cpu: false, picks: Setup.picks[1].slice() }];
       const first = coinFirst();
-      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, timer: Setup.timer, net: { code: N.code, me: 1, pid: Setup.t0 } });
+      startGame(teams, { pieces: Setup.pieces, backdo: Setup.backdo, mode: "net", battle: Setup.battle, skills: Setup.skills, study: Setup.study, first, timer: Setup.timer, net: { code: N.code, me: N.me, pid: Setup.t0, round: N.round || 0, first: N.first || 0 } });
     }
   } catch (e) { console.error(e); toast("📶 올리지 못했어요. 인터넷을 확인하고 다시 눌러 주세요", 2600); }
+}
+/* ---------- 🔁 같은 친구와 한 판 더 (사용자 요청 2026-10-04) — 같은 방에서 바로, 먼저 고르는 집은 판마다 번갈아 ---------- */
+async function netRematch() {
+  if (!G.net || !G.s || G.s.phase !== "over" || G.net.rematching) return;
+  G.net.rematching = true;
+  const btn = $("[data-act=net-rematch]");
+  if (btn) btn.disabled = true;
+  try {
+    const room = await Net.get(G.net.code);
+    if (!room || !room.guest) throw new Error("gone");
+    if ((room.round || 0) > (G.net.round || 0)) { netRematchEnter(room); return; } // 친구가 먼저 눌렀음
+    const round = (room.round || 0) + 1, first = 1 - (room.first || 0);
+    await Net.patch(G.net.code, { round, first, status: "pick-first", picks: null, stateJ: null, lastJ: null, seq: 0, updated: Date.now() });
+    netRematchEnter(Object.assign({}, room, { round, first, status: "pick-first", picks: null }));
+  } catch (e) {
+    console.error(e);
+    G.net.rematching = false;
+    if (btn) btn.disabled = false;
+    toast("📶 친구 방에 다시 들어가지 못했어요. 인터넷을 확인해 주세요", 2600);
+  }
+}
+function netRematchEnter(room) {
+  const me = G.net.me, code = G.net.code, round = room.round || 0, first = room.first || 0;
+  const st = room.settings || {};
+  Object.assign(Setup, { mode: "net", pieces: st.pieces || Setup.pieces, backdo: st.backdo !== false, skills: st.skills !== false, battle: st.battle !== false, timer: st.timer == null ? 20 : st.timer });
+  Setup.t0 = G.net.pid || Setup.t0;
+  Setup.net = { code, me, round, first, names: [room.host.name, room.guest.name], avatars: [room.host.avatar || null, room.guest.avatar || null] };
+  G.net = null; G.s = null;
+  Store.data.game = null; Store.data.net = null; Store.save();
+  toast("🔁 한 판 더! " + (first === me ? "이번엔 우리가 먼저 골라요" : Setup.net.names[first] + "가 먼저 골라요"), 2200);
+  if (first === me) { Setup.ti = me; Setup.picks = [[], []]; Setup.picks[me] = validPicks(Store.data.lastPicks[Setup.t0], me); showScreen("pick"); }
+  else { Setup.net.stage = "first-pick"; showScreen("netwait"); }
 }
 function netLeave() {
   Net.stop();
@@ -4796,7 +4839,7 @@ function openRules() {
       "<li>🪙 시작할 때 <b>동전</b>을 던져서 먼저 할 팀을 정해요 — 앞면(Heads)·뒷면(Tails)</li>" +
       "<li>📖 <b>기술</b>은 <b>10칸</b> 가면 배워요 (모든 포켓몬 같아요). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
       "<li>🎲 기술은 <b>확률로 성공</b>해요 — 일반 <b>60%</b> · 레어 <b>70%</b> · 유니크 <b>80%</b> · 👑 전설 <b>90%</b> (스타팅 포켓몬은 레어). 상대 말에 거는 기술은 타입 상성이 좋으면 <b>+10%</b>, 나쁘면 <b>−10%</b>. 실패하면 그 기술은 사라져요!</li>" +
-      "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 🏥 로켓단 대결이 끝나면 <b>포켓몬센터</b>에서 계산(돈 세기)을 도와요. 맞히면 몬스터볼을 받고, 열면 포켓몬이 짜잔! (두 문제까지)</li>" +
+      "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 🏥 로켓단 대결이 끝나면 <b>포켓몬센터</b>에서 세 손님의 계산(천 원 · 만 원 · 십만 원)을 도와요. 끝나면 몬스터볼을 받고, 열면 포켓몬이 짜잔! 맞힌 만큼 유니크·전설 확률이 올라가요 (다 맞히면 20% · 20%)</li>" +
       "<li>🎯 잡을 확률(몬스터볼): 일반 80 · 레어 70 · 유니크 60 · 전설 40% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
       "<li>😼 로켓단도 풀숲에서 그물로 포켓몬을 잡아 가요. 먼저 가서 잡아요!</li>" +
@@ -4908,6 +4951,7 @@ const Act = {
     Store.data.game = null; Store.data.net = null; Store.save(); G.s = null; G.net = null; G.paused = false; showScreen("home"); toast("판을 정리했어요");
   }),
   "rematch": rematch,
+  "net-rematch": () => netRematch(),
   "win-home": () => showScreen("home"),
   "close-modal": closeModal,
   "app-update": () => location.replace(location.pathname + "?v=" + Date.now()),

@@ -99,6 +99,9 @@ with sync_playwright() as p:
         pg.wait_for_selector('.quiz .qz-choice', timeout=20000); shot(pg, 'money', '.quiz')
         pg.click('.qz-choice:not([data-ok])'); pg.wait_for_selector('.qz-next:not([hidden])'); shot(pg, 'money-explain', '.quiz')
         pg.click('.qz-next'); pg.wait_for_selector('.quiz .qz-choice:not([disabled])'); pg.click('.qz-choice[data-ok]')
+        pg.wait_for_timeout(1200); pg.wait_for_selector('.quiz .qz-choice:not([disabled])', timeout=20000); pg.click('.qz-choice[data-ok]')  # 🏥 세 번째 손님
+        pg.wait_for_selector('#bonus-zone .bg-ball', timeout=20000); shot(pg, 'center-ball', '.win-screen')
+        pg.click('#bonus-zone .bg-ball', force=True); pg.wait_for_selector('#bonus-zone .bonus-mon', timeout=20000)
         pg.wait_for_selector('.win-btns:not(.hidden)', timeout=20000); pg.wait_for_timeout(800); shot(pg, 'win-done', '.win-screen')
         res['_errors'] = errs
         pg.close()
