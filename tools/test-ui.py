@@ -415,12 +415,17 @@ def scenario_v2(browser, base, errors):
         answer_quiz(page, timeout=20000)
     check(all(f"{k + 1}/3" in t for k, t in enumerate(titles)) and "유니크 10%" in titles[0] and "유니크 13%" in titles[1] and "유니크 16%" in titles[2],
           "🏥 손님 세 명 (1/3 · 2/3 · 3/3), 맞힐 때마다 유니크 10 → 13 → 16%")
-    page.wait_for_selector("#bonus-zone .bg-ball", timeout=15000)
-    check(store(page, "JSON.stringify(d.lastGame.reward.bonus.odds)") == '{"c":40,"r":20,"u":20,"l":20}' and "20%" in page.inner_text("#bonus-zone"),
+    page.wait_for_selector(".center-ov .cv-ball", timeout=15000)
+    check(store(page, "JSON.stringify(d.lastGame.reward.bonus.odds)") == '{"c":40,"r":20,"u":20,"l":20}' and "20%" in page.inner_text(".center-ov"),
           "세 문제 다 맞히면 볼 속 확률 일반 40 · 레어 20 · 유니크 20 · 전설 20")
-    check("몬스터볼" in page.inner_text("#bonus-zone") and store(page, "d.lastGame.reward.bonus.opened") is False, "끝나면 럭키가 몬스터볼을 줌 (아직 안 열림)")
+    check("몬스터볼" in page.inner_text(".center-ov") and store(page, "d.lastGame.reward.bonus.opened") is False, "끝나면 🏥 포켓몬센터 화면에서 럭키가 몬스터볼을 줌 (아직 안 열림)")
+    vis = page.evaluate("() => { const b = document.querySelector('.center-ov .cv-ball').getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight; }")
+    check(vis, "몬스터볼이 스크롤 없이 바로 보임 (상자 · 볼 목록은 뒤에 가려짐)")
     page.screenshot(path=str(OUT / "76b-center-ball.png"))
-    page.click("#bonus-zone .bg-ball", force=True)
+    page.click(".center-ov .cv-ball", force=True)
+    page.wait_for_selector(".center-ov .cv-mon", timeout=15000)
+    check("짜잔" in page.inner_text(".center-ov"), "포켓몬센터 화면에서 볼을 열면 짜잔!")
+    page.click("[data-act=center-close]")
     page.wait_for_selector("#bonus-zone .bonus-mon", timeout=15000)
     page.wait_for_selector(".win-btns:not(.hidden)", timeout=5000)
     mon = store(page, "d.lastGame.reward.bonus.mon")
