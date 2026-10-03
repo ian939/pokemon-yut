@@ -996,7 +996,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-04b";
+const APP_VERSION = "2026-10-04c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1575,7 +1575,7 @@ Screens.setup = sec => {
       '<h3>✨ 포켓몬 기술</h3><div class="chips">' + chipHtml("skills", true, "✨ 켜기") + chipHtml("skills", false, "끄기") + "</div>" +
       '<p class="note">' + (Setup.skills ? "5칸마다 진화하고, 10칸 가면 기술을 하나 배워요! 🎲 기술은 확률로 성공 — 일반 60% · 레어 70% · 유니크 80% · 👑 전설 90% (상대에게 거는 기술은 상성 ±10%). 말마다 한 판에 한 번." : "기술 없이 윷놀이 규칙만으로 해요.") + "</p>" +
       '<h3>🎓 공부 문제 (시계·돈)</h3><div class="chips">' + chipHtml("study", true, "🎓 켜기") + chipHtml("study", false, "끄기") + "</div>" +
-      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계를 맞히면 희귀한 포켓몬이 더 잘 나와요. 로켓단 대결이 끝나면 🏥 포켓몬센터에서 세 손님 계산(천 · 만 · 십만 원)을 돕고 몬스터볼을 받아요 — 맞힐수록 유니크·전설이 잘 나와요!" : "문제 없이 놀아요.") + "</p>" +
+      '<p class="note">' + (Setup.study ? "❓ 풀숲에서 🕐 시계 문제 세 번(정각 → 15·30·45분 → 몇 시 몇 분) — 맞힐수록 유니크·전설이 잘 나와요. 로켓단 대결이 끝나면 🏥 포켓몬센터에서 세 손님 계산(천 · 만 · 십만 원)을 돕고 몬스터볼을 받아요 — 맞힐수록 유니크·전설이 잘 나와요!" : "문제 없이 놀아요.") + "</p>" +
       '<h3>배틀 장면 (잡을 때 모습)</h3><div class="chips">' + chipHtml("battle", true, "⚔️ 보기") + chipHtml("battle", false, "⏭ 건너뛰기") + "</div>" +
       (net ? '<h3>⏱ 차례 타이머</h3><div class="chips">' + chipHtml("timer", 20, "20초") + chipHtml("timer", 10, "10초") + chipHtml("timer", 0, "없음") + "</div>" +
         '<p class="note">' + (Setup.timer ? "내 차례에 " + Setup.timer + "초 안에 안 하면 저절로 던지고 가장 좋은 칸으로 가요 (친구가 오래 기다리지 않게). ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)" : "시간 제한 없이 해요. ❓ 풀숲에서는 몬스터볼이 저절로 던져져요 (70%)") + "</p>" : "") +
@@ -2578,8 +2578,8 @@ async function animWild(e) {
   else if (netOn()) { rollSpot(e, false); await encounter(e, true); } // 🏠 친구 대결: 문제 없이, 볼은 저절로 (친구가 기다리니까)
   else {
     await sleep(450);
-    const boosted = studyOn() ? await clockQuiz() : false; // 🕐 맞히면 이번 조우만 30·30·20·20
-    rollSpot(e, boosted);
+    const right = studyOn() ? await clockQuiz() : 0; // 🕐 맞힌 수만큼 이번 조우만 유니크·전설 ↑
+    rollSpot(e, right);
     await encounter(e);
   }
   if (spotEl) spotEl.remove();
@@ -3684,39 +3684,55 @@ function clockExplain(h, m) {
     : "긴 <b class='mn'>파란 바늘</b>이 <b>" + (k * 5) + "분</b>에서 작은 눈금 <b>" + extra + "칸</b> 더 → <b>" + m + "분</b>";
   return [{ hl: ".hand-h", text: hourText }, { hl: ".hand-m", text: minText }, { text: "정답은 <b>" + Yut.Study.clockText({ h, m }) + "</b>!" }];
 }
-// ❓ 풀숲: 시계를 맞히면 이번 조우만 희귀도 30·30·20·20 → true
+// ❓ 풀숲: 시계 문제 세 번 (아래 clockQuiz) — 맞힌 수만큼 이번 조우의 유니크·전설 ↑
 const QUIZ_TRIES = 3; // 틀리면 풀이를 보고 다음 문제로 — 세 문제까지 (사용자 요청 2026-09-27: 교육 효과)
 // 🏥 금액 문제 (사용자 확정 2026-10-04): 세 문제 — 천 원 · 만 원 · 십만 원 단위. 끝나면 럭키가 몬스터볼을 준다
 // 맞힐 때마다 볼 안 포켓몬의 유니크·전설 확률 +3 · +3 · +4% (일반·레어는 그만큼 −) → 다 맞히면 일반 40 · 레어 20 · 유니크 20 · 전설 20
 const MONEY_QS = 3, MONEY_BOOST = [3, 3, 4];
 const moneyOdds = right => { const b = MONEY_BOOST.slice(0, right).reduce((t, x) => t + x, 0); const W = Yut.Rewards.WILD_ODDS; return { c: W.c - b, r: W.r - b, u: W.u + b, l: W.l + b }; };
+// 🕐 풀숲 시계 문제 (사용자 확정 2026-10-04): 기회 세 번 — ① 정각 → ② 15 · 30 · 45분 → ③ 몇 시 몇 분(1분 단위)
+// 맞히면 다음 단계, 틀리면 같은 단계의 다른 문제. 맞힐 때마다 이번 조우의 유니크·전설 +3 · +3 · +4% (금액 문제와 같은 표)
+// 예) ① 틀림 → ① 맞힘(+3) → ② 틀림 = +3%만
+const CLOCK_QS = 3;
 async function clockQuiz() {
-  for (let step = 1; step <= QUIZ_TRIES; step++) if (await clockQuizOnce(step)) return true;
-  return false;
+  let right = 0;
+  for (let step = 1; step <= CLOCK_QS; step++) if (await clockQuizOnce(step, Math.min(3, right + 1), right)) right++;
+  return right;
 }
-async function clockQuizOnce(step) {
+function clockPick(lv) {
+  const h = 1 + Math.floor(Math.random() * 12);
+  if (lv === 1) return { h, m: 0 };
+  if (lv === 2) return { h, m: [15, 30, 45][Math.floor(Math.random() * 3)] };
+  let m; do { m = Math.floor(Math.random() * 60); } while (m % 5 === 0); // 1분 단위 (5의 배수가 아닌 분)
+  return { h, m };
+}
+async function clockQuizOnce(step, lv, right) {
   const f = (Q.get("clock") || "").split(":").map(Number);
-  const q = Yut.Study.clock(studyLevel("clock"), Math.random, step === 1 && f.length === 2 && f[0] >= 1 && f[0] <= 12 && f[1] >= 0 && f[1] < 60 ? { h: f[0], m: f[1] } : null);
+  const forced = step === 1 && f.length === 2 && f[0] >= 1 && f[0] <= 12 && f[1] >= 0 && f[1] < 60 ? { h: f[0], m: f[1] } : clockPick(lv);
+  const q = Yut.Study.clock(3, Math.random, forced);
+  const od = moneyOdds(right);
   const r = await quizWindow({
-    kind: "clock", level: studyLevel("clock"), step,
-    title: step === 1 ? "🕐 풀숲이 흔들흔들! 시계를 맞히면 <b>희귀한 포켓몬</b>이 나올지도?"
-      : step === 2 ? "🕐 두 번째 문제! 이번에 맞히면 <b>희귀한 포켓몬</b>이 나올지도?" : "🕐 마지막 세 번째 문제! 힘내요!",
-    body: clockSvg(q.h, q.m), question: "지금 몇 시" + (studyLevel("clock") === 1 ? "일까요?" : " 몇 분일까요?"),
-    say: step === 1 ? "시계를 맞히면 희귀한 포켓몬이 나올지도! 지금 몇 시일까요?" : (step === 2 ? "두 번째 문제! " : "마지막 문제! ") + "지금 몇 시일까요?",
+    kind: "clock", level: lv, step, of: CLOCK_QS,
+    title: "🕐 시계 문제 " + step + "/" + CLOCK_QS + " — " + ["정각", "15 · 30 · 45분", "몇 시 몇 분"][lv - 1] + "! 맞히면 <b>유니크·전설 +" + MONEY_BOOST[right] + "%</b>" +
+      ' <small class="qz-odds">지금 유니크 ' + od.u + "% · 전설 " + od.l + "%</small>",
+    body: clockSvg(q.h, q.m), question: "지금 몇 시" + (lv === 1 ? "일까요?" : " 몇 분일까요?"),
+    say: (step === 1 ? "풀숲이 흔들흔들! " : "") + "지금 몇 시" + (lv === 1 ? "일까요?" : " 몇 분일까요?"),
     choices: q.choices.map(Yut.Study.clockText), answer: q.answer,
-    okText: "정답! " + Yut.Study.clockText(q) + " ⭐ 유니크·전설이 나올 확률이 올라갔어요!",
+    okText: "정답! " + Yut.Study.clockText(q) + " ⭐ 유니크·전설 +" + MONEY_BOOST[right] + "%!",
     explain: () => clockExplain(q.h, q.m),
   });
   studyRecord("clock", r.ok);
   return r.ok;
 }
-// 🌿 풀숲 포켓몬을 이제 뽑는다 (시계를 맞혔으면 30·30·20·20). 뽑은 즉시 저장 — 새로고침으로 다시 뽑기 불가
-function rollSpot(e, boosted) {
+// 🌿 풀숲 포켓몬을 이제 뽑는다 (시계를 맞힌 수만큼 유니크·전설 ↑ — 다 맞히면 40·20·20·20). 뽑은 즉시 저장 — 새로고침으로 다시 뽑기 불가
+function rollSpot(e, right) {
   const sp = (G.s.spots || []).find(x => x.node === e.node);
   if (sp && sp.id) { e.id = sp.id; return e.id; }
   const other = (G.s.spots || []).map(x => x.id).filter(Boolean), owned = ownedSet(teamPid(e.team) || gamePid());
   let id, tries = 0;
-  do { id = Yut.Rewards.rollWild(WILD_POOLS, owned, Math.random, boosted ? Yut.Rewards.WILD_ODDS_BOOST : null); } while (other.indexOf(id) >= 0 && ++tries < 10);
+  const odds = right ? moneyOdds(right) : null;
+  e.odds = odds || Yut.Rewards.WILD_ODDS;
+  do { id = Yut.Rewards.rollWild(WILD_POOLS, owned, Math.random, odds); } while (other.indexOf(id) >= 0 && ++tries < 10);
   if (sp) sp.id = id;
   e.id = id;
   persist();
@@ -4311,7 +4327,7 @@ Screens.profiles = sec => {
       '<div class="prof-list">' + D2.order.map(id => {
         const p = D2.profiles[id];
         const sc = k => ((p.study || {})[k] || {});
-        const study = (sc("clock").total || sc("money").total) ? "🎓 시계 " + (sc("clock").level || 1) + "단계 " + (sc("clock").right || 0) + "/" + (sc("clock").total || 0) + " · 돈 " + (sc("money").right || 0) + "/" + (sc("money").total || 0) : "";
+        const study = (sc("clock").total || sc("money").total) ? "🎓 시계 " + (sc("clock").right || 0) + "/" + (sc("clock").total || 0) + " · 돈 " + (sc("money").right || 0) + "/" + (sc("money").total || 0) : "";
         const w = p.stats || {};
         const wins = "🏆 이김 " + ["family", "rocket", "net"].reduce((t, k) => t + ((w[k] || {}).win || 0), 0) + "번";
         return '<div class="prof-card" data-id="' + esc(id) + '"><span class="pc-av">' + spr(p.avatar) + '</span><div class="pc-body"><b>' + esc(p.name) + "</b><small>" + esc(profLine(p)) + " · " + wins + "</small>" + (study ? '<small class="pc-study">' + esc(study) + "</small>" : "") +
@@ -4840,7 +4856,7 @@ function openRules() {
       "<li>🪙 시작할 때 <b>동전</b>을 던져서 먼저 할 팀을 정해요 — 앞면(Heads)·뒷면(Tails)</li>" +
       "<li>📖 <b>기술</b>은 <b>10칸</b> 가면 배워요 (모든 포켓몬 같아요). 내 차례에 <b>✨ 기술</b> 버튼으로 써요 — 말마다 한 판에 한 번, 한 차례에 하나!</li>" +
       "<li>🎲 기술은 <b>확률로 성공</b>해요 — 일반 <b>60%</b> · 레어 <b>70%</b> · 유니크 <b>80%</b> · 👑 전설 <b>90%</b> (스타팅 포켓몬은 레어). 상대 말에 거는 기술은 타입 상성이 좋으면 <b>+10%</b>, 나쁘면 <b>−10%</b>. 실패하면 그 기술은 사라져요!</li>" +
-      "<li>🕐 풀숲에서 <b>시계</b>를 맞히면 유니크·전설 포켓몬이 더 잘 나와요 (틀려도 세 문제까지). 🏥 로켓단 대결이 끝나면 <b>포켓몬센터</b>에서 세 손님의 계산(천 원 · 만 원 · 십만 원)을 도와요. 끝나면 몬스터볼을 받고, 열면 포켓몬이 짜잔! 맞힌 만큼 유니크·전설 확률이 올라가요 (다 맞히면 20% · 20%)</li>" +
+      "<li>🕐 풀숲에서 <b>시계 문제</b>를 세 번 풀어요 — 정각 → 15·30·45분 → 몇 시 몇 분. 맞히면 다음 단계, 틀리면 같은 단계 다른 문제. 맞힐 때마다 유니크·전설 +3·+3·+4% (다 맞히면 20% · 20%). 🏥 로켓단 대결이 끝나면 <b>포켓몬센터</b>에서 세 손님의 계산(천 원 · 만 원 · 십만 원)을 도와요. 끝나면 몬스터볼을 받고, 열면 포켓몬이 짜잔! 맞힌 만큼 유니크·전설 확률이 올라가요 (다 맞히면 20% · 20%)</li>" +
       "<li>🎯 잡을 확률(몬스터볼): 일반 80 · 레어 70 · 유니크 60 · 전설 40% — 좋은 볼일수록, 놓칠 때마다(+10%) 올라가요.</li>" +
       "<li>🌿 윷판의 <b>❓ 풀숲</b>에 딱 멈추면 야생 포켓몬! 볼로 잡으면 <b>그 자리에서 바로</b> 내 말과 바꿀 수 있어요. 기술을 다 쓴 말과 바꾸면 새 기술을 또 써요!</li>" +
       "<li>😼 로켓단도 풀숲에서 그물로 포켓몬을 잡아 가요. 먼저 가서 잡아요!</li>" +

@@ -87,6 +87,7 @@ with sync_playwright() as p:
         pg.wait_for_selector('.quiz .qz-choice'); shot(pg, 'clock', '.quiz')
         pg.click('.qz-choice:not([data-ok])'); pg.wait_for_selector('.qz-next:not([hidden])'); shot(pg, 'clock-explain', '.quiz')
         pg.click('.qz-next'); pg.wait_for_selector('.quiz .qz-choice:not([disabled])'); pg.click('.qz-choice[data-ok]')  # 두 번째 문제
+        pg.wait_for_timeout(1200); pg.wait_for_selector('.quiz .qz-choice:not([disabled])', timeout=20000); pg.click('.qz-choice[data-ok]')  # 🕐 세 번째 기회
         pg.wait_for_selector('.bt-menu .bt-ballbtn'); shot(pg, 'wild', '.battle')
         pg.click('.bt-skip'); idle(pg)
         # 이긴 화면 → 상자 → 돈 문제 → 볼 4개
