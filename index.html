@@ -777,7 +777,10 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 @keyframes handGlow { 50% { stroke: #ffd23f; stroke-width: 14; } }
 /* 놀이 돈 (진짜 지폐 그림이 아님) */
 .money { width: 100%; display: grid; gap: 10px; padding: 12px; border-radius: 14px; background: #f3efe2 repeating-linear-gradient(45deg, rgba(255,255,255,.5) 0 8px, rgba(255,255,255,0) 8px 16px); border: 3px solid var(--ink); }
-.mrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.mrow { display: grid; grid-template-columns: 96px auto 1fr; align-items: center; justify-items: start; gap: 10px; padding-left: 8px; }
+.mrow .cash { justify-self: center; }
+.mx { font-family: var(--pixel); font-size: 30px; line-height: 1; color: var(--ink); white-space: nowrap; }
+.mx-u { font-size: 18px; font-weight: 900; color: var(--ink-soft); }
 .cash { position: relative; display: inline-grid; place-items: center; font-family: var(--pixel); font-weight: 700; line-height: 1; border: 2px solid var(--ink); box-shadow: 0 3px 0 rgba(38,49,71,.3); }
 .cash b { font-size: 15px; } .cash i { position: absolute; right: 4px; bottom: 2px; font-style: normal; font-family: var(--font); font-size: 9px; font-weight: 900; }
 .cash.chk { width: 92px; height: 42px; border-radius: 6px; background: #e8dcff; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px #9a6be0, 0 3px 0 rgba(38,49,71,.3); color: #4b2c86; }
@@ -1012,7 +1015,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-04d";
+const APP_VERSION = "2026-10-04e";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -3636,9 +3639,11 @@ const MONEY_UI = {
   100000: { name: "십만 원", cls: "chk", n: "장" }, 10000: { name: "만 원", cls: "b10k", n: "장" },
   1000: { name: "천 원", cls: "b1k", n: "장" }, 100: { name: "백 원", cls: "coin", n: "개" },
 };
+// 돈 한 장 + "× 7장" 한 줄 (사용자 요청 2026-10-04 — 하나하나 늘어놓으면 세기 어렵다)
 function moneyHtml(counts) {
   return '<div class="money">' + Yut.Study.UNITS.filter(u => counts[u] > 0).map(u =>
-    '<div class="mrow">' + Array.from({ length: counts[u] }, () => '<span class="cash ' + MONEY_UI[u].cls + '"><b>' + u + "</b><i>원</i></span>").join("") + "</div>").join("") + "</div>";
+    '<div class="mrow"><span class="cash ' + MONEY_UI[u].cls + '"><b>' + u + "</b><i>원</i></span>" +
+    '<b class="mx">× ' + counts[u] + "</b><span class=\"mx-u\">" + MONEY_UI[u].n + "</span></div>").join("") + "</div>";
 }
 /* 문제 창 — kind: "clock" | "money". 누르면 { ok }. 틀리면 풀이를 보여 주고 "알겠어요!"를 눌러야 닫힌다 */
 function quizWindow(o) {
@@ -3702,8 +3707,9 @@ function clockExplain(h, m) {
 }
 // ❓ 풀숲: 시계 문제 세 번 (아래 clockQuiz) — 맞힌 수만큼 이번 조우의 유니크·전설 ↑
 const QUIZ_TRIES = 3; // 틀리면 풀이를 보고 다음 문제로 — 세 문제까지 (사용자 요청 2026-09-27: 교육 효과)
-// 🏥 금액 문제 (사용자 확정 2026-10-04): 세 문제 — 천 원 · 만 원 · 십만 원 단위. 끝나면 럭키가 몬스터볼을 준다
-// 맞힐 때마다 볼 안 포켓몬의 유니크·전설 확률 +3 · +3 · +4% (일반·레어는 그만큼 −) → 다 맞히면 일반 40 · 레어 20 · 유니크 20 · 전설 20
+// 🏥 금액 문제 (사용자 확정 2026-10-04): 기회 세 번 — ① 천 원 → ② 천 원 → ③ 만 원 단위. 끝나면 럭키가 몬스터볼을 준다
+// 맞히면 다음 단계, 틀리면 같은 단계의 다른 손님 (시계 문제와 같은 방식)
+// 맞힌 단계만큼 볼 안 포켓몬의 유니크·전설 확률 ① +3 · ② +3 · ③ +4% (일반·레어는 그만큼 −) → 다 맞히면 일반 40 · 레어 20 · 유니크 20 · 전설 20
 const MONEY_QS = 3, MONEY_BOOST = [3, 3, 4];
 const moneyOdds = right => { const b = MONEY_BOOST.slice(0, right).reduce((t, x) => t + x, 0); const W = Yut.Rewards.WILD_ODDS; return { c: W.c - b, r: W.r - b, u: W.u + b, l: W.l + b }; };
 // 🕐 풀숲 시계 문제 (사용자 확정 2026-10-04): 기회 세 번 — ① 정각 → ② 15 · 30 · 45분 → ③ 몇 시 몇 분(1분 단위)
@@ -3729,12 +3735,12 @@ async function clockQuizOnce(step, lv, right) {
   const od = moneyOdds(right);
   const r = await quizWindow({
     kind: "clock", level: lv, step, of: CLOCK_QS,
-    title: "🕐 시계 문제 " + step + "/" + CLOCK_QS + " — " + ["정각", "15 · 30 · 45분", "몇 시 몇 분"][lv - 1] + "! 맞히면 <b>유니크·전설 +" + MONEY_BOOST[right] + "%</b>" +
+    title: "🕐 시계 문제 " + step + "/" + CLOCK_QS + " — " + ["정각", "15 · 30 · 45분", "몇 시 몇 분"][lv - 1] + "! 맞히면 <b>유니크·전설 +" + MONEY_BOOST[lv - 1] + "%</b>" +
       ' <small class="qz-odds">지금 유니크 ' + od.u + "% · 전설 " + od.l + "%</small>",
     body: clockSvg(q.h, q.m), question: "지금 몇 시" + (lv === 1 ? "일까요?" : " 몇 분일까요?"),
     say: (step === 1 ? "풀숲이 흔들흔들! " : "") + "지금 몇 시" + (lv === 1 ? "일까요?" : " 몇 분일까요?"),
     choices: q.choices.map(Yut.Study.clockText), answer: q.answer,
-    okText: "정답! " + Yut.Study.clockText(q) + " ⭐ 유니크·전설 +" + MONEY_BOOST[right] + "%!",
+    okText: "정답! " + Yut.Study.clockText(q) + " ⭐ 유니크·전설 +" + MONEY_BOOST[lv - 1] + "%!",
     explain: () => clockExplain(q.h, q.m),
   });
   studyRecord("clock", r.ok);
@@ -3762,21 +3768,21 @@ function moneyExplain(q) {
 }
 // 💰 돈 문제 단계는 문제마다 무작위 1·2·3 (사용자 요청 2026-09-27 — 천·백만 나오지 않게, 만·십만도 자주)
 const moneyLevel = () => 1 + Math.floor(Math.random() * 3);
-async function moneyQuizOnce(step, right) {
-  const lv = Math.min(3, step); // 1 = 천 원 단위 · 2 = 만 원 단위 · 3 = 십만 원 단위
-  const retry = step > 1;
+const MONEY_LV = ["천 원", "천 원", "만 원"], MONEY_STUDY_LV = [1, 1, 2]; // 단계 → Study.money 단계 (1 = 천·백 원, 2 = 만·천·백 원)
+async function moneyQuizOnce(step, right, again) { // again = 앞 문제를 틀려 같은 단계를 한 번 더
+  const lv = Math.min(3, right + 1); // ① 천 원 · ② 천 원 · ③ 만 원 단위 — 틀리면 같은 단계
   const f = (Q.get("money") || "").split(",").map(Number);
-  const forced = !retry && f.length === 4 && f.every(x => x >= 0 && x <= 9) ? { 100000: f[0], 10000: f[1], 1000: f[2], 100: f[3] } : null;
-  const q = Yut.Study.money(lv, Math.random, forced);
+  const forced = step === 1 && f.length === 4 && f.every(x => x >= 0 && x <= 9) ? { 100000: f[0], 10000: f[1], 1000: f[2], 100: f[3] } : null;
+  const q = Yut.Study.money(MONEY_STUDY_LV[lv - 1], Math.random, forced);
   const r = await quizWindow({
-    kind: "money", level: forced ? 2 : lv, step, of: MONEY_QS,
-    scene: centerScene(["천 원 손님이에요! 모두 얼마예요?", "이번엔 만 원 손님! 모두 얼마예요?", "마지막 십만 원 손님! 모두 얼마예요?"][step - 1] || "모두 얼마예요?"),
-    title: "🏥 포켓몬센터 손님 " + step + "/" + MONEY_QS + " — 맞히면 몬스터볼 속 <b>유니크·전설 +" + MONEY_BOOST[right] + "%</b>" +
+    kind: "money", level: lv, step, of: MONEY_QS,
+    scene: centerScene((again ? "한 번 더! " : "") + MONEY_LV[lv - 1] + " 손님이에요! 모두 얼마예요?"),
+    title: "🏥 포켓몬센터 손님 " + step + "/" + MONEY_QS + " — " + MONEY_LV[lv - 1] + " 단위! 맞히면 몬스터볼 속 <b>유니크·전설 +" + MONEY_BOOST[lv - 1] + "%</b>" +
       ' <small class="qz-odds">지금 유니크 ' + moneyOdds(right).u + "% · 전설 " + moneyOdds(right).l + "%</small>",
     body: moneyHtml(q.counts), question: "모두 얼마일까요?",
-    say: step === 1 ? "포켓몬센터에 왔어요! 럭키의 계산을 도와주세요. 모두 얼마일까요?" : step === 2 ? "이번엔 만 원 손님이에요. 모두 얼마일까요?" : "마지막 십만 원 손님! 모두 얼마일까요?",
+    say: step === 1 ? "포켓몬센터에 왔어요! 럭키의 계산을 도와주세요. 모두 얼마일까요?" : (again ? "한 번 더! " : "이번엔 ") + MONEY_LV[lv - 1] + " 손님이에요. 모두 얼마일까요?",
     choices: q.choices.map(Yut.Study.won), answer: q.answer,
-    okText: "정답! " + Yut.Study.won(q.total) + " (" + Yut.Study.koNum(q.total) + " 원) — 럭키: 고마워요! 💕",
+    okText: "정답! " + Yut.Study.won(q.total) + " (" + Yut.Study.koNum(q.total) + " 원) ⭐ 유니크·전설 +" + MONEY_BOOST[lv - 1] + "%!",
     explain: () => moneyExplain(q),
   });
   studyRecord("money", r.ok);
@@ -3798,7 +3804,7 @@ function bonusHtml(rw) {
   if (B) return '<div class="bonus-zone" id="bonus-zone"><p class="box-hint">' + (B.ball ? "💰 돈 문제 보너스!" : "🏥 럭키: 괜찮아요, 다음에 또 도와줘요!") + "</p></div>";
   return '<div class="bonus-zone" id="bonus-zone"><button class="btn big gold cursor" data-act="money-quiz">🏥 포켓몬센터에서 계산 돕기!</button></div>';
 }
-// 🏥 돈 문제 (사용자 요청 2026-10-03): 포켓몬센터에서 럭키의 계산을 돕는다 — 두 문제까지, 맞히면 몬스터볼을 받는다.
+// 🏥 돈 문제 (사용자 요청 2026-10-03): 포켓몬센터에서 럭키의 계산을 돕는다 — 기회 세 번(위 MONEY_LV), 끝나면 몬스터볼을 받는다.
 // 볼 안에는 포켓몬이 풀숲과 같은 확률(50·30·10·10, 절반은 아직 없는 포켓몬 먼저)로 들어 있고, 열면 짜잔! 시험용 ?bonusmon=번호
 async function moneyBonus() {
   const rw = G.s && G.s.reward;
@@ -3806,7 +3812,10 @@ async function moneyBonus() {
   G.moneyBusy = true;
   Store.use(rw.to); // 👤 상자를 받은 프로필의 공부 기록·보관함
   let right = 0;
-  for (let step = 1; step <= MONEY_QS; step++) if (await moneyQuizOnce(step, right)) right++;
+  for (let step = 1, prev = true; step <= MONEY_QS; step++) {
+    prev = await moneyQuizOnce(step, right, !prev);
+    if (prev) right++;
+  }
   const ok = true; // 세 문제가 끝나면 늘 몬스터볼 — 맞힌 만큼 유니크·전설 확률이 올라가 있다
   const odds = moneyOdds(right);
   let mon = null, isNew = false;
