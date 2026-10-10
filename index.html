@@ -1015,7 +1015,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-04e";
+const APP_VERSION = "2026-10-10a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1073,7 +1073,7 @@ const SKILL_UI = {
   nitro: { emoji: "🔥", desc: "지금 바로 2칸 앞으로!" },
   flame: { emoji: "🔥", desc: "앞쪽 3칸 안의 상대 말을 물리쳐요!" },
   surf: { emoji: "🌊", desc: "상대 말 하나를 2칸 뒤로 밀어요" },
-  rain: { emoji: "🌧️", desc: "우리 차례 세 번 동안 비! 도·빽도가 나오면 개로" },
+  splash: { emoji: "🐟", desc: "잉어킹처럼 퐁! 반은 아무 일도 없고, 반은 4칸 점프!" }, // 2026-10-10: 비바라기 대신
   growth: { emoji: "🌱", desc: "윷 결과 하나를 한 단계 크게! (개→걸)" },
   sleep: { emoji: "💤", desc: "상대 말 하나가 쿨쿨 — 두 번 못 움직여요 (깰 수도 있어요!)" },
   discharge: { emoji: "⚡", desc: "상대 말이 모두 한 번 못 움직여요" },
@@ -3258,6 +3258,15 @@ function goHome(el) {
 }
 // 기술이 만든 사건들의 연출 (playEvents 가 부른다)
 const EVENT_ANIM = {
+  // 🐟 튀어오르기: 퐁! 반은 "그러나 아무 일도 일어나지 않았다!" (포켓몬 게임의 그 말), 반은 4칸 점프 (점프는 뒤따르는 move 사건이 보여 준다)
+  async splash(e, prev) {
+    const st = prev || G.s, p = st.pieces[e.pieces[0]];
+    if (p && p.state === "board") fxAt(Yut.posOf(p), "🐟💦");
+    SFX.pop();
+    const msg = e.hop ? "🐟 튀어오르기! " + namesOf(e.pieces) + " 4칸 점프!" : "🐟 튀어오르기! …그러나 아무 일도 일어나지 않았다!";
+    toast(msg, 1800); TTS.say(msg);
+    await sleep(1000);
+  },
   async skill(e, prev) {
     markSeen(e.key);
     const st = prev || G.s;
