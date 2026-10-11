@@ -1027,7 +1027,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-11b";
+const APP_VERSION = "2026-10-11c";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -5338,7 +5338,7 @@ function openParentMode() {
   const cur = (window.YutLang && YutLang.get()) || "ko";
   const opt = (v, label) => '<button class="btn big lang-opt' + (cur === v ? " on" : "") + '" data-act="set-lang" data-v="' + v + '">' + label + (cur === v ? ' <i class="lang-now">✓ 지금</i>' : "") + "</button>";
   showModal('<h2>🔒 부모 모드</h2><h3 class="pm-h">🌐 언어</h3><div class="btns lang-opts">' +
-    opt("ko", "🇰🇷 한국어") + opt("en", "🇺🇸 English") + opt("en-ko", "🇺🇸 English <small>기술 이름은 한국어</small>") + "</div>" +
+    opt("ko", "🇰🇷 한국어") + opt("en", "🇺🇸 English") + opt("en-ko", "🇺🇸 English <small>기술은 한국어</small>") + "</div>" +
     '<p class="note">바꾸면 그 언어 판으로 옮겨 가요. 잡은 포켓몬·볼·하던 판은 그대로예요.</p><div class="btns"><button class="btn" data-act="close-modal">닫기</button></div>');
 }
 function setLang(v) {
