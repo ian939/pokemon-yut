@@ -19,6 +19,7 @@
   - file:// 로 열어도 동작. 저장은 윷놀이 것(localStorage engmon_yut_v1)만 쓴다 — 잉글리시몬 저장은 읽지도 쓰지도 않는다.
 -->
 <script src="lock.js"></script>
+<script src="lang.js"></script>
 <style>
 /* ===== 패드 터치 잠금 (pad-input-lock 스킬) — 스타일시트 맨 위 ===== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -668,6 +669,14 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 .pf-h { margin: 6px 0 6px; } .pf-h small { font-weight: 700; color: var(--ink-soft); font-size: 13px; }
 .pf-set { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .pf-set .btn { min-height: 48px; }
+/* 🔒 부모 모드 */
+.pg-q b { font-family: var(--pixel); font-size: var(--t2); }
+#pg-in { font-size: 28px; text-align: center; width: 140px; }
+.pm-h { margin: 6px 0 8px; }
+.lang-opts { flex-direction: column; }
+.lang-opt.on { background: var(--gold); }
+.lang-opt small { font-size: 14px; font-weight: 700; opacity: .85; }
+.lang-now { font-style: normal; font-size: 14px; margin-left: 6px; }
 .pc-study { color: #2f6fd6 !important; }
 .rank-by { justify-content: center; margin-bottom: 10px; }
 .rank-by .chip { min-height: 48px; font-size: 17px; }
@@ -1017,7 +1026,7 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-10b";
+const APP_VERSION = "2026-10-11a";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -4484,7 +4493,7 @@ Screens.profiles = sec => {
   const D2 = Store.data;
   sec.innerHTML = '<header class="bar"><button class="btn icon" data-act="home" aria-label="처음으로">←</button><h2>👤 프로필</h2><span class="side"></span></header>' +
     '<div class="scroll"><div class="card">' +
-      '<h3 class="pf-h">⚙️ 설정 <small>이 패드</small></h3><div class="pf-set"><button class="btn" data-act="sound" id="sound-btn">' + soundLabel() + "</button></div>" +
+      '<h3 class="pf-h">⚙️ 설정 <small>이 패드</small></h3><div class="pf-set"><button class="btn" data-act="sound" id="sound-btn">' + soundLabel() + '</button><button class="btn" data-act="parent">🔒 부모 모드</button></div>' +
       '<h3 class="pf-h">👤 프로필</h3><p class="note">사람마다 <b>이름</b>과 <b>캐릭터 포켓몬</b>을 정해요. 잡은 포켓몬 · 볼 · 공부 기록은 사람마다 따로 모여요. 💾 저장 코드를 만들면 다른 패드에서도 그대로, 🥇 랭킹에도 나와요!</p>' +
       '<div class="prof-list">' + D2.order.map(id => {
         const p = D2.profiles[id];
@@ -5075,6 +5084,8 @@ const Act = {
   "save-load": openSaveLoad,
   "save-key": el => saveKey(el.dataset.k),
   "save-fetch": saveFetch,
+  "parent": openParentGate,
+  "set-lang": el => setLang(el.dataset.v),
   "sound": () => { Store.data.sound = Store.data.sound === false; Store.save(); const b = $("#sound-btn"); if (b) b.textContent = soundLabel(); if (Store.data.sound) SFX.tap(); else TTS.stop(); },
   "sound-game": () => { Act.sound(); const b = $("#sound-icon"); if (b) b.textContent = Store.data.sound === false ? "🔇" : "🔊"; },
   "set": el => {
@@ -5177,6 +5188,37 @@ function tellUpdate() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
 window.addEventListener("online", () => checkUpdate(true));
 setInterval(() => checkUpdate(), 10 * 60000);
+
+/* ---------- 🔒 부모 모드 (사용자 확정 2026-10-11) — 곱셈 문제를 맞혀야 열린다 (초1은 못 풀고 어른은 바로) · 🌐 언어 3가지 ---------- */
+function openParentGate() {
+  const a = 6 + Math.floor(Math.random() * 4), b = 6 + Math.floor(Math.random() * 4);
+  showModal('<h2>🔒 부모 모드</h2><p>어른만 들어갈 수 있어요. 답을 써 주세요.</p><p class="pg-q"><b>' + a + " × " + b + ' = ?</b></p>' +
+    '<input id="pg-in" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="3">' +
+    '<p class="net-err" id="pg-err"></p><div class="btns"><button class="btn big green" id="pg-ok">들어가기</button><button class="btn" data-act="close-modal">취소</button></div>');
+  const inp = $("#pg-in"), go = () => {
+    if (Number(inp.value.trim()) === a * b) { SFX.tap(); openParentMode(); }
+    else { $("#pg-err").textContent = "다시 해 보세요"; inp.value = ""; }
+  };
+  $("#pg-ok").addEventListener("click", go);
+  inp.addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
+  setTimeout(() => inp.focus(), 50);
+}
+function openParentMode() {
+  const cur = (window.YutLang && YutLang.get()) || "ko";
+  const opt = (v, label) => '<button class="btn big lang-opt' + (cur === v ? " on" : "") + '" data-act="set-lang" data-v="' + v + '">' + label + (cur === v ? ' <i class="lang-now">✓ 지금</i>' : "") + "</button>";
+  showModal('<h2>🔒 부모 모드</h2><h3 class="pm-h">🌐 언어</h3><div class="btns lang-opts">' +
+    opt("ko", "🇰🇷 한국어") + opt("en", "🇺🇸 English") + opt("en-ko", "🇺🇸 English <small>기술 이름은 한국어</small>") + "</div>" +
+    '<p class="note">바꾸면 그 언어 판으로 옮겨 가요. 잡은 포켓몬·볼·하던 판은 그대로예요.</p><div class="btns"><button class="btn" data-act="close-modal">닫기</button></div>');
+}
+function setLang(v) {
+  if (!window.YutLang) return;
+  YutLang.set(v);
+  const t = YutLang.target(v);
+  if (t) { location.replace(t); return; }
+  const here = YutLang.site || "ko", want = v === "ko" ? "ko" : "en";
+  if (want !== here) { closeModal(); toast("이 주소에서는 다른 판으로 옮길 수 없어요 (설정만 저장했어요)", 2600); return; }
+  location.reload(); // 같은 판 안에서 (영어 ↔ 영어+한국어 기술 이름)
+}
 
 /* ================================================================
    시작
