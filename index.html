@@ -1021,12 +1021,13 @@ body.coining .tcard.active { border-color: var(--ink) !important; box-shadow: va
 
 <script src="data/pokemon.js"></script>
 <script src="yut-rules.js"></script>
+<script src="assets/voice/voice.js"></script>
 <script>
 "use strict";
 /* ================================================================
    설정
 ================================================================ */
-const APP_VERSION = "2026-10-11a";
+const APP_VERSION = "2026-10-11b";
 const D = window.YUT_DATA;
 const Q = new URLSearchParams(location.search);
 const SPEED = Q.has("fast") ? 0.12 : 1;           // 테스트용: ?fast=1 이면 연출을 빠르게
@@ -1041,12 +1042,12 @@ const CAST = {
 };
 const LOCAL_ART = new Set([].concat(Object.values(CAST.yut), CAST.rocket).map(Number));
 const RES = {
-  "-1": { name: "빽도", animal: "", emoji: "↩️", steps: "뒤로 1칸", say: "빽도! 뒤로 한 칸", en: "Back one" },
-  1: { name: "도", animal: "돼지", emoji: "🐷", steps: "1칸", say: "도! 한 칸", en: "One" },
-  2: { name: "개", animal: "개", emoji: "🐶", steps: "2칸", say: "개! 두 칸", en: "Two" },
-  3: { name: "걸", animal: "양", emoji: "🐑", steps: "3칸", say: "걸! 세 칸", en: "Three" },
-  4: { name: "윷", animal: "소", emoji: "🐮", steps: "4칸", say: "윷! 네 칸, 한 번 더!", en: "Four" },
-  5: { name: "모", animal: "말", emoji: "🐴", steps: "5칸", say: "모! 다섯 칸, 한 번 더!", en: "Five" },
+  "-1": { name: "빽도", animal: "", emoji: "↩️", steps: "뒤로 1칸", say: vo("빽도! 뒤로 한 칸"), en: vo("Back one") },
+  1: { name: "도", animal: "돼지", emoji: "🐷", steps: "1칸", say: vo("도! 한 칸"), en: vo("One") },
+  2: { name: "개", animal: "개", emoji: "🐶", steps: "2칸", say: vo("개! 두 칸"), en: vo("Two") },
+  3: { name: "걸", animal: "양", emoji: "🐑", steps: "3칸", say: vo("걸! 세 칸"), en: vo("Three") },
+  4: { name: "윷", animal: "소", emoji: "🐮", steps: "4칸", say: vo("윷! 네 칸, 한 번 더!"), en: vo("Four") },
+  5: { name: "모", animal: "말", emoji: "🐴", steps: "5칸", say: vo("모! 다섯 칸, 한 번 더!"), en: vo("Five") },
 };
 const MEMBERS = [
   { key: "kid", name: "🧒 지온이" }, { key: "mom", name: "👩 엄마" }, { key: "dad", name: "👨 아빠" },
@@ -1173,6 +1174,14 @@ function josa(word, pair) {
   const jong = (c - 0xAC00) % 28;
   if (pair === "으로/로") return word + (jong === 0 || jong === 8 ? "로" : "으로");
   return word + (jong > 0 ? a : b);
+}
+// 🔊 읽어 주기용: 이름 뒤에 올 "조사로 시작하는 고정 조각" 둘 중 하나를 고른다 — 받침이 있으면 a, 없으면 b (ro = "으로/로" 규칙: ㄹ 받침도 b)
+// 예) TTS.say([name, jo(name, "이 나왔다!", "가 나왔다!")]) — 두 조각을 꼭 리터럴로 써야 gen-voice.py 가 찾아 녹음한다
+function jo(word, a, b, ro) {
+  const c = String(word).trim().slice(-1).charCodeAt(0);
+  if (!(c >= 0xAC00 && c <= 0xD7A3)) return b;
+  const jong = (c - 0xAC00) % 28;
+  return ro ? (jong === 0 || jong === 8 ? b : a) : (jong > 0 ? a : b);
 }
 
 const nameOf = id => D.names[id - 1] || "???";
@@ -1399,44 +1408,111 @@ const SFX = {
   clang() { this.tone(1200, 0.12, "square", 0, 0.12); this.tone(1800, 0.2, "triangle", 0.04, 0.1); this.tone(600, 0.2, "square", 0.1, 0.08); },
   thud() { this.tone(110, 0.2, "square", 0, 0.2); this.tone(80, 0.25, "sine", 0.06, 0.2); },
 };
+/* 🔊 한국어로 읽어 주기 — Edge TTS 로 미리 녹음한 mp3 (assets/voice/, tools/gen-voice.py) 를 먼저 쓰고,
+   녹음이 없는 말(사람 이름처럼 직접 쓴 글자)만 브라우저 목소리로 읽는다 (한국어 목소리 — 한글 없이 영어 글자만 있는 조각만 영어 목소리).
+   TTS.say(글 또는 [조각, 조각…]) — 하던 말을 끊고 새로 읽는다. 문장 전체가 녹음돼 있으면 그것을, 아니면 조각마다 이어서.
+   TTS.sayEn(글) — 하던 말 뒤에 이어서 읽는다 (윷 결과 영어 One~Five).
+   이름이 섞인 말은 + 로 붙이지 말고 조각 배열로: [name, jo(name, "이 나왔다!", "가 나왔다!")] — 조사로 시작하는 고정 조각 둘을 리터럴로 쓴다.
+   녹음할 말 모으기: TTS.say( … ) 안의 글자와 vo("…") 로 감싼 글자 + 포켓몬·기술·볼 이름 (gen-voice.py 가 찾는다) */
+function vo(s) { return s; } // 녹음해 둘 문장 표시 (gen-voice.py 가 찾는다) — 하는 일은 없음. const 가 아닌 함수 선언 = 위쪽 RES 에서도 쓸 수 있다
 const TTS = {
-  voice: null, voicesLoaded: false,
+  en: null, ko: null, voicesLoaded: false,
+  seq: 0, chain: Promise.resolve(), live: [], bufs: {},
   init() {
     if (!("speechSynthesis" in window)) return;
     const pick = () => {
       const vs = speechSynthesis.getVoices();
       this.voicesLoaded = vs.length > 0;
-      this.voice = vs.find(v => /^ko/i.test(v.lang)) || null;
+      this.en = vs.find(v => /^en(-|_)US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+      this.ko = vs.find(v => /^ko/i.test(v.lang)) || null;
     };
     pick();
     speechSynthesis.onvoiceschanged = pick;
   },
-  say(text) {
-    if (Store.data.sound === false || !("speechSynthesis" in window)) return;
-    if (this.voicesLoaded && !this.voice) return; // 한국어 목소리가 없으면 읽지 않는다 (엉뚱한 발음 방지)
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(plain(text));
-      u.lang = "ko-KR";
-      if (this.voice) u.voice = this.voice;
-      u.rate = 0.95; u.pitch = 1.1;
-      speechSynthesis.speak(u);
-    } catch (e) {}
+  // 녹음 찾기 열쇠 — gen-voice.py 의 key() 와 똑같이 유지
+  key(s) {
+    return plain(s).replace(/♀/g, " 암컷").replace(/♂/g, " 수컷").normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC") // é → e (한글은 NFC 로 다시 합친다)
+      .toLowerCase().replace(/[’‘`]/g, "'").replace(/[^a-z0-9'\uac00-\ud7a3]+/g, " ").trim();
   },
-  // 영어 한 마디 — 한국어 다음에 이어서 (끊지 않고 줄 세움), 영어 목소리로
-  sayEn(text) {
-    if (Store.data.sound === false || !("speechSynthesis" in window)) return;
-    try {
-      const v = speechSynthesis.getVoices().find(x => /^en(-|_)?(US|GB)?/i.test(x.lang));
-      if (this.voicesLoaded && !v) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US";
-      if (v) u.voice = v;
-      u.rate = 0.9;
-      speechSynthesis.speak(u);
-    } catch (e) {}
+  clip(text) { const V = window.VOICE || {}; return V[this.key(text)] || null; },
+  say(text) { this.stop(); return this.queue(text); }, // 다 읽으면 끝나는 Promise (소리 끔이면 undefined)
+  sayEn(text) { return this.queue(text); },
+  queue(text) {
+    if (Store.data.sound === false) return;
+    const parts = (Array.isArray(text) ? text : [text]).map(p => plain(p)).filter(p => this.key(p));
+    if (!parts.length) return;
+    const whole = parts.join(" ");
+    const items = (this.clip(whole) ? [whole] : parts).map(p => ({ text: p, clip: this.clip(p) }));
+    items.forEach(it => { if (it.clip) this.load(it.clip[0]).catch(() => {}); }); // 미리 받아 두면 조각 사이가 덜 끊긴다
+    const my = this.seq;
+    return this.chain = this.chain.then(async () => {
+      for (const it of items) {
+        if (my !== this.seq) return;
+        try { await (it.clip ? this.playClip(it.clip, my) : this.synth(it.text, my)); } catch (e) { /* 하나 못 읽어도 다음으로 */ }
+      }
+    });
   },
-  stop() { try { speechSynthesis.cancel(); } catch (e) {} },
+  load(file) {
+    if (!this.bufs[file]) {
+      this.bufs[file] = fetch("assets/voice/" + file).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(b => new Promise((ok, bad) => { const p = SFX.ctx.decodeAudioData(b, ok, bad); if (p && p.then) p.then(ok, bad); }));
+      this.bufs[file].catch(() => { delete this.bufs[file]; });
+    }
+    return this.bufs[file];
+  },
+  // clip = [파일, 말 시작(초), 길이(초)] — 앞뒤 빈 소리는 잘라서 조각이 자연스럽게 이어지게
+  async playClip(c, my) {
+    if (!SFX.ensure()) return;
+    let buf = null;
+    try { buf = await this.load(c[0]); } catch (e) { return this.playTag(c, my); } // file:// 처럼 fetch 가 안 되면 <audio> 로
+    if (my !== this.seq) return;
+    await new Promise(done => {
+      const src = SFX.ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(SFX.ctx.destination);
+      src.onended = () => { this.live = this.live.filter(x => x !== src); done(); };
+      this.live.push(src);
+      const start = Math.max(0, (c[1] || 0) - 0.05);
+      src.start(0, start, Math.min(buf.duration - start, (c[2] || buf.duration) + 0.12));
+    });
+  },
+  playTag(c, my) {
+    return new Promise(done => {
+      try {
+        const a = new Audio("assets/voice/" + c[0]);
+        const fin = () => { a.pause(); this.live = this.live.filter(x => x !== a); done(); };
+        a.onended = fin; a.onerror = fin;
+        a.ontimeupdate = () => { if (my !== this.seq || a.currentTime >= (c[1] || 0) + (c[2] || 99) + 0.12) fin(); };
+        this.live.push(a);
+        a.play().catch(fin);
+      } catch (e) { done(); }
+    });
+  },
+  synth(text, my) {
+    return new Promise(done => {
+      if (!("speechSynthesis" in window) || my !== this.seq) return done();
+      const ko = /[\uac00-\ud7a3]/.test(text) || !/[a-z]/i.test(text); // 기본은 한국어 (영어 글자만 있는 조각만 영어로)
+      const v = ko ? this.ko : this.en;
+      if (this.voicesLoaded && !v) return done(); // 맞는 목소리가 없으면 읽지 않는다 (엉뚱한 발음 방지)
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = ko ? "ko-KR" : "en-US";
+        if (v) u.voice = v;
+        u.rate = ko ? 0.95 : 0.9;
+        if (ko) u.pitch = 1.1;
+        const t = setTimeout(done, 600 + text.length * 120); // onend 가 안 오는 기기 대비
+        u.onend = u.onerror = () => { clearTimeout(t); done(); };
+        speechSynthesis.speak(u);
+      } catch (e) { done(); }
+    });
+  },
+  stop() {
+    this.seq++;
+    this.live.forEach(x => { try { x.stop ? x.stop() : x.pause(); } catch (e) {} });
+    this.live = [];
+    this.chain = Promise.resolve();
+    try { speechSynthesis.cancel(); } catch (e) {}
+  },
 };
 const Cry = {
   a: null,
@@ -2171,9 +2247,9 @@ async function doThrow() {
     if (t.psych) { // 🧘 자기암시: 두 번 던진 것 중 큰 쪽 (빽도가 가장 작다)
       const [a, b] = t.psych, pick = (b === -1 ? 0 : b) > (a === -1 ? 0 : a) ? b : a;
       const m = "🧘 자기암시! " + RES[a].name + " · " + RES[b].name + " 중에서 " + josa(RES[pick].name, "을/를") + " 골랐어요!";
-      toast(m, 1800); TTS.say(plain(m)); await sleep(900);
+      toast(m, 1800); TTS.say(["자기암시!", RES[a].name, RES[b].name, "중에서", RES[pick].name, jo(RES[pick].name, "을 골랐어요!", "를 골랐어요!")]); await sleep(900);
     }
-    if (t.cottoned) { toast("🌼 목화포자! 윷이 작아졌어요 " + RES[t.cottoned].name + " → " + RES[t.result].name, 1700); TTS.say("목화포자! " + RES[t.result].name); await sleep(800); }
+    if (t.cottoned) { toast("🌼 목화포자! 윷이 작아졌어요 " + RES[t.cottoned].name + " → " + RES[t.result].name, 1700); TTS.say(["목화포자!", RES[t.result].name]); await sleep(800); }
     await showResult(t.result);
     if (t.again) { SFX.again(); await banner(RES[t.result].name + "! 한 번 더 던져요!", null, 1000, "gold"); }
     renderPending();
@@ -2354,6 +2430,8 @@ function fitInStage(c, el) {
   return el;
 }
 const RARITY_KO = { c: "일반", r: "레어", u: "유니크", l: "전설" };
+// 🔊 풀숲 조우 첫마디 (희귀도마다 통째로 녹음 — 화면 글 "앗! 야생의 레어 포켓몬 ○○가 튀어나왔다!" 와 같게)
+const WILD_INTRO = { c: vo("앗! 야생의"), r: vo("앗! 야생의 레어 포켓몬"), u: vo("앗! 야생의 유니크 포켓몬"), l: vo("앗! 야생의 전설 포켓몬") };
 const RARITY_STAR = { c: "", r: "⭐", u: "⭐⭐", l: "👑" };
 // 기술을 쓸 수 있는 때 (v8, 사용자 확정 2026-09-28): 일반~전설 모두 10칸 (전에는 희귀도로 15·10·5·처음부터)
 const SKILL_NEED = 10;
@@ -2426,7 +2504,7 @@ function openStage(o) {
     clearInterval(typer);
     c.menuEl.innerHTML = "";
     if (c.skip) { c.text.textContent = msg; return res(); }
-    if (speak) TTS.say(msg);
+    if (speak) TTS.say(speak === true ? msg : speak); // speak = 말할 조각 배열 (녹음된 조각으로 읽게 — 화면 글 msg 와 따로)
     const chars = Array.from(msg);
     let i = 0;
     c.text.textContent = "";
@@ -2576,6 +2654,7 @@ function battle(e, prev) {
   const vTeam = prev.teams[prev.pieces[e.victims[0]].team];
   const foes = e.victims.map(i => Yut.formOf(prev, i));
   const foeNames = foes.map(nameOf).join("·");
+  const foeList = foes.map(nameOf), foeLast = foeList[foeList.length - 1]; // 🔊 읽어 줄 이름 조각
   const c = openStage({ foes, foeTeam: vTeam, ally: atk, allyTeam: aTeam });
   (async () => {
     // ① 등장: 줄무늬 섬광 → 양쪽에서 미끄러져 들어옴
@@ -2587,7 +2666,8 @@ function battle(e, prev) {
     await c.say("앗! " + vTeam.name + "의 " + josa(foeNames, "와/과") + " 마주쳤다!");
     await c.wait(550);
     // ② 기술
-    await c.say(nameOf(atk) + "의 " + (e.skill ? skillName(e.skill) : moveOf(atk)) + "!", true);
+    const mvName = e.skill ? skillName(e.skill) : moveOf(atk);
+    await c.say(nameOf(atk) + "의 " + mvName + "!", [nameOf(atk), mvName]);
     await stageAttack(c, atk);
     await c.wait(750);
     const sup = superEffective(atk, foes);
@@ -2595,7 +2675,7 @@ function battle(e, prev) {
       c.stage.classList.remove("quake"); void c.stage.offsetWidth; c.stage.classList.add("quake");
       c.stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp super">효과가 굉장했다!</div>');
       SFX.hit();
-      await c.say("효과가 굉장했다! " + sup, true);
+      await c.say("효과가 굉장했다! " + sup, [vo("효과가 굉장했다!"), TYPE_BEATS_SAY[superType(atk, foes)]]);
       await c.wait(700);
       const st = $(".bt-stamp.super", c.el); if (st) st.remove();
     }
@@ -2607,9 +2687,9 @@ function battle(e, prev) {
       stageStars(c, 27, 70);
       c.stage.insertAdjacentHTML("beforeend", '<div class="bt-stamp">물리쳤다!</div>');
     }
-    if (aTeam.cpu) await c.say("로켓단이 " + josa(foeNames, "을/를") + " 물리쳤다옹~! 😼", true);
-    else if (vTeam.cpu) await c.say("로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다! 로켓단은 또 당했다옹~!", true);
-    else await c.say("신난다! " + josa(foeNames, "을/를") + " 물리쳤다!", true);
+    if (aTeam.cpu) await c.say("로켓단이 " + josa(foeNames, "을/를") + " 물리쳤다옹~! 😼", foeList.concat([jo(foeLast, vo("을 로켓단이 물리쳤다옹!"), vo("를 로켓단이 물리쳤다옹!"))]));
+    else if (vTeam.cpu) await c.say("로켓단의 " + josa(foeNames, "을/를") + " 물리쳤다! 로켓단은 또 당했다옹~!", [vo("로켓단의")].concat(foeList, [jo(foeLast, vo("을 물리쳤다!"), vo("를 물리쳤다!")), vo("로켓단은 또 당했다옹!")]));
+    else await c.say("신난다! " + josa(foeNames, "을/를") + " 물리쳤다!", [vo("신난다!")].concat(foeList, [jo(foeLast, vo("을 물리쳤다!"), vo("를 물리쳤다!"))]));
     await c.wait(700);
     // ④ 집으로 — 쓰러지지 않는다 (영영 지는 게 아니라 처음부터 다시)
     if (c.live()) SFX.runHome();
@@ -2677,7 +2757,7 @@ function encounter(e, auto) {
     }
     if (c.live()) Cry.play(id);
     rarTag();
-    await c.say("앗! 야생의 " + (rar === "c" ? "" : RARITY_KO[rar] + " 포켓몬 ") + josa(name, "이/가") + " 튀어나왔다!", true);
+    await c.say("앗! 야생의 " + (rar === "c" ? "" : RARITY_KO[rar] + " 포켓몬 ") + josa(name, "이/가") + " 튀어나왔다!", [WILD_INTRO[rar], name, jo(name, vo("이 튀어나왔다!"), vo("가 튀어나왔다!"))]);
     await c.wait(500);
     // ② 내 포켓몬 등장
     c.allyEl.style.opacity = ""; $(".bt-plate.ally", c.el).style.opacity = "";
@@ -2686,7 +2766,7 @@ function encounter(e, auto) {
     await c.wait(350);
     let tries = 0, caught = false;
     if (auto) {
-      await c.say("몬스터볼이 저절로 날아가요! (잡을 확률 " + Math.round(NET_CATCH * 100) + "%)", true);
+      await c.say("몬스터볼이 저절로 날아가요! (잡을 확률 " + Math.round(NET_CATCH * 100) + "%)", vo("몬스터볼이 저절로 날아가요!"));
       const res = FORCE_CATCH === "1" ? { ok: true, shakes: 3 } : FORCE_CATCH === "0" ? { ok: false, shakes: 2 } : (() => { const ok = Math.random() < NET_CATCH; return { ok, shakes: ok ? 3 : 1 + Math.floor(Math.random() * 3) }; })();
       if (res.ok) {
         caught = true;
@@ -2696,7 +2776,7 @@ function encounter(e, auto) {
       }
       await stageThrow(c, "poke", res);
       if (c.live() && res.ok) {
-        await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", true);
+        await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", [vo("신난다!"), name, jo(name, vo("을 잡았다!"), vo("를 잡았다!"))]);
         await c.wait(600);
         const swapped = c.live() ? await offerSwap(c, e, id) : false;
         G.net.note = "🌿 " + G.s.teams[e.team].name + "가 " + josa(name, "을/를") + " 잡았어요!" + (swapped ? " 🔄 말로 바꿨어요" : "");
@@ -2708,7 +2788,7 @@ function encounter(e, auto) {
     while (c.live() && !auto) {
       const have = R.BALLS.filter(b => (prof.bag[b] || 0) > 0);
       if (!have.length) {
-        await c.say("가방에 볼이 없어요! 로켓단을 이기면 🎁 상자에서 볼을 얻을 수 있어요.", true);
+        await c.say("가방에 볼이 없어요! 로켓단을 이기면 🎁 상자에서 볼을 얻을 수 있어요.", vo("가방에 볼이 없어요! 로켓단을 이기면 상자에서 볼을 얻을 수 있어요."));
         await c.wait(1300);
         break;
       }
@@ -2737,11 +2817,11 @@ function encounter(e, auto) {
       }
       Store.save();
       renderBagChip();
-      await c.say("가랏, " + R.BALL_INFO[ball].name + "!", true);
+      await c.say("가랏, " + R.BALL_INFO[ball].name + "!", [vo("가랏!"), R.BALL_INFO[ball].name]);
       await stageThrow(c, ball, res);
       if (!c.live()) break;
       if (res.ok) {
-        await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", true);
+        await c.say("신난다! " + josa(name, "을/를") + " 잡았다!", [vo("신난다!"), name, jo(name, vo("을 잡았다!"), vo("를 잡았다!"))]);
         await c.wait(800);
         const swapped = c.live() ? await offerSwap(c, e, id) : false;
         if (netOn()) G.net.note = "🌿 " + G.s.teams[e.team].name + "가 " + josa(name, "을/를") + " 잡았어요!" + (swapped ? " 🔄 말로 바꿨어요" : "");
@@ -2800,7 +2880,7 @@ async function animEvolve(e) {
     sparkle(node);
     Cry.play(b);
     toast("✨ " + msg, 2200);
-    TTS.say(msg);
+    TTS.say([nameOf(a), jo(nameOf(a), "이", "가"), nameOf(b), jo(nameOf(b), "으로 진화했어요!", "로 진화했어요!", true)]);
     await sleep(1150);
   }
   el.classList.remove("evolved");
@@ -2811,7 +2891,7 @@ async function animFinish(e) {
   sparkle(0);
   SFX.finish();
   toast("🏁 " + names.join("·") + " 골인!", 2000);
-  TTS.say(names.join(", ") + " 골인!");
+  TTS.say(names.concat(["골인!"]));
   if (el) { el.classList.add("finishing"); await sleep(900); el.remove(); }
   else await sleep(900);
 }
@@ -2824,7 +2904,7 @@ async function animSkip(e) {
 async function announceTurn(ti, first) {
   const t = G.s.teams[ti];
   const text = t.cpu ? "😈 로켓단 차례다옹~" : (first ? t.name + " 팀부터 시작!" : t.name + " 차례!");
-  TTS.say(t.cpu ? "로켓단 차례다옹" : plain(t.name) + (first ? " 팀부터 시작해요!" : " 차례예요!"));
+  TTS.say(t.cpu ? "로켓단 차례다옹" : [plain(t.name), first ? "팀부터 시작해요!" : "차례예요!"]);
   await banner(text, t.color, first ? 1400 : 1050);
 }
 
@@ -2877,7 +2957,7 @@ async function showWin(ti) {
   SFX.win();
   confetti(80);
   Cry.play(finals[0]);
-  TTS.say(plain(title));
+  TTS.say(rocket && t.cpu ? "로켓단이 이겼다옹!" : [plain(t.name), "팀 승리!"]);
   await sleep(500);
   const o = document.createElement("div");
   o.className = "win-screen";
@@ -2921,7 +3001,7 @@ async function openBox() {
     await sleep(450);
   }
   $("#box-hint").textContent = "가방에 넣었어요! 🎒";
-  TTS.say(rw.balls.map(b => Yut.Rewards.BALL_INFO[b].name).join(", ") + "! 가방에 넣었어요");
+  TTS.say(rw.balls.map(b => Yut.Rewards.BALL_INFO[b].name).concat(["가방에 넣었어요!"]));
   rw.opened = true;
   zone.classList.remove("opening");
   zone.classList.add("opened");
@@ -3288,7 +3368,7 @@ function cutIn(id, key, team, title) {
     SFX.skill();
     if (legend) { SFX.win(); const b = $("#board"); if (b) { b.classList.remove("quake"); void b.offsetWidth; b.classList.add("quake"); setTimeout(() => b.classList.remove("quake"), 650 * SPEED); } }
     Cry.play(id);
-    TTS.say((title ? plain(title) + " " : nameOf(id) + "의 ") + K.name + "!");
+    TTS.say([title ? plain(title) : nameOf(id), K.name]); // "피카츄! 10만볼트!" (손가락흔들기 → ○○)
     let done = false;
     const close = () => { if (done) return; done = true; el.classList.add("out"); setTimeout(() => { el.remove(); res(); }, 220 * SPEED); };
     el.addEventListener("click", close);
@@ -3296,6 +3376,7 @@ function cutIn(id, key, team, title) {
   });
 }
 const namesOf = ps => ps.map(i => nameOf(Yut.formOf(G.s, i))).join("·");
+const namesArr = ps => ps.map(i => nameOf(Yut.formOf(G.s, i))); // 🔊 읽어 줄 이름 조각
 function goHome(el) {
   return new Promise(res => {
     if (!el) return res();
@@ -3313,7 +3394,7 @@ const EVENT_ANIM = {
     if (p && p.state === "board") fxAt(Yut.posOf(p), "🐟💦");
     SFX.pop();
     const msg = e.hop ? "🐟 튀어오르기! " + namesOf(e.pieces) + " 4칸 점프!" : "🐟 튀어오르기! …그러나 아무 일도 일어나지 않았다!";
-    toast(msg, 1800); TTS.say(msg);
+    toast(msg, 1800); TTS.say(e.hop ? ["튀어오르기!"].concat(namesArr(e.pieces), ["4칸 점프!"]) : "튀어오르기! 그러나 아무 일도 일어나지 않았다!");
     await sleep(1000);
   },
   async skill(e, prev) {
@@ -3380,7 +3461,8 @@ const EVENT_ANIM = {
     SFX.pop();
     const who = nameOf(Yut.formOf(G.s, e.target));
     const msg = e.keys.length ? "물붓기! " + who + "의 " + josa(e.keys.map(skillName).join("·"), "이/가") + " 씻겨 나갔어요" : "물붓기! 그런데 씻을 기술이 없었어요";
-    toast("💦 " + msg, 2200); TTS.say(msg);
+    const kns = e.keys.map(skillName);
+    toast("💦 " + msg, 2200); TTS.say(kns.length ? ["물붓기!", who].concat(kns, [jo(kns[kns.length - 1], "이 씻겨 나갔어요", "가 씻겨 나갔어요")]) : "물붓기! 그런데 씻을 기술이 없었어요");
     renderPanel(); refreshUnits();
     await sleep(1100);
   },
@@ -3390,7 +3472,8 @@ const EVENT_ANIM = {
     e.rolls.forEach(r => fxAt(r.node, r.hit ? "⚡" : "💨"));
     const n = e.rolls.filter(r => r.hit).length;
     const msg = "전자포! " + (n ? e.rolls.length + "마리 중 " + n + "마리 명중!" : "아쉽게 모두 빗나갔어요");
-    toast("⚡ " + msg, 1900); TTS.say(msg);
+    toast("⚡ " + msg, 1900); const hits = n + "마리"; // "N마리" 는 gen-voice.py 가 1~12 녹음
+    TTS.say(n ? ["전자포!", hits, "명중!"] : "전자포! 아쉽게 모두 빗나갔어요");
     await sleep(1000);
   },
   async avalanche(e) {
@@ -3403,7 +3486,8 @@ const EVENT_ANIM = {
   async venoshock(e) {
     fxAt(e.node, e.poisoned ? "☠️" : "🧪");
     const msg = e.poisoned ? "베놈쇼크! 독이 퍼져서 " + josa(namesOf(e.pieces), "을/를") + " 물리쳐요!" : "베놈쇼크! 독이 없어서 2칸만 밀어요";
-    toast("🧪 " + msg, 1800); TTS.say(msg);
+    const vn = namesArr(e.pieces);
+    toast("🧪 " + msg, 1800); TTS.say(e.poisoned ? ["베놈쇼크! 독이 퍼져서"].concat(vn, [jo(vn[vn.length - 1], "을 물리쳐요!", "를 물리쳐요!")]) : "베놈쇼크! 독이 없어서 2칸만 밀어요");
     await sleep(900);
   },
   async earthpower(e) {
@@ -3429,7 +3513,7 @@ const EVENT_ANIM = {
     SFX.learn();
     const msg = josa(name, "은/는") + " " + josa(k, "을/를") + " 배웠다!";
     toast("📖 " + msg + " " + ((SKILL_UI[e.key] || {}).emoji || ""), 2200);
-    TTS.say(msg);
+    TTS.say([name, k, jo(k, "을 배웠다!", "를 배웠다!")]);
     renderPanel();
     refreshUnits();
     await sleep(1400);
@@ -3484,7 +3568,29 @@ const EVENT_ANIM = {
       mist: "미스트필드! " + josa(tname, "은/는") + " 상대 차례 두 번 동안 상대 기술이 안 통해요",
     }[e.kind] || "";
     toast(icon + " " + msg, 2200);
-    TTS.say(plain(msg));
+    // 🔊 읽어 줄 조각 — 이름(포켓몬·팀) + 조사로 시작하는 고정 조각 (녹음된 조각으로 이어 읽는다)
+    const np = namesArr(e.pieces), nl = np[np.length - 1] || "", tn = plain(tname);
+    TTS.say({ // 글자를 TTS.say( ) 안에 바로 써야 gen-voice.py 가 찾는다
+      para: e.nodes ? ["방전!", tn, "의 말이 모두 몸이 저려서 한 번 못 움직여요!"] : np.concat([jo(nl, "은 몸이 저려서 한 번 못 움직여요!", "는 몸이 저려서 한 번 못 움직여요!")]),
+      sleep: np.concat([jo(nl, "은 쿨쿨 잠들었어요! 두 번 못 움직여요. 깰 수도 있어요", "는 쿨쿨 잠들었어요! 두 번 못 움직여요. 깰 수도 있어요")]),
+      freeze: np.concat([jo(nl, "은 꽁꽁 얼었어요! 다음 차례에 못 움직이고,", "는 꽁꽁 얼었어요! 다음 차례에 못 움직이고,"), "그다음", tn, "의 윷은 빽도·도·개만!"]),
+      tired: np.concat([jo(nl, "은 지쳤어요… 우리 차례", "는 지쳤어요… 우리 차례"), (e.n || 1) >= 2 ? "두 번 쉬어요" : "한 번 쉬어요"]),
+      bulk: np.concat([jo(nl, "은 힘이 넘쳐요! 다음 두 번은 1칸씩 더 가요", "는 힘이 넘쳐요! 다음 두 번은 1칸씩 더 가요")]),
+      weak: np.concat([jo(nl, "은 약해졌어요! 두 번 동안 1칸씩 덜 가요", "는 약해졌어요! 두 번 동안 1칸씩 덜 가요")]),
+      dig: np.concat([jo(nl, "은 땅속에 숨었어요! 한 번 안 잡히고, 다음엔 1칸 더", "는 땅속에 숨었어요! 한 번 안 잡히고, 다음엔 1칸 더")]),
+      confuse: np.concat([jo(nl, "은 헷갈려요! 다음 이동은 뒤로 가요", "는 헷갈려요! 다음 이동은 뒤로 가요")]),
+      spike: ["독압정!"].concat(np, [jo(nl, "은 다음 차례에 못 움직여요", "는 다음 차례에 못 움직여요")]),
+      veil: ["얼음 장막!"].concat(np, [jo(nl, "은 상대 차례 두 번 동안 안전해요", "는 상대 차례 두 번 동안 안전해요")]),
+      poison: [tn, "의 다음 윷은", G.s.settings.backdo ? "빽도!" : "도!"],
+      seal: [tn, jo(tn, "은 세 번 동안 기술을 못 써요!", "는 세 번 동안 기술을 못 써요!")],
+      rain: ["비가 내려요!", tn, "의 도·빽도는 개가 돼요"],
+      string: ["실뿜기!", tn, "의 말이 모두 다음 한 번 1칸씩 덜 가요"],
+      polish: np.concat([jo(nl, "은 반짝반짝! 다음 두 번은 2칸씩 더 가요", "는 반짝반짝! 다음 두 번은 2칸씩 더 가요")]),
+      gear: ["기어업!", tn, "의 말이 모두 다음 한 번 1칸씩 더 가요"],
+      slow: np.concat([jo(nl, "은 힘을 다 썼어요… 다음 두 번은 1칸씩 덜 가요", "는 힘을 다 썼어요… 다음 두 번은 1칸씩 덜 가요")]),
+      cotton: ["목화포자!", tn, "의 다음 윷이 한 단계 작아져요"],
+      mist: ["미스트필드!", tn, jo(tn, "은 상대 차례 두 번 동안 상대 기술이 안 통해요", "는 상대 차례 두 번 동안 상대 기술이 안 통해요")],
+    }[e.kind] || "");
     renderPanel();
     await sleep(1100);
   },
@@ -3602,7 +3708,7 @@ async function offerSwap(c, e, id) {
   const s = G.s, team = e.team, root = rootOf(id), name = nameOf(id);
   const cands = s.pieces.map((p, i) => i).filter(i => s.pieces[i].team === team && Yut.swapOk(s, i, root));
   if (!cands.length) { await c.say("판 위에 " + nameOf(root) + " 가족이 있어서 지금은 말로 못 써요."); await c.wait(900); return false; }
-  await c.say(josa(name, "을/를") + " 지금 말로 쓸까요? 바꿀 말을 골라요!", true);
+  await c.say(josa(name, "을/를") + " 지금 말로 쓸까요? 바꿀 말을 골라요!", [name, jo(name, vo("을 지금 말로 쓸까요? 바꿀 말을 골라요!"), vo("를 지금 말로 쓸까요? 바꿀 말을 골라요!"))]);
   const tag = i => { const p = s.pieces[i]; return p.skill && p.used ? " <em>✨ 다 씀</em>" : p.state === "wait" ? ' <em class="home">집</em>' : ""; };
   const pick = await c.menu(cands.map(i => ({ key: String(i), cls: "bt-swapbtn", html: '<span class="sw-pic">' + spr(Yut.formOf(s, i)) + "</span>" + esc(nameOf(Yut.formOf(s, i))) + tag(i) }))
     .concat([{ key: "later", cls: "ghost", html: "나중에 (보관함에)" }]));
@@ -3623,7 +3729,7 @@ async function offerSwap(c, e, id) {
     const plate = $(".bt-plate.ally b", c.el);
     if (plate) plate.textContent = name;
   }
-  await c.say("가라, " + name + "! 🔄", true);
+  await c.say("가라, " + name + "! 🔄", [vo("가라!"), name]);
   await c.wait(700);
   G.swapAfter = { piece: i, events: r.events.slice(1), from: old, to: id };
   return true;
@@ -3671,7 +3777,7 @@ async function rocketNet(e) {
   SFX.catchOk();
   fxAt(e.node, "😼");
   toast("😼 로켓단이 그물로 " + josa(name, "을/를") + " 잡아 갔다옹! " + josa(nameOf(old), "은/는") + " 쉬고 " + josa(name, "이/가") + " 나온다옹~", 2800);
-  TTS.say("로켓단이 " + josa(name, "을/를") + " 잡아 갔다옹!");
+  TTS.say([name, jo(name, "을 로켓단이 잡아 갔다옹!", "를 로켓단이 잡아 갔다옹!")]);
   await sleep(1200);
   G.swapAfter = { piece: target, events: r.events.slice(1), from: old, to: id };
 }
@@ -3683,7 +3789,8 @@ async function announceStartSkills() {
   if (legends.length) {
     const nm = legends.slice(0, 2).map(i => nameOf(Yut.formOf(G.s, i))).join("·") + (legends.length > 2 ? " 외 " + (legends.length - 2) + "마리" : "");
     SFX.win(); confetti(40); Cry.play(Yut.formOf(G.s, legends[0]));
-    TTS.say("전설의 포켓몬 " + nm + "! 기술이 구십 퍼센트 성공해요");
+    const lnames = legends.slice(0, 2).map(i => nameOf(Yut.formOf(G.s, i)));
+    TTS.say(["전설의 포켓몬"].concat(lnames, ["기술이 구십 퍼센트 성공해요"]));
     await banner("👑 전설의 " + nm + "! 기술 성공 90%", null, 1900, "gold legend");
   }
   const list = G.s.pieces.map((p, i) => i).filter(i => G.s.pieces[i].skill);
@@ -3777,7 +3884,7 @@ function quizWindow(o) {
         '<button class="btn big green qz-next" hidden>알겠어요!</button></div>' +
       "</div>";
     document.body.appendChild(el);
-    TTS.say(plain(o.say || o.question));
+    TTS.say(o.say || o.question); // o.say 는 조각 배열도 된다
     const btns = $$(".qz-choice", el), ex = $(".qz-explain", el), next = $(".qz-next", el);
     let done = false;
     const close = ok => { el.classList.add("out"); setTimeout(() => { el.remove(); res({ ok }); }, 220 * SPEED); };
@@ -3791,8 +3898,9 @@ function quizWindow(o) {
         SFX.catchOk();
         b.insertAdjacentHTML("beforeend", '<span class="qz-star">⭐</span>');
         ex.innerHTML = "<b>" + (o.okText || "정답!") + "</b>";
-        TTS.say(plain(o.okText || "정답!"));
-        await sleep(1500);
+        const spoken = TTS.say(o.okSay || "정답!"); // o.okSay = 말할 조각 배열 (okText 는 화면용)
+        // 정답 시각·금액을 끝까지 듣고 넘어간다 (1.5초 만에 닫혀 다음 문제 소리가 끊어 버리지 않게) — 최대 7초
+        await (SPEED < 1 ? sleep(1500) : Promise.race([Promise.all([spoken, sleep(1500)]), sleep(7000)]).then(() => sleep(400)));
         close(true);
         return;
       }
@@ -3811,6 +3919,18 @@ function quizWindow(o) {
       next.addEventListener("click", () => { SFX.tap(); close(false); }, { once: true });
     }));
   });
+}
+// 🔊 시각·금액을 녹음된 조각으로 읽기 — "N시"(1~12) · "N분"(1~59) · "N만"(2~99) · "N천" · "N백"(2~9) · "만"·"천"·"백" 은 gen-voice.py 가 따로 녹음해 둔다
+// 3:05 → ["3시", "5분"] (세 시 오 분) · 32500 → ["3만", "2천", "5백", "원"] (삼만 이천오백 원) · 11100 → ["만", "천", "백", "원"]
+const clockSay = c => [c.h + "시"].concat(c.m ? [c.m + "분"] : []);
+function wonSay(n) {
+  const man = Math.floor(n / 10000), th = Math.floor(n % 10000 / 1000), h = Math.floor(n % 1000 / 100), out = [];
+  const u = (d, w) => (d === 1 ? "" : d) + w; // 1 은 빼고 읽는다: 만·천·백 (일만 X)
+  if (man) out.push(u(man, "만"));
+  if (th) out.push(u(th, "천"));
+  if (h) out.push(u(h, "백"));
+  out.push(vo("원"));
+  return out;
 }
 // 숫자 뒤 조사: 3을·2를, 3과·4와 (숫자를 읽은 소리의 받침으로)
 const nj = (n, pair) => { const d = n % 10, jong = [0, 1, 3, 6, 7, 8].indexOf(d) >= 0; const [a, b] = pair.split("/"); return n + (jong ? a : b); };
@@ -3856,9 +3976,10 @@ async function clockQuizOnce(step, lv, right) {
     title: "🕐 시계 문제 " + step + "/" + CLOCK_QS + " — " + ["정각", "15 · 30 · 45분", "몇 시 몇 분"][lv - 1] + "! 맞히면 <b>유니크·전설 +" + MONEY_BOOST[lv - 1] + "%</b>" +
       ' <small class="qz-odds">지금 유니크 ' + od.u + "% · 전설 " + od.l + "%</small>",
     body: clockSvg(q.h, q.m), question: "지금 몇 시" + (lv === 1 ? "일까요?" : " 몇 분일까요?"),
-    say: (step === 1 ? "풀숲이 흔들흔들! " : "") + "지금 몇 시" + (lv === 1 ? "일까요?" : " 몇 분일까요?"),
+    say: (step === 1 ? [vo("풀숲이 흔들흔들!")] : []).concat([lv === 1 ? vo("지금 몇 시일까요?") : vo("지금 몇 시 몇 분일까요?")]),
     choices: q.choices.map(Yut.Study.clockText), answer: q.answer,
     okText: "정답! " + Yut.Study.clockText(q) + " ⭐ 유니크·전설 +" + MONEY_BOOST[lv - 1] + "%!",
+    okSay: [vo("정답!")].concat(clockSay(q)),
     explain: () => clockExplain(q.h, q.m),
   });
   studyRecord("clock", r.ok);
@@ -3898,9 +4019,12 @@ async function moneyQuizOnce(step, right, again) { // again = 앞 문제를 틀�
     title: "🏥 포켓몬센터 손님 " + step + "/" + MONEY_QS + " — " + MONEY_LV[lv - 1] + " 단위! 맞히면 몬스터볼 속 <b>유니크·전설 +" + MONEY_BOOST[lv - 1] + "%</b>" +
       ' <small class="qz-odds">지금 유니크 ' + moneyOdds(right).u + "% · 전설 " + moneyOdds(right).l + "%</small>",
     body: moneyHtml(q.counts), question: "모두 얼마일까요?",
-    say: step === 1 ? "포켓몬센터에 왔어요! 럭키의 계산을 도와주세요. 모두 얼마일까요?" : (again ? "한 번 더! " : "이번엔 ") + MONEY_LV[lv - 1] + " 손님이에요. 모두 얼마일까요?",
+    say: step === 1 ? vo("포켓몬센터에 왔어요! 럭키의 계산을 도와주세요. 모두 얼마일까요?")
+      : again ? (lv === 3 ? vo("한 번 더! 만 원 손님이에요. 모두 얼마일까요?") : vo("한 번 더! 천 원 손님이에요. 모두 얼마일까요?"))
+      : (lv === 3 ? vo("이번엔 만 원 손님이에요. 모두 얼마일까요?") : vo("이번엔 천 원 손님이에요. 모두 얼마일까요?")),
     choices: q.choices.map(Yut.Study.won), answer: q.answer,
     okText: "정답! " + Yut.Study.won(q.total) + " (" + Yut.Study.koNum(q.total) + " 원) ⭐ 유니크·전설 +" + MONEY_BOOST[lv - 1] + "%!",
+    okSay: [vo("정답!")].concat(wonSay(q.total)),
     explain: () => moneyExplain(q),
   });
   studyRecord("money", r.ok);
@@ -4004,7 +4128,7 @@ async function openBonusBall() {
   const zone = $("#bonus-zone");
   if (zone) zone.outerHTML = bonusHtml(rw);
   SFX.catchOk(); confetti(36); Cry.play(B.mon);
-  TTS.say("짜잔! " + josa(nameOf(B.mon), "이/가") + " 나왔다!");
+  TTS.say(["짜잔!", nameOf(B.mon), jo(nameOf(B.mon), "이 나왔다!", "가 나왔다!")]);
   G.moneyBusy = false;
 }
 
@@ -4051,7 +4175,7 @@ function coinToss() {
         document.body.classList.remove("coining");
         const msg = (win === 0 ? "앞면! " : "뒷면! ") + T[win].name + " 먼저!";
         $("#ct-say", el).textContent = msg;
-        TTS.say(plain(msg));
+        TTS.say([win === 0 ? "앞면!" : "뒷면!", plain(T[win].name), "먼저!"]);
         SFX.again();
         setTimeout(close, 1600 * SPEED);
         el.addEventListener("click", close);
@@ -4144,13 +4268,19 @@ function probBars(backdo) {
 /* ---------- 💧🔥🌿 타입 상성 — 물 > 불꽃 > 풀 > 물 (연출만, 승패는 그대로) ---------- */
 const TYPE_BEATS = { "물": "불꽃", "불꽃": "풀", "풀": "물" };
 const TYPE_EMOJI = { "물": "💧", "불꽃": "🔥", "풀": "🌿" };
-function superEffective(atk, foes) {
+// 상성이 맞는 내 타입 (없으면 "")
+function superType(atk, foes) {
   for (const a of typesOf(atk)) {
     const d = TYPE_BEATS[a];
-    if (d && foes.some(f => typesOf(f).indexOf(d) >= 0)) return TYPE_EMOJI[a] + " " + a + " 타입은 " + TYPE_EMOJI[d] + " " + d + " 타입에 강해요!";
+    if (d && foes.some(f => typesOf(f).indexOf(d) >= 0)) return a;
   }
   return "";
 }
+function superEffective(atk, foes) {
+  const a = superType(atk, foes), d = TYPE_BEATS[a];
+  return a ? TYPE_EMOJI[a] + " " + a + " 타입은 " + TYPE_EMOJI[d] + " " + d + " 타입에 강해요!" : "";
+}
+const TYPE_BEATS_SAY = { "물": vo("물 타입은 불꽃 타입에 강해요!"), "불꽃": vo("불꽃 타입은 풀 타입에 강해요!"), "풀": vo("풀 타입은 물 타입에 강해요!") }; // 🔊
 
 /* ---------- 🎁 기술 넘겨주기 — 기술을 못 쓰고 골인하면, 그 기술을 받을 팀원을 고른다 ---------- */
 function openGiftChooser() {
@@ -4161,7 +4291,7 @@ function openGiftChooser() {
   const from = nameOf(Yut.formOf(s, q.from)), K = Yut.SKILLS[q.key], U = SKILL_UI[q.key] || {};
   markSeen(q.key);
   SFX.learn();
-  TTS.say(josa(from, "이/가") + " 못 쓴 " + K.name + "! 누구에게 줄까요?");
+  TTS.say([from, jo(from, "이 못 쓴", "가 못 쓴"), K.name, "누구에게 줄까요?"]);
   const tag = i => {
     const p = s.pieces[i];
     const own = p.skill ? (p.used ? "✓ " + skillName(p.skill) + " 다 씀" : "✨ " + skillName(p.skill)) : "기술 없음";
@@ -4196,7 +4326,8 @@ Object.assign(EVENT_ANIM, {
     renderPanel();
     const msg = (G.s.teams[e.team].cpu ? "로켓단 " : "") + josa(name, "이/가") + " " + josa(skillName(e.key), "을/를") + " 받았어요! 🎁";
     toast(msg, 2000);
-    TTS.say(plain(msg));
+    const gk = skillName(e.key);
+    TTS.say((G.s.teams[e.team].cpu ? ["로켓단"] : []).concat([name, gk, jo(gk, "을 받았어요!", "를 받았어요!")]));
     await sleep(1100);
   },
   async giftlost(e) { toast("받을 팀원이 없어서 " + josa(skillName(e.key), "은/는") + " 사라졌어요", 1800); await sleep(900); },

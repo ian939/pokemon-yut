@@ -44,7 +44,7 @@
 - **🔍 기술 보기** — 오른쪽 팀 카드의 포켓몬을 누르면 그 포켓몬의 기술(이름·설명·쓸 수 있는지)과 진화 모습, 아직 없으면 몇 칸 더 가야 하는지 보여 줘요
 - **🎁 보물상자** — 로켓단을 이기면 볼 3개! 몬스터볼 50% · 슈퍼볼 30% · 하이퍼볼 10% · 럭셔리볼 5% · 마스터볼 5%. 잡을 확률은 몬스터볼 기준 일반 80 · 레어 70 · 유니크 60 · 전설 40%, 좋은 볼일수록 +5%, 놓칠 때마다 +10%, 마스터볼 100%
 - **🎒 가방** — 볼 개수와 잡은 포켓몬(잡은 순서대로)
-- 한국어로 결과·차례를 읽어 주고, 포켓몬 울음소리가 나요
+- 한국어로 결과·차례를 읽어 주고, 포켓몬 울음소리가 나요. 읽어 주는 말은 **Microsoft Edge TTS 로 미리 녹음한 mp3**(`assets/voice/`, 보통 말 ko-KR-SunHiNeural · 로켓단 나옹 말투 ko-KR-InJoonNeural · 윷 결과 영어 en-US-AnaNeural)라 패드마다 목소리가 같아요. 포켓몬·기술 이름 같은 조각을 이어 읽고, 녹음이 없는 말(직접 쓴 사람 이름 등)만 기기 목소리로 읽어요. 읽는 문장을 바꾸거나 새로 쓰면 `python tools/gen-voice.py` 로 새 문장만 녹음해요
 - 판은 자동 저장 — 나갔다 와도 **이어하기**. 사람별 전적
 
 ## 잉글리시몬과는 따로
@@ -61,6 +61,7 @@
 | `lock.js` | 패드 확대·복사 잠금 |
 | `data/pokemon.js` | 포켓몬 이름·타입·희귀도·지역·진화 순서 — `tools/`로 생성 |
 | `assets/` | 포켓몬 도트 앞·뒷모습·일러스트(PokeAPI) + 윷판·윷가락·멍석·배경·배틀 무대(직접 그림) |
+| `assets/voice/` | 읽어 주는 말 녹음(Edge TTS mp3) + `voice.js` 목록 — `python tools/gen-voice.py` 로 만든다 |
 | `tools/` | 데이터·그림 만들기, 테스트 |
 | `docs/` | [기획서](docs/기획서.md) · [기술 스펙](docs/기술스펙.md) · [v2 계획](docs/v2-보물상자·야생포켓몬.md) · [v3 계획 — 기술·말 바꾸기](docs/v3-기술·말바꾸기.md) · [v4 계획 — 시계·돈 문제](docs/v4-시계·돈문제.md) |
 
@@ -69,6 +70,7 @@ node tools/test-rules.js          # 규칙 테스트 98개 (기술 54개·발동
 node tools/sim-cpu.js             # 로켓단 난이도 시뮬레이션
 python tools/test-ui.py           # 화면 검사 (Playwright)
 python tools/audit-ui.py          # 전체 화면 점검 (8가지 크기 × 17장면 잘림)
+python tools/gen-voice.py         # 읽어 주는 말 녹음 (pip install edge-tts, 인터넷 필요) — TTS.say 문장을 바꾸면 돌린다 (--list 목록만 · --all 전부 다시)
 ```
 
 `index.html`을 그냥 열어도(`file://`) 돌아가요. 개발용 주소 옵션: `?fast=1`(연출 빠르게) · `?seed=12` · `?force=5,4,3`(다음 윷 결과 정하기) · `?spots=3:58,12:133` / `?spots=none`(풀숲) · `?catch=1`/`0`(볼·로켓단 그물 결과) · `?box=master,poke,poke`(상자) · `?pools=nitro,surf|toxic,quake`(말마다 기술) · `?early=1`(모두 처음부터 기술) · `?luck=1`(기술이 늘 성공) · `?swappool=splash`(바꿔 들어오는 포켓몬 기술) · `?clock=3:40` · `?money=0,3,2,5`(십만·만·천·백 장 수).
@@ -78,4 +80,5 @@ python tools/audit-ui.py          # 전체 화면 점검 (8가지 크기 × 17�
 - 개인·가정용 비상업 팬 프로젝트입니다.
 - 포켓몬 이미지는 [PokeAPI sprites](https://github.com/PokeAPI/sprites), 울음소리는 [PokeAPI cries](https://github.com/PokeAPI/cries)에서 가져오며, 포켓몬 관련 저작권은 Nintendo / Creatures Inc. / GAME FREAK inc.에 있습니다.
 - 윷판·윷가락·멍석·배경 그림은 이 프로젝트에서 이미지 생성으로 만들었습니다.
+- 목소리: Microsoft Edge 텍스트 음성 변환(Edge TTS — ko-KR-SunHiNeural, ko-KR-InJoonNeural, en-US-AnaNeural)으로 미리 녹음했습니다.
 - 글꼴: [갈무리(Galmuri)](https://github.com/quiple/galmuri) © 이민서 — SIL Open Font License 1.1 (`assets/fonts/OFL.md`). 게임에 쓰는 글자만 남겨 넣었습니다.
